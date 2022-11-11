@@ -46,7 +46,7 @@ class Point {
     auto diff =
         GiNaC::sqrt(GiNaC::pow(B._x - A._x, 2) + GiNaC::pow(B._y - A._y, 2) +
                     GiNaC::pow(B._z - A._z, 2));
-    return diff < k_eps;
+    return diff < kEps;
   }
   friend bool operator!=(const Point &A, const Point &B) { return !(A == B); }
 };

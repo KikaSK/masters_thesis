@@ -16,10 +16,12 @@ class MeshPoint : public Point {
 
  public:
   MeshPoint(const numeric x, const numeric y, const numeric z,
-            HalfEdgeIndex outgoing = -1);
-  MeshPoint(const Point &A, HalfEdgeIndex outgoing = -1);
-  MeshPoint(const Point &A, const Vector &u, HalfEdgeIndex outgoing = -1);
-  MeshPoint(const MeshPoint &A, const Vector &u, HalfEdgeIndex outgoing = -1);
+            HalfEdgeIndex outgoing = kInvalidEdgeIndex);
+  MeshPoint(const Point &A, HalfEdgeIndex outgoing = kInvalidEdgeIndex);
+  MeshPoint(const Point &A, const Vector &u,
+            HalfEdgeIndex outgoing = kInvalidEdgeIndex);
+  MeshPoint(const MeshPoint &A, const Vector &u,
+            HalfEdgeIndex outgoing = kInvalidEdgeIndex);
   MeshPoint() = delete;
 
   numeric x() const;
@@ -39,7 +41,7 @@ class MeshPoint : public Point {
     auto diff = GiNaC::sqrt(GiNaC::pow(B._point.x() - A._point.x(), 2) +
                             GiNaC::pow(B._point.y() - A._point.y(), 2) +
                             GiNaC::pow(B._point.z() - A._point.z(), 2));
-    return diff < k_eps;
+    return diff < kEps;
   }
   friend bool operator!=(const MeshPoint &A, const MeshPoint &B) {
     return !(A == B);

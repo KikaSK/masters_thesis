@@ -38,7 +38,7 @@ class Vector {
 
   friend bool operator==(const Vector &a, const Vector &b) {
     auto diff = (a - b).get_length();
-    return diff < k_eps;
+    return diff < kEps;
   }
   friend bool operator!=(const Vector &a, const Vector &b) { return !(a == b); }
   friend Vector operator+(const Vector &a, const Vector &b) {
@@ -65,7 +65,7 @@ class Vector {
     return Vector(a._x * k, a._y * k, a._z * k);
   }
   friend Vector operator/(const Vector &a, const numeric k) {
-    assertm(abs(k) >= k_eps, "Division by 0.");
+    assertm(abs(k) >= kEps, "Division by 0.");
     numeric frac = inverse(k);
     return Vector(a._x * frac, a._y * frac, a._z * frac);
   }

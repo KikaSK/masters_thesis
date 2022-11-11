@@ -40,8 +40,10 @@ class HalfEdge {
 
  public:
   HalfEdge(Edge edge, MeshPointIndex A, MeshPointIndex B,
-           HalfEdgeIndex previous = -1, HalfEdgeIndex next = -1,
-           HalfEdgeIndex opposite = -1, FaceIndex incident = -1);
+           HalfEdgeIndex previous = kInvalidEdgeIndex,
+           HalfEdgeIndex next = kInvalidEdgeIndex,
+           HalfEdgeIndex opposite = kInvalidEdgeIndex,
+           FaceIndex incident = kInvalidFaceIndex);
   HalfEdge() = delete;
 
   MeshPointIndex A() const;

@@ -2,4 +2,11 @@
 
 #include <ginac/ginac.h>
 
-static const GiNaC::numeric k_eps = GiNaC::numeric(10e-6);
+using HalfEdgeIndex = int;
+using MeshPointIndex = int;
+using FaceIndex = int;
+
+static const GiNaC::numeric kEps = GiNaC::numeric(10e-6);
+constexpr HalfEdgeIndex kInvalidEdgeIndex = -1;
+constexpr MeshPointIndex kInvalidPointIndex = -1;
+constexpr FaceIndex kInvalidFaceIndex = -1;

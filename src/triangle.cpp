@@ -39,7 +39,7 @@ bool Triangle::is_triangle() const {
   auto a = _AB.get_length();
   auto b = _BC.get_length();
   auto c = _CA.get_length();
-  return (a + b > c + k_eps) && (b + c > a + k_eps) && (a + c > b + k_eps);
+  return (a + b > c + kEps) && (b + c > a + kEps) && (a + c > b + kEps);
 }
 
 // returns unit normal vector of triangle
@@ -60,7 +60,7 @@ Point Triangle::get_circumcenter() const {
   Vector AC(_A, _C);
 
   assertm(_B != _C, "Same edges in triangle.");
-  assertm(((AB ^ AC).get_length()) > k_eps,
+  assertm(((AB ^ AC).get_length()) > kEps,
           "Edges of triangle lineary dependent!");
   Point circumcenter(_A, (AC.get_length_squared() * ((AB ^ AC) ^ AB) +
                           AB.get_length_squared() * ((AC ^ AB) ^ AC)) /
@@ -68,7 +68,7 @@ Point Triangle::get_circumcenter() const {
   numeric l1 = Vector(_A, circumcenter).get_length();
   numeric l2 = Vector(_B, circumcenter).get_length();
   numeric l3 = Vector(_C, circumcenter).get_length();
-  assertm(abs(l1 - l2) < k_eps && abs(l1 - l3) < k_eps && abs(l2 - l3) < k_eps,
+  assertm(abs(l1 - l2) < kEps && abs(l1 - l3) < kEps && abs(l2 - l3) < kEps,
           "Wrong circumcenter!");
   return circumcenter;
 }
@@ -101,7 +101,7 @@ bool Triangle::is_in_triangle(Point P) const {
 
   numeric denominator = dot00 * dot11 - dot01 * dot01;
 
-  assertm(abs(denominator) > k_eps, "Denominator is zero!");
+  assertm(abs(denominator) > kEps, "Denominator is zero!");
 
   numeric u = (dot11 * dot02 - dot01 * dot12) / denominator;
   numeric v = (dot00 * dot12 - dot01 * dot02) / denominator;
