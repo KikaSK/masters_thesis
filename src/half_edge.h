@@ -7,6 +7,7 @@
 #include <optional>
 
 #include "assertm.h"
+#include "constants.h"
 #include "edge.h"
 #include "mesh_point.h"
 #include "point.h"

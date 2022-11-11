@@ -8,9 +8,6 @@
 
 using HalfEdgeIndex = int;
 
-class Point;
-class Vector;
-
 class MeshPoint : public Point {
  private:
   Point _point;
