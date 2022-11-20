@@ -12,10 +12,10 @@ build_dependencies := $(dependencies:src/%.cpp=build/%.o)
 all: main
 
 clean:
-	rm -rf $(BUILD_DIR) # $(TEST_BUILD_DIR)
+	rm -rf $(BUILD_DIR)
 
 prepare:
-	mkdir -p $(BUILD_DIR) # $(TEST_BUILD_DIR)
+	mkdir -p $(BUILD_DIR)
 
 reformat:
 	clang-format -i -style=Google main.cpp $(SRC_DIR)/*.cpp $(SRC_DIR)/*.h $(TEST_DIR)/*.cpp

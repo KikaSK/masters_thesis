@@ -16,3 +16,18 @@ MeshPoint::MeshPoint(const MeshPoint &A, const Vector &u,
 numeric MeshPoint::x() const { return _point.x(); }
 numeric MeshPoint::y() const { return _point.y(); }
 numeric MeshPoint::z() const { return _point.z(); }
+
+Point MeshPoint::get_point() const { return _point; }
+
+bool MeshPoint::has_outgoing(HalfEdgeIndex outgoing) const {
+  for (auto edge : _outgoing)
+    if (edge == outgoing) return true;
+
+  return false;
+}
+
+void MeshPoint::add_outgoing(HalfEdgeIndex outgoing) {
+  if (!has_outgoing(outgoing)) _outgoing.push_back(outgoing);
+}
+
+std::vector<HalfEdgeIndex> MeshPoint::get_outgoing() const { return _outgoing; }

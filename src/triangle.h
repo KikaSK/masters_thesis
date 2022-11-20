@@ -1,5 +1,4 @@
-#ifndef TRIANGLE_H
-#define TRIANGLE_H
+#pragma once
 
 #include <ginac/ginac.h>
 
@@ -59,5 +58,3 @@ class Triangle {
     return os;
   }
 };
-
-#endif

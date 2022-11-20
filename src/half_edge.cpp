@@ -11,8 +11,8 @@ HalfEdge::HalfEdge(Edge edge, MeshPointIndex A, MeshPointIndex B,
       _opposite(opposite),
       _incident(incident) {}
 
-MeshPointIndex HalfEdge::A() const { return _A; }
-MeshPointIndex HalfEdge::B() const { return _B; }
+MeshPointIndex HalfEdge::get_A() const { return _A; }
+MeshPointIndex HalfEdge::get_B() const { return _B; }
 
 HalfEdgeIndex HalfEdge::get_opposite() const { return _opposite; }
 void HalfEdge::set_opposite(HalfEdgeIndex opposite) { _opposite = opposite; }
@@ -25,3 +25,20 @@ void HalfEdge::set_incident(FaceIndex incident) { _incident = incident; }
 
 numeric HalfEdge::get_length() const { return _edge.get_length(); }
 Point HalfEdge::get_midpoint() const { return _edge.get_midpoint(); }
+
+Edge HalfEdge::get_edge() const { return _edge; }
+Point HalfEdge::get_point_A() const { return _edge.A(); }
+Point HalfEdge::get_point_B() const { return _edge.B(); }
+
+void HalfEdge::set_active() {
+  _is_active = true;
+  _is_checked = false;
+}
+void HalfEdge::set_checked() {
+  _is_active = false;
+  _is_checked = true;
+}
+void HalfEdge::set_inside() {
+  _is_active = false;
+  _is_checked = false;
+}

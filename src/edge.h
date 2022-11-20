@@ -1,5 +1,4 @@
-#ifndef EDGE_H
-#define EDGE_H
+#pragma once
 
 #include <ginac/ginac.h>
 
@@ -45,5 +44,3 @@ class Edge {
     return os;
   }
 };
-
-#endif

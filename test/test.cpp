@@ -1,9 +1,13 @@
 #include <memory>
 
 #include "edge.h"
+#include "face.h"
 #include "gtest/gtest.h"
+#include "half_edge.h"
+#include "mesh.h"
 #include "mesh_point.h"
 #include "point.h"
+#include "triangle.h"
 #include "vector.h"
 
 #define eps 10e-6
@@ -231,9 +235,25 @@ TEST(MESHPOINT, Get) {
   EXPECT_FALSE(p3.y() == 2.28375802376);
   EXPECT_FALSE(p3.z() == 3.328574038626);
 }
-/*
+
 TEST(MESHPOINT, Addition) {
   MeshPoint p1(1, 2, 3);
   EXPECT_TRUE(p1 + p1 == Point(2, 4, 6));
-}*/
+}
+
+// TEST Mesh
+
+TEST(MESH, CreateMesh) {
+  Point P0(0, 0, 0);
+  Point Px(1, 0, 0);
+  Point Py(0, 1, 0);
+  Point Pz(0, 0, 1);
+  Edge Exy(Px, Py);
+  Triangle T1(P0, Px, Py);
+  HalfEdge HExy(Exy, 1, 2);
+  Face F0xy(-1, T1);
+  Mesh M(F0xy);
+  M.cout_triangles();
+  EXPECT_TRUE(P0 == Point(0, 0, 0));
+}
 }  // namespace

@@ -1,5 +1,4 @@
-#ifndef VECTOR_H
-#define VECTOR_H
+#pragma once
 
 #include <ginac/ginac.h>
 
@@ -37,8 +36,8 @@ class Vector {
   Vector get_any_perpendicular() const;
 
   friend bool operator==(const Vector &a, const Vector &b) {
-    auto diff = (a - b).get_length();
-    return diff < kEps;
+    auto diff = (a - b).get_length_squared();
+    return diff < kEps * kEps;
   }
   friend bool operator!=(const Vector &a, const Vector &b) { return !(a == b); }
   friend Vector operator+(const Vector &a, const Vector &b) {
@@ -74,5 +73,3 @@ class Vector {
     return os;
   }
 };
-
-#endif
