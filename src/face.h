@@ -7,12 +7,13 @@ using HalfEdgeIndex = int;
 
 class Face {
  private:
-  HalfEdgeIndex _halfedge;
   Triangle _triangle;
+  HalfEdgeIndex _halfedge;
 
  public:
-  Face(HalfEdgeIndex halfedge, Triangle triangle);
+  Face(Triangle triangle, HalfEdgeIndex halfedge = kInvalidEdgeIndex);
 
-  Triangle triangle() const;
-  HalfEdgeIndex halfedge_index() const;
+  Triangle get_triangle() const;
+  HalfEdgeIndex get_halfedge() const;
+  void set_halfedge(HalfEdgeIndex index);
 };

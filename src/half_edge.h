@@ -37,6 +37,7 @@ class HalfEdge {
   HalfEdgeIndex _next;
   HalfEdgeIndex _opposite;
   FaceIndex _incident;
+  HalfEdgeIndex _self;
   bool _is_active;
   bool _is_checked;
 
@@ -59,9 +60,17 @@ class HalfEdge {
   void set_next(HalfEdgeIndex next);
   FaceIndex get_incident() const;
   void set_incident(FaceIndex incident);
+  HalfEdgeIndex get_index() const;
+  void set_index(HalfEdgeIndex index);
+
   void set_active();
   void set_checked();
   void set_inside();
+
+  bool is_active() const;
+  bool is_checked() const;
+  bool is_boundary() const;
+  bool is_inside() const;
 
   numeric get_length() const;
   Point get_midpoint() const;
@@ -83,7 +92,10 @@ class HalfEdge {
   }
 
   friend std::ostream &operator<<(std::ostream &os, const HalfEdge &e) {
-    os << "A: " << e._A << endl << "B: " << e._B << endl;
+    os << "HalfEdge AB: " << endl;
+    os << "A: " << e.get_point_A() << endl << "B: " << e.get_point_B() << endl;
+    os << "Previous: " << e.get_previous() << " Next: " << e.get_next()
+       << " Opposite: " << e.get_opposite() << endl;
     return os;
   }
 };

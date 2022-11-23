@@ -1,8 +1,9 @@
 #include "face.h"
 
-Face::Face(HalfEdgeIndex halfedge, Triangle triangle)
-    : _halfedge(halfedge), _triangle(triangle) {}
+Face::Face(Triangle triangle, HalfEdgeIndex halfedge)
+    : _triangle(triangle), _halfedge(halfedge) {}
 
-Triangle Face::triangle() const { return _triangle; }
+Triangle Face::get_triangle() const { return _triangle; }
 
-HalfEdgeIndex Face::halfedge_index() const { return _halfedge; }
+HalfEdgeIndex Face::get_halfedge() const { return _halfedge; }
+void Face::set_halfedge(HalfEdgeIndex index) { _halfedge = index; }

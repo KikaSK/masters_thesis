@@ -2,14 +2,40 @@
 
 #include <iostream>
 
+#include "edge.h"
+#include "face.h"
+#include "half_edge.h"
+#include "mesh.h"
 #include "mesh_point.h"
 #include "point.h"
+#include "triangle.h"
 #include "vector.h"
 
 int main() {
   GiNaC::Digits = 15;
 
-  for (int i = 0; i < 10; ++i) {
-    std::cout << i << std::endl;
-  }
+  MeshPoint p(1, 2, 3);
+
+  Point P0(0, 0, 0);
+  Point Px(1, 0, 0);
+  Point Py(0, 1, 0);
+  Point Pz(0, 0, 1);
+  Edge Exy(Px, Py);
+  Triangle T1(P0, Px, Py);
+  HalfEdge HExy(Exy, 1, 2);
+  Face F0xy(T1);
+  Mesh M(F0xy);
+  M.cout_triangles();
+
+  std::cout << *M._active_edges.begin() << endl
+            << *std::next(M._active_edges.begin()) << endl
+            << *std::next(M._active_edges.begin(), 2);
+
+  // add triangle
+  auto active_edge_index = 0;  // p0-px
+  M.add_triangle(0, Pz, "new");
+
+  M.cout_triangles();
+
+  std::cout << "SUCCESS" << std::endl;
 }

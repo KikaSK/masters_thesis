@@ -42,10 +42,10 @@ class MeshPoint : public Point {
                  A._point.z() + B._point.z());
   }
   friend bool operator==(const MeshPoint &A, const MeshPoint &B) {
-    auto diff = GiNaC::sqrt(GiNaC::pow(B._point.x() - A._point.x(), 2) +
-                            GiNaC::pow(B._point.y() - A._point.y(), 2) +
-                            GiNaC::pow(B._point.z() - A._point.z(), 2));
-    return diff < kEps;
+    auto diff = GiNaC::pow(B._point.x() - A._point.x(), 2) +
+                GiNaC::pow(B._point.y() - A._point.y(), 2) +
+                GiNaC::pow(B._point.z() - A._point.z(), 2);
+    return diff < kEps * kEps;
   }
   friend bool operator!=(const MeshPoint &A, const MeshPoint &B) {
     return !(A == B);

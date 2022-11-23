@@ -180,7 +180,7 @@ TEST(EDGE, Equality) {}
 // TEST MeshPoint
 
 TEST(MESHPOINT, Equality) {
-  MeshPoint p1(1, 2, 3);
+  MeshPoint p1(numeric(1), numeric(2), numeric(3));
   MeshPoint q1(1, 2, 3);
   EXPECT_TRUE(p1 == q1);
   MeshPoint p3(0, 0, 0);
@@ -250,10 +250,159 @@ TEST(MESH, CreateMesh) {
   Point Pz(0, 0, 1);
   Edge Exy(Px, Py);
   Triangle T1(P0, Px, Py);
-  HalfEdge HExy(Exy, 1, 2);
-  Face F0xy(-1, T1);
+  Face F0xy(T1);
   Mesh M(F0xy);
+
+  // Test all previous, next, opposite relationships of P0Px
+  EXPECT_TRUE((M.get_previous_halfedge(0)).get_edge() ==
+              Edge(Py, P0));  // Previous of P0Px should be PyP0
+  EXPECT_TRUE((M.get_next_halfedge(0)).get_edge() ==
+              Edge(Px, Py));                   // Next of P0Px should be PxPy
+  EXPECT_TRUE(M.get_opposite_index(0) == -1);  // P0Px does not have opposite
+
+  // Test all previous, next, opposite relationships of PxPy
+  EXPECT_TRUE((M.get_previous_halfedge(1)).get_edge() ==
+              Edge(P0, Px));  // Previous of PxPy should be P0Px
+  EXPECT_TRUE((M.get_next_halfedge(1)).get_edge() ==
+              Edge(Py, P0));                   // Next of PxPy should be PyP0
+  EXPECT_TRUE(M.get_opposite_index(1) == -1);  // PxPy does not have opposite
+
+  // Test all previous, next, opposite relationships of PyP0
+  EXPECT_TRUE((M.get_previous_halfedge(2)).get_edge() ==
+              Edge(Px, Py));  // Previous of PyP0 should be PxPy
+  EXPECT_TRUE((M.get_next_halfedge(2)).get_edge() ==
+              Edge(P0, Px));                   // Next of PyP0 should be P0Px
+  EXPECT_TRUE(M.get_opposite_index(2) == -1);  // PyP0 does not have opposite
+
+  // Test outgoing edges
+  EXPECT_TRUE(M.get_halfedge(M.get_meshpoint(0).get_outgoing()[0]).get_edge() ==
+              Edge(P0, Px));  // Outgoing from P0 is P0Px
+  EXPECT_TRUE(M.get_halfedge(M.get_meshpoint(1).get_outgoing()[0]).get_edge() ==
+              Edge(Px, Py));  // Outgoing from Px is PxPy
+  EXPECT_TRUE(M.get_halfedge(M.get_meshpoint(2).get_outgoing()[0]).get_edge() ==
+              Edge(Py, P0));  // Outgoing from Py is PyP0
+
+  // Test edge points
+  EXPECT_TRUE(M.get_halfedge(0).get_point_A() == P0);
+  EXPECT_TRUE(M.get_halfedge(0).get_point_B() == Px);
+  EXPECT_TRUE(M.get_halfedge(1).get_point_A() == Px);
+  EXPECT_TRUE(M.get_halfedge(1).get_point_B() == Py);
+  EXPECT_TRUE(M.get_halfedge(2).get_point_A() == Py);
+  EXPECT_TRUE(M.get_halfedge(2).get_point_B() == P0);
+
+  // Test incident face
+  EXPECT_TRUE(M.get_face(0).get_triangle() == T1);
+  EXPECT_TRUE(M.get_halfedge(0).get_incident() == 0);
+  EXPECT_TRUE(M.get_halfedge(1).get_incident() == 0);
+  EXPECT_TRUE(M.get_halfedge(2).get_incident() == 0);
+  EXPECT_TRUE(M.get_face(0).get_halfedge() == 0 ||
+              M.get_face(0).get_halfedge() == 1 ||
+              M.get_face(0).get_halfedge() == 2);
+
+  // Test active edges list
+  EXPECT_TRUE(M.has_active_edge(0));
+  EXPECT_TRUE(M.has_active_edge(1));
+  EXPECT_TRUE(M.has_active_edge(2));
+}
+
+TEST(MESH, AddNewTriangle) {
+  Point P0(0, 0, 0);
+  Point Px(1, 0, 0);
+  Point Py(0, 1, 0);
+  Point Pz(0, 0, 1);
+  Edge Exy(Px, Py);
+  Triangle T1(P0, Px, Py);
+  Face F0xy(T1);
+  Mesh M(F0xy);
+
+  // Add triangle P0PxPz to edge P0Px
+
+  HalfEdgeIndex i_P0Px(0), i_PxPy(1), i_PyP0(2);
+  M.add_triangle(i_P0Px, Pz, "new");
+  HalfEdgeIndex i_PxP0(3), i_P0Pz(4), i_PzPx(5);
+
+  // All edges
+  const HalfEdge& P0Px = M.get_halfedge(i_P0Px);
+  const HalfEdge& PxPy = M.get_halfedge(i_PxPy);
+  const HalfEdge& PyP0 = M.get_halfedge(i_PyP0);
+  const HalfEdge& PxP0 = M.get_halfedge(i_PxP0);
+  const HalfEdge& P0Pz = M.get_halfedge(i_P0Pz);
+  const HalfEdge& PzPx = M.get_halfedge(i_PzPx);
+
+  // All points
+  const MeshPoint& mp_P0 = M.get_meshpoint(P0Px.get_A());
+  const MeshPoint& mp_Px = M.get_meshpoint(P0Px.get_B());
+  const MeshPoint& mp_Py = M.get_meshpoint(PyP0.get_A());
+  const MeshPoint& mp_Pz = M.get_meshpoint(P0Pz.get_B());
+
+  // All faces
+  const Face& F0 = M.get_face(0);
+  const Face& F1 = M.get_face(1);
+
+  // Test if P0Px and PxP0 are correctly set to inside edges
+  EXPECT_TRUE(P0Px.is_inside());  // P0Px is inside edge
+  EXPECT_TRUE(PxP0.is_inside());  // PxP0 is inside edge
+
+  // Test if all other edges are active edges
+  EXPECT_TRUE(PxPy.is_active());
+  EXPECT_TRUE(PyP0.is_active());
+  EXPECT_TRUE(P0Pz.is_active());
+  EXPECT_TRUE(PzPx.is_active());
+
+  // Test all previous/next relationships
+  EXPECT_TRUE(P0Px.get_opposite() == i_PxP0);
+  EXPECT_TRUE(PxP0.get_opposite() == i_P0Px);
+
+  EXPECT_TRUE(P0Px.get_previous() == i_PyP0);
+  EXPECT_TRUE(P0Px.get_next() == i_PxPy);
+  EXPECT_TRUE(PxPy.get_previous() == i_P0Px);
+  EXPECT_TRUE(PxPy.get_next() == i_PyP0);
+  EXPECT_TRUE(PyP0.get_previous() == i_PxPy);
+  EXPECT_TRUE(PyP0.get_next() == i_P0Px);
+
+  EXPECT_TRUE(PxP0.get_previous() == i_PzPx);
+  EXPECT_TRUE(PxP0.get_next() == i_P0Pz);
+  EXPECT_TRUE(P0Pz.get_previous() == i_PxP0);
+  EXPECT_TRUE(P0Pz.get_next() == i_PzPx);
+  EXPECT_TRUE(PzPx.get_previous() == i_P0Pz);
+  EXPECT_TRUE(PzPx.get_next() == i_PxP0);
+
+  // Test outgoing relationships
+  EXPECT_TRUE(mp_P0.has_outgoing(i_P0Px));
+  EXPECT_TRUE(mp_P0.has_outgoing(i_P0Pz));
+  EXPECT_TRUE(mp_Px.has_outgoing(i_PxPy));
+  EXPECT_TRUE(mp_Py.has_outgoing(i_PyP0));
+  EXPECT_TRUE(mp_Pz.has_outgoing(i_PzPx));
+
+  // Test incident face
+  EXPECT_TRUE(P0Px.get_incident() == 0);
+  EXPECT_TRUE(PxPy.get_incident() == 0);
+  EXPECT_TRUE(PyP0.get_incident() == 0);
+  EXPECT_TRUE(PxP0.get_incident() == 1);
+  EXPECT_TRUE(P0Pz.get_incident() == 1);
+  EXPECT_TRUE(PzPx.get_incident() == 1);
+
+  // Test face halfedges
+  EXPECT_TRUE(F0.get_halfedge() == i_P0Px || F0.get_halfedge() == i_PxPy ||
+              F0.get_halfedge() == i_PyP0);
+  EXPECT_TRUE(F1.get_halfedge() == i_P0Pz || F1.get_halfedge() == i_PzPx ||
+              F1.get_halfedge() == i_PxP0);
+
+  // Test active edges list
+
+  EXPECT_FALSE(M.has_active_edge(0));  // 0x
+  EXPECT_TRUE(M.has_active_edge(1));   // xy
+  EXPECT_TRUE(M.has_active_edge(2));   // y0
+  EXPECT_FALSE(M.has_active_edge(3));  // x0
+  EXPECT_TRUE(M.has_active_edge(4));   // 0z
+  EXPECT_TRUE(M.has_active_edge(5));   // zx
+
   M.cout_triangles();
-  EXPECT_TRUE(P0 == Point(0, 0, 0));
+
+  /*
+    std::cout << *M._active_edges.begin() << endl
+              << *std::next(M._active_edges.begin()) << endl
+              << *std::next(M._active_edges.begin(), 2);
+  */
 }
 }  // namespace
