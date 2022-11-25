@@ -316,7 +316,6 @@ TEST(MESH, AddNewTriangle) {
   Mesh M(F0xy);
 
   // Add triangle P0PxPz to edge P0Px
-
   HalfEdgeIndex i_P0Px(0), i_PxPy(1), i_PyP0(2);
   M.add_triangle(i_P0Px, Pz, "new");
   HalfEdgeIndex i_PxP0(3), i_P0Pz(4), i_PzPx(5);
@@ -371,6 +370,7 @@ TEST(MESH, AddNewTriangle) {
   EXPECT_TRUE(mp_P0.has_outgoing(i_P0Px));
   EXPECT_TRUE(mp_P0.has_outgoing(i_P0Pz));
   EXPECT_TRUE(mp_Px.has_outgoing(i_PxPy));
+  EXPECT_TRUE(mp_Px.has_outgoing(i_PxP0));
   EXPECT_TRUE(mp_Py.has_outgoing(i_PyP0));
   EXPECT_TRUE(mp_Pz.has_outgoing(i_PzPx));
 
@@ -396,13 +396,546 @@ TEST(MESH, AddNewTriangle) {
   EXPECT_FALSE(M.has_active_edge(3));  // x0
   EXPECT_TRUE(M.has_active_edge(4));   // 0z
   EXPECT_TRUE(M.has_active_edge(5));   // zx
+}
 
-  M.cout_triangles();
+TEST(MESH, AddNextTriangle) {
+  Point P0(0, 0, 0);
+  Point Px(1, 0, 0);
+  Point Py(0, 1, 0);
+  Point Pz(0, 0, 1);
+  Edge Exy(Px, Py);
+  Triangle T1(P0, Px, Py);
+  Face F0xy(T1);
+  Mesh M(F0xy);
 
-  /*
-    std::cout << *M._active_edges.begin() << endl
-              << *std::next(M._active_edges.begin()) << endl
-              << *std::next(M._active_edges.begin(), 2);
-  */
+  // Add triangle P0PzPx to edge P0Px
+  HalfEdgeIndex i_P0Px(0), i_PxPy(1), i_PyP0(2);
+  M.add_triangle(i_P0Px, Pz, "new");
+  HalfEdgeIndex i_PxP0(3), i_P0Pz(4), i_PzPx(5);
+
+  // Add triangle P0PyPz to edge PyP0
+  HalfEdgeIndex i_P0Py(6), i_PyPz(7), i_PzP0(8);
+  M.add_triangle(i_PyP0, Pz, "next", 3);
+
+  // All edges
+  const HalfEdge& P0Px = M.get_halfedge(i_P0Px);
+  const HalfEdge& PxPy = M.get_halfedge(i_PxPy);
+  const HalfEdge& PyP0 = M.get_halfedge(i_PyP0);
+  const HalfEdge& PxP0 = M.get_halfedge(i_PxP0);
+  const HalfEdge& P0Pz = M.get_halfedge(i_P0Pz);
+  const HalfEdge& PzPx = M.get_halfedge(i_PzPx);
+  const HalfEdge& P0Py = M.get_halfedge(i_P0Py);
+  const HalfEdge& PyPz = M.get_halfedge(i_PyPz);
+  const HalfEdge& PzP0 = M.get_halfedge(i_PzP0);
+
+  // All points
+  const MeshPoint& mp_P0 = M.get_meshpoint(P0Px.get_A());
+  const MeshPoint& mp_Px = M.get_meshpoint(P0Px.get_B());
+  const MeshPoint& mp_Py = M.get_meshpoint(PyP0.get_A());
+  const MeshPoint& mp_Pz = M.get_meshpoint(P0Pz.get_B());
+
+  // All faces
+  const Face& F0 = M.get_face(0);
+  const Face& F1 = M.get_face(1);
+  const Face& F2 = M.get_face(2);
+
+  // Test if P0Px and PxP0 are correctly set to inside edges
+  EXPECT_TRUE(P0Px.is_inside());  // P0Px is inside edge
+  EXPECT_TRUE(PxP0.is_inside());  // PxP0 is inside edge
+  EXPECT_TRUE(P0Py.is_inside());  // P0Py is inside edge
+  EXPECT_TRUE(PyP0.is_inside());  // PyP0 is inside edge
+
+  // Test if all other edges are active edges
+  EXPECT_TRUE(PxPy.is_active());
+  EXPECT_TRUE(PzPx.is_active());
+  EXPECT_TRUE(PyPz.is_active());
+
+  // Test all previous/next relationships
+  EXPECT_TRUE(P0Px.get_opposite() == i_PxP0);
+  EXPECT_TRUE(PxP0.get_opposite() == i_P0Px);
+  EXPECT_TRUE(PyP0.get_opposite() == i_P0Py);
+  EXPECT_TRUE(P0Py.get_opposite() == i_PyP0);
+  EXPECT_TRUE(P0Pz.get_opposite() == i_PzP0);
+  EXPECT_TRUE(PzP0.get_opposite() == i_P0Pz);
+
+  EXPECT_TRUE(P0Px.get_previous() == i_PyP0);
+  EXPECT_TRUE(P0Px.get_next() == i_PxPy);
+  EXPECT_TRUE(PxPy.get_previous() == i_P0Px);
+  EXPECT_TRUE(PxPy.get_next() == i_PyP0);
+  EXPECT_TRUE(PyP0.get_previous() == i_PxPy);
+  EXPECT_TRUE(PyP0.get_next() == i_P0Px);
+
+  EXPECT_TRUE(PxP0.get_previous() == i_PzPx);
+  EXPECT_TRUE(PxP0.get_next() == i_P0Pz);
+  EXPECT_TRUE(P0Pz.get_previous() == i_PxP0);
+  EXPECT_TRUE(P0Pz.get_next() == i_PzPx);
+  EXPECT_TRUE(PzPx.get_previous() == i_P0Pz);
+  EXPECT_TRUE(PzPx.get_next() == i_PxP0);
+
+  EXPECT_TRUE(PzP0.get_previous() == i_PyPz);
+  EXPECT_TRUE(PzP0.get_next() == i_P0Py);
+  EXPECT_TRUE(P0Py.get_previous() == i_PzP0);
+  EXPECT_TRUE(P0Py.get_next() == i_PyPz);
+  EXPECT_TRUE(PyPz.get_previous() == i_P0Py);
+  EXPECT_TRUE(PyPz.get_next() == i_PzP0);
+
+  // Test outgoing relationships
+  EXPECT_TRUE(mp_P0.has_outgoing(i_P0Px));
+  EXPECT_TRUE(mp_P0.has_outgoing(i_P0Pz));
+  EXPECT_TRUE(mp_P0.has_outgoing(i_P0Py));
+  EXPECT_TRUE(mp_Px.has_outgoing(i_PxPy));
+  EXPECT_TRUE(mp_Px.has_outgoing(i_PxP0));
+  EXPECT_TRUE(mp_Py.has_outgoing(i_PyP0));
+  EXPECT_TRUE(mp_Py.has_outgoing(i_PyPz));
+  EXPECT_TRUE(mp_Pz.has_outgoing(i_PzPx));
+  EXPECT_TRUE(mp_Pz.has_outgoing(i_PzP0));
+
+  // Test incident face
+  EXPECT_TRUE(P0Px.get_incident() == 0);
+  EXPECT_TRUE(PxPy.get_incident() == 0);
+  EXPECT_TRUE(PyP0.get_incident() == 0);
+  EXPECT_TRUE(PxP0.get_incident() == 1);
+  EXPECT_TRUE(P0Pz.get_incident() == 1);
+  EXPECT_TRUE(PzPx.get_incident() == 1);
+  EXPECT_TRUE(P0Py.get_incident() == 2);
+  EXPECT_TRUE(PyPz.get_incident() == 2);
+  EXPECT_TRUE(PzP0.get_incident() == 2);
+
+  // Test face halfedges
+  EXPECT_TRUE(F0.get_halfedge() == i_P0Px || F0.get_halfedge() == i_PxPy ||
+              F0.get_halfedge() == i_PyP0);
+  EXPECT_TRUE(F1.get_halfedge() == i_P0Pz || F1.get_halfedge() == i_PzPx ||
+              F1.get_halfedge() == i_PxP0);
+  EXPECT_TRUE(F2.get_halfedge() == i_P0Py || F2.get_halfedge() == i_PyPz ||
+              F2.get_halfedge() == i_PzP0);
+
+  // Test active edges list
+  EXPECT_FALSE(M.has_active_edge(0));  // 0x
+  EXPECT_TRUE(M.has_active_edge(1));   // xy
+  EXPECT_FALSE(M.has_active_edge(2));  // y0
+  EXPECT_FALSE(M.has_active_edge(3));  // x0
+  EXPECT_FALSE(M.has_active_edge(4));  // 0z
+  EXPECT_TRUE(M.has_active_edge(5));   // zx
+  EXPECT_FALSE(M.has_active_edge(6));  // x0
+  EXPECT_TRUE(M.has_active_edge(7));   // 0z
+  EXPECT_FALSE(M.has_active_edge(8));  // zx
+}
+
+TEST(MESH, AddPreviousTriangle) {
+  Point P0(0, 0, 0);
+  Point Px(1, 0, 0);
+  Point Py(0, 1, 0);
+  Point Pz(0, 0, 1);
+  Edge Exy(Px, Py);
+  Triangle T1(P0, Px, Py);
+  Face F0xy(T1);
+  Mesh M(F0xy);
+
+  // Add triangle P0PzPx to edge P0Px
+  HalfEdgeIndex i_P0Px(0), i_PxPy(1), i_PyP0(2);
+  M.add_triangle(i_P0Px, Pz, "new");
+  HalfEdgeIndex i_PxP0(3), i_P0Pz(4), i_PzPx(5);
+
+  // Add triangle PxPzPy to edge PxPy
+  HalfEdgeIndex i_PyPx(6), i_PxPz(7), i_PzPy(8);
+  M.add_triangle(i_PxPy, Pz, "previous", 3);
+
+  // All edges
+  const HalfEdge& P0Px = M.get_halfedge(i_P0Px);
+  const HalfEdge& PxPy = M.get_halfedge(i_PxPy);
+  const HalfEdge& PyP0 = M.get_halfedge(i_PyP0);
+  const HalfEdge& PxP0 = M.get_halfedge(i_PxP0);
+  const HalfEdge& P0Pz = M.get_halfedge(i_P0Pz);
+  const HalfEdge& PzPx = M.get_halfedge(i_PzPx);
+  const HalfEdge& PyPx = M.get_halfedge(i_PyPx);
+  const HalfEdge& PxPz = M.get_halfedge(i_PxPz);
+  const HalfEdge& PzPy = M.get_halfedge(i_PzPy);
+
+  // All points
+  const MeshPoint& mp_P0 = M.get_meshpoint(P0Px.get_A());
+  const MeshPoint& mp_Px = M.get_meshpoint(P0Px.get_B());
+  const MeshPoint& mp_Py = M.get_meshpoint(PyP0.get_A());
+  const MeshPoint& mp_Pz = M.get_meshpoint(P0Pz.get_B());
+
+  // All faces
+  const Face& F0 = M.get_face(0);
+  const Face& F1 = M.get_face(1);
+  const Face& F2 = M.get_face(2);
+
+  // Test if P0Px and PxP0 are correctly set to inside edges
+  EXPECT_TRUE(P0Px.is_inside());  // P0Px is inside edge
+  EXPECT_TRUE(PxP0.is_inside());  // PxP0 is inside edge
+  EXPECT_TRUE(PyPx.is_inside());  // PyPx is inside edge
+  EXPECT_TRUE(PxPy.is_inside());  // PxPy is inside edge
+
+  // Test if all other edges are active edges
+  EXPECT_TRUE(P0Pz.is_active());
+  EXPECT_TRUE(PzPy.is_active());
+  EXPECT_TRUE(PyP0.is_active());
+
+  // Test all previous/next relationships
+  EXPECT_TRUE(P0Px.get_opposite() == i_PxP0);
+  EXPECT_TRUE(PxP0.get_opposite() == i_P0Px);
+  EXPECT_TRUE(PxPy.get_opposite() == i_PyPx);
+  EXPECT_TRUE(PyPx.get_opposite() == i_PxPy);
+  EXPECT_TRUE(PxPz.get_opposite() == i_PzPx);
+  EXPECT_TRUE(PzPx.get_opposite() == i_PxPz);
+
+  EXPECT_TRUE(P0Px.get_previous() == i_PyP0);
+  EXPECT_TRUE(P0Px.get_next() == i_PxPy);
+  EXPECT_TRUE(PxPy.get_previous() == i_P0Px);
+  EXPECT_TRUE(PxPy.get_next() == i_PyP0);
+  EXPECT_TRUE(PyP0.get_previous() == i_PxPy);
+  EXPECT_TRUE(PyP0.get_next() == i_P0Px);
+
+  EXPECT_TRUE(PxP0.get_previous() == i_PzPx);
+  EXPECT_TRUE(PxP0.get_next() == i_P0Pz);
+  EXPECT_TRUE(P0Pz.get_previous() == i_PxP0);
+  EXPECT_TRUE(P0Pz.get_next() == i_PzPx);
+  EXPECT_TRUE(PzPx.get_previous() == i_P0Pz);
+  EXPECT_TRUE(PzPx.get_next() == i_PxP0);
+
+  EXPECT_TRUE(PyPx.get_previous() == i_PzPy);
+  EXPECT_TRUE(PyPx.get_next() == i_PxPz);
+  EXPECT_TRUE(PxPz.get_previous() == i_PyPx);
+  EXPECT_TRUE(PxPz.get_next() == i_PzPy);
+  EXPECT_TRUE(PzPy.get_previous() == i_PxPz);
+  EXPECT_TRUE(PzPy.get_next() == i_PyPx);
+
+  // Test outgoing relationships
+  EXPECT_TRUE(mp_P0.has_outgoing(i_P0Px));
+  EXPECT_TRUE(mp_P0.has_outgoing(i_P0Pz));
+  EXPECT_TRUE(mp_Px.has_outgoing(i_PxPy));
+  EXPECT_TRUE(mp_Px.has_outgoing(i_PxP0));
+  EXPECT_TRUE(mp_Px.has_outgoing(i_PxPz));
+  EXPECT_TRUE(mp_Py.has_outgoing(i_PyP0));
+  EXPECT_TRUE(mp_Py.has_outgoing(i_PyPx));
+  EXPECT_TRUE(mp_Pz.has_outgoing(i_PzPx));
+  EXPECT_TRUE(mp_Pz.has_outgoing(i_PzPx));
+
+  // Test incident face
+  EXPECT_TRUE(P0Px.get_incident() == 0);
+  EXPECT_TRUE(PxPy.get_incident() == 0);
+  EXPECT_TRUE(PyP0.get_incident() == 0);
+  EXPECT_TRUE(PxP0.get_incident() == 1);
+  EXPECT_TRUE(P0Pz.get_incident() == 1);
+  EXPECT_TRUE(PzPx.get_incident() == 1);
+  EXPECT_TRUE(PzPy.get_incident() == 2);
+  EXPECT_TRUE(PyPx.get_incident() == 2);
+  EXPECT_TRUE(PxPz.get_incident() == 2);
+
+  // Test face halfedges
+  EXPECT_TRUE(F0.get_halfedge() == i_P0Px || F0.get_halfedge() == i_PxPy ||
+              F0.get_halfedge() == i_PyP0);
+  EXPECT_TRUE(F1.get_halfedge() == i_P0Pz || F1.get_halfedge() == i_PzPx ||
+              F1.get_halfedge() == i_PxP0);
+  EXPECT_TRUE(F2.get_halfedge() == i_PzPy || F2.get_halfedge() == i_PyPx ||
+              F2.get_halfedge() == i_PxPz);
+
+  // Test active edges list
+  EXPECT_FALSE(M.has_active_edge(0));  // 0x
+  EXPECT_FALSE(M.has_active_edge(1));  // xy
+  EXPECT_TRUE(M.has_active_edge(2));   // y0
+  EXPECT_FALSE(M.has_active_edge(3));  // x0
+  EXPECT_TRUE(M.has_active_edge(4));   // 0z
+  EXPECT_FALSE(M.has_active_edge(5));  // zx
+  EXPECT_FALSE(M.has_active_edge(6));  // x0
+  EXPECT_FALSE(M.has_active_edge(7));  // 0z
+  EXPECT_TRUE(M.has_active_edge(8));   // zx
+}
+
+TEST(MESH, AddFillTriangle) {
+  Point P0(0, 0, 0);
+  Point Px(1, 0, 0);
+  Point Py(0, 1, 0);
+  Point Pz(0, 0, 1);
+  Edge Exy(Px, Py);
+  Triangle T1(P0, Px, Py);
+  Face F0xy(T1);
+  Mesh M(F0xy);
+
+  // Add triangle P0PzPx to edge P0Px
+  HalfEdgeIndex i_P0Px(0), i_PxPy(1), i_PyP0(2);
+  M.add_triangle(i_P0Px, Pz, "new");
+  HalfEdgeIndex i_PxP0(3), i_P0Pz(4), i_PzPx(5);
+
+  // Add triangle P0PyPz to edge PyP0
+  HalfEdgeIndex i_P0Py(6), i_PyPz(7), i_PzP0(8);
+  M.add_triangle(i_PyP0, Pz, "next", 3);
+
+  // Add triangle PxPzPy to edge PxPy
+  HalfEdgeIndex i_PyPx(9), i_PxPz(10), i_PzPy(11);
+  M.add_triangle(i_PxPy, Pz, "fill", 3);
+
+  // All edges
+  const HalfEdge& P0Px = M.get_halfedge(i_P0Px);
+  const HalfEdge& PxPy = M.get_halfedge(i_PxPy);
+  const HalfEdge& PyP0 = M.get_halfedge(i_PyP0);
+  const HalfEdge& PxP0 = M.get_halfedge(i_PxP0);
+  const HalfEdge& P0Pz = M.get_halfedge(i_P0Pz);
+  const HalfEdge& PzPx = M.get_halfedge(i_PzPx);
+  const HalfEdge& P0Py = M.get_halfedge(i_P0Py);
+  const HalfEdge& PyPz = M.get_halfedge(i_PyPz);
+  const HalfEdge& PzP0 = M.get_halfedge(i_PzP0);
+  const HalfEdge& PyPx = M.get_halfedge(i_PyPx);
+  const HalfEdge& PxPz = M.get_halfedge(i_PxPz);
+  const HalfEdge& PzPy = M.get_halfedge(i_PzPy);
+
+  // All points
+  const MeshPoint& mp_P0 = M.get_meshpoint(P0Px.get_A());
+  const MeshPoint& mp_Px = M.get_meshpoint(P0Px.get_B());
+  const MeshPoint& mp_Py = M.get_meshpoint(PyP0.get_A());
+  const MeshPoint& mp_Pz = M.get_meshpoint(P0Pz.get_B());
+
+  // All faces
+  const Face& F0 = M.get_face(0);
+  const Face& F1 = M.get_face(1);
+  const Face& F2 = M.get_face(2);
+  const Face& F3 = M.get_face(3);
+
+  // Test if all edges are correctly set to inside edges
+  EXPECT_TRUE(P0Px.is_inside());  // P0Px is inside edge
+  EXPECT_TRUE(PxP0.is_inside());  // PxP0 is inside edge
+  EXPECT_TRUE(P0Py.is_inside());  // P0Py is inside edge
+  EXPECT_TRUE(PyP0.is_inside());  // PyP0 is inside edge
+  EXPECT_TRUE(P0Pz.is_inside());  // P0Pz is inside edge
+  EXPECT_TRUE(PzPx.is_inside());  // PzPx is inside edge
+  EXPECT_TRUE(PyPz.is_inside());  // PyPz is inside edge
+  EXPECT_TRUE(PzP0.is_inside());  // PzP0 is inside edge
+  EXPECT_TRUE(PyPx.is_inside());  // PyPx is inside edge
+  EXPECT_TRUE(PxPz.is_inside());  // PxPz is inside edge
+  EXPECT_TRUE(PzPy.is_inside());  // PzPy is inside edge
+  EXPECT_TRUE(PxPy.is_inside());  // PxPy is inside edge
+
+  // Test all previous/next relationships
+  EXPECT_TRUE(P0Px.get_opposite() == i_PxP0);
+  EXPECT_TRUE(PxP0.get_opposite() == i_P0Px);
+  EXPECT_TRUE(PyP0.get_opposite() == i_P0Py);
+  EXPECT_TRUE(P0Py.get_opposite() == i_PyP0);
+  EXPECT_TRUE(P0Pz.get_opposite() == i_PzP0);
+  EXPECT_TRUE(PzP0.get_opposite() == i_P0Pz);
+  EXPECT_TRUE(PxPz.get_opposite() == i_PzPx);
+  EXPECT_TRUE(PzPx.get_opposite() == i_PxPz);
+
+  EXPECT_TRUE(P0Px.get_previous() == i_PyP0);
+  EXPECT_TRUE(P0Px.get_next() == i_PxPy);
+  EXPECT_TRUE(PxPy.get_previous() == i_P0Px);
+  EXPECT_TRUE(PxPy.get_next() == i_PyP0);
+  EXPECT_TRUE(PyP0.get_previous() == i_PxPy);
+  EXPECT_TRUE(PyP0.get_next() == i_P0Px);
+
+  EXPECT_TRUE(PxP0.get_previous() == i_PzPx);
+  EXPECT_TRUE(PxP0.get_next() == i_P0Pz);
+  EXPECT_TRUE(P0Pz.get_previous() == i_PxP0);
+  EXPECT_TRUE(P0Pz.get_next() == i_PzPx);
+  EXPECT_TRUE(PzPx.get_previous() == i_P0Pz);
+  EXPECT_TRUE(PzPx.get_next() == i_PxP0);
+
+  EXPECT_TRUE(PzP0.get_previous() == i_PyPz);
+  EXPECT_TRUE(PzP0.get_next() == i_P0Py);
+  EXPECT_TRUE(P0Py.get_previous() == i_PzP0);
+  EXPECT_TRUE(P0Py.get_next() == i_PyPz);
+  EXPECT_TRUE(PyPz.get_previous() == i_P0Py);
+  EXPECT_TRUE(PyPz.get_next() == i_PzP0);
+
+  EXPECT_TRUE(PyPx.get_previous() == i_PzPy);
+  EXPECT_TRUE(PyPx.get_next() == i_PxPz);
+  EXPECT_TRUE(PxPz.get_previous() == i_PyPx);
+  EXPECT_TRUE(PxPz.get_next() == i_PzPy);
+  EXPECT_TRUE(PzPy.get_previous() == i_PxPz);
+  EXPECT_TRUE(PzPy.get_next() == i_PyPx);
+
+  // Test outgoing relationships
+  EXPECT_TRUE(mp_P0.has_outgoing(i_P0Px));
+  EXPECT_TRUE(mp_P0.has_outgoing(i_P0Pz));
+  EXPECT_TRUE(mp_P0.has_outgoing(i_P0Py));
+  EXPECT_TRUE(mp_Px.has_outgoing(i_PxPy));
+  EXPECT_TRUE(mp_Px.has_outgoing(i_PxP0));
+  EXPECT_TRUE(mp_Px.has_outgoing(i_PxPz));
+  EXPECT_TRUE(mp_Py.has_outgoing(i_PyP0));
+  EXPECT_TRUE(mp_Py.has_outgoing(i_PyPz));
+  EXPECT_TRUE(mp_Py.has_outgoing(i_PyPx));
+  EXPECT_TRUE(mp_Pz.has_outgoing(i_PzPx));
+  EXPECT_TRUE(mp_Pz.has_outgoing(i_PzP0));
+  EXPECT_TRUE(mp_Pz.has_outgoing(i_PzPy));
+
+  // Test incident face
+  EXPECT_TRUE(P0Px.get_incident() == 0);
+  EXPECT_TRUE(PxPy.get_incident() == 0);
+  EXPECT_TRUE(PyP0.get_incident() == 0);
+  EXPECT_TRUE(PxP0.get_incident() == 1);
+  EXPECT_TRUE(P0Pz.get_incident() == 1);
+  EXPECT_TRUE(PzPx.get_incident() == 1);
+  EXPECT_TRUE(P0Py.get_incident() == 2);
+  EXPECT_TRUE(PyPz.get_incident() == 2);
+  EXPECT_TRUE(PzP0.get_incident() == 2);
+  EXPECT_TRUE(PzPy.get_incident() == 3);
+  EXPECT_TRUE(PyPx.get_incident() == 3);
+  EXPECT_TRUE(PxPz.get_incident() == 3);
+
+  // Test face halfedges
+  EXPECT_TRUE(F0.get_halfedge() == i_P0Px || F0.get_halfedge() == i_PxPy ||
+              F0.get_halfedge() == i_PyP0);
+  EXPECT_TRUE(F1.get_halfedge() == i_P0Pz || F1.get_halfedge() == i_PzPx ||
+              F1.get_halfedge() == i_PxP0);
+  EXPECT_TRUE(F2.get_halfedge() == i_P0Py || F2.get_halfedge() == i_PyPz ||
+              F2.get_halfedge() == i_PzP0);
+  EXPECT_TRUE(F3.get_halfedge() == i_PzPy || F3.get_halfedge() == i_PyPx ||
+              F3.get_halfedge() == i_PxPz);
+
+  // Test active edges list
+  EXPECT_FALSE(M.has_active_edge(0));   // 0x
+  EXPECT_FALSE(M.has_active_edge(1));   // xy
+  EXPECT_FALSE(M.has_active_edge(2));   // y0
+  EXPECT_FALSE(M.has_active_edge(3));   // x0
+  EXPECT_FALSE(M.has_active_edge(4));   // 0z
+  EXPECT_FALSE(M.has_active_edge(5));   // zx
+  EXPECT_FALSE(M.has_active_edge(6));   // x0
+  EXPECT_FALSE(M.has_active_edge(7));   // 0z
+  EXPECT_FALSE(M.has_active_edge(8));   // zx
+  EXPECT_FALSE(M.has_active_edge(9));   // yx
+  EXPECT_FALSE(M.has_active_edge(10));  // xz
+  EXPECT_FALSE(M.has_active_edge(11));  // zy
+}
+
+TEST(MESH, AddOverlapTriangle) {
+  Point P0(0, 0, 0);
+  Point Px(1, 0, 0);
+  Point Py(0, 1, 0);
+  Point Pz(0, 0, 1);
+  Point Pq(1, 0, 1);
+  Edge Exy(Px, Py);
+  Triangle T1(P0, Px, Py);
+  Face F0xy(T1);
+  Mesh M(F0xy);
+
+  // Add triangle P0PzPx to edge P0Px
+  HalfEdgeIndex i_P0Px(0), i_PxPy(1), i_PyP0(2);
+  M.add_triangle(i_P0Px, Pz, "new");
+  HalfEdgeIndex i_PxP0(3), i_P0Pz(4), i_PzPx(5);
+
+  // Add triangle PxPzPq to edge PzPx
+  HalfEdgeIndex i_PxPz(6), i_PzPq(7), i_PqPx(8);
+  M.add_triangle(i_PzPx, Pq, "new");
+
+  // Add triangle PqPzPy to edge PzPq
+  HalfEdgeIndex i_PqPz(9), i_PzPy(10), i_PyPq(11);
+  M.add_triangle(i_PzPq, Py, "overlap", 2);
+
+  // All edges
+  const HalfEdge& P0Px = M.get_halfedge(i_P0Px);
+  const HalfEdge& PxPy = M.get_halfedge(i_PxPy);
+  const HalfEdge& PyP0 = M.get_halfedge(i_PyP0);
+  const HalfEdge& PxP0 = M.get_halfedge(i_PxP0);
+  const HalfEdge& P0Pz = M.get_halfedge(i_P0Pz);
+  const HalfEdge& PzPx = M.get_halfedge(i_PzPx);
+  const HalfEdge& PxPz = M.get_halfedge(i_PxPz);
+  const HalfEdge& PzPq = M.get_halfedge(i_PzPq);
+  const HalfEdge& PqPx = M.get_halfedge(i_PqPx);
+  const HalfEdge& PqPz = M.get_halfedge(i_PqPz);
+  const HalfEdge& PzPy = M.get_halfedge(i_PzPy);
+  const HalfEdge& PyPq = M.get_halfedge(i_PyPq);
+
+  // All points
+  const MeshPoint& mp_P0 = M.get_meshpoint(P0Px.get_A());
+  const MeshPoint& mp_Px = M.get_meshpoint(P0Px.get_B());
+  const MeshPoint& mp_Py = M.get_meshpoint(PyP0.get_A());
+  const MeshPoint& mp_Pz = M.get_meshpoint(P0Pz.get_B());
+  const MeshPoint& mp_Pq = M.get_meshpoint(PzPq.get_B());
+
+  // All faces
+  const Face& F0 = M.get_face(0);
+  const Face& F1 = M.get_face(1);
+  const Face& F2 = M.get_face(2);
+  const Face& F3 = M.get_face(3);
+
+  // Test if edges are correctly set to inside edges
+  EXPECT_TRUE(P0Px.is_inside());  // P0Px is inside edge
+  EXPECT_TRUE(PxP0.is_inside());  // PxP0 is inside edge
+  EXPECT_TRUE(PzPx.is_inside());  // PzPx is inside edge
+  EXPECT_TRUE(PxPz.is_inside());  // PxPz is inside edge
+  EXPECT_TRUE(PzPq.is_inside());  // PzPq is inside edge
+  EXPECT_TRUE(PqPz.is_inside());  // PqPz is inside edge
+
+  // Test all previous/next relationships
+  EXPECT_TRUE(P0Px.get_opposite() == i_PxP0);
+  EXPECT_TRUE(PxP0.get_opposite() == i_P0Px);
+  EXPECT_TRUE(PzPx.get_opposite() == i_PxPz);
+  EXPECT_TRUE(PxPz.get_opposite() == i_PzPx);
+  EXPECT_TRUE(PzPq.get_opposite() == i_PqPz);
+  EXPECT_TRUE(PqPz.get_opposite() == i_PzPq);
+
+  EXPECT_TRUE(P0Px.get_previous() == i_PyP0);
+  EXPECT_TRUE(P0Px.get_next() == i_PxPy);
+  EXPECT_TRUE(PxPy.get_previous() == i_P0Px);
+  EXPECT_TRUE(PxPy.get_next() == i_PyP0);
+  EXPECT_TRUE(PyP0.get_previous() == i_PxPy);
+  EXPECT_TRUE(PyP0.get_next() == i_P0Px);
+
+  EXPECT_TRUE(PxPz.get_previous() == i_PqPx);
+  EXPECT_TRUE(PxPz.get_next() == i_PzPq);
+  EXPECT_TRUE(PzPq.get_previous() == i_PxPz);
+  EXPECT_TRUE(PzPq.get_next() == i_PqPx);
+  EXPECT_TRUE(PqPx.get_previous() == i_PzPq);
+  EXPECT_TRUE(PqPx.get_next() == i_PxPz);
+
+  EXPECT_TRUE(PqPz.get_previous() == i_PyPq);
+  EXPECT_TRUE(PqPz.get_next() == i_PzPy);
+  EXPECT_TRUE(PzPy.get_previous() == i_PqPz);
+  EXPECT_TRUE(PzPy.get_next() == i_PyPq);
+  EXPECT_TRUE(PyPq.get_previous() == i_PzPy);
+  EXPECT_TRUE(PyPq.get_next() == i_PqPz);
+
+  // Test outgoing relationships
+  EXPECT_TRUE(mp_P0.has_outgoing(i_P0Px));
+  EXPECT_TRUE(mp_P0.has_outgoing(i_P0Pz));
+  EXPECT_TRUE(mp_Px.has_outgoing(i_PxPy));
+  EXPECT_TRUE(mp_Px.has_outgoing(i_PxP0));
+  EXPECT_TRUE(mp_Px.has_outgoing(i_PxPz));
+  EXPECT_TRUE(mp_Py.has_outgoing(i_PyP0));
+  EXPECT_TRUE(mp_Py.has_outgoing(i_PyPq));
+  EXPECT_TRUE(mp_Pz.has_outgoing(i_PzPx));
+  EXPECT_TRUE(mp_Pz.has_outgoing(i_PzPy));
+  EXPECT_TRUE(mp_Pz.has_outgoing(i_PzPq));
+  EXPECT_TRUE(mp_Pq.has_outgoing(i_PqPz));
+  EXPECT_TRUE(mp_Pq.has_outgoing(i_PqPx));
+
+  // Test incident face
+  EXPECT_TRUE(P0Px.get_incident() == 0);
+  EXPECT_TRUE(PxPy.get_incident() == 0);
+  EXPECT_TRUE(PyP0.get_incident() == 0);
+  EXPECT_TRUE(PxP0.get_incident() == 1);
+  EXPECT_TRUE(P0Pz.get_incident() == 1);
+  EXPECT_TRUE(PzPx.get_incident() == 1);
+  EXPECT_TRUE(PxPz.get_incident() == 2);
+  EXPECT_TRUE(PzPq.get_incident() == 2);
+  EXPECT_TRUE(PqPx.get_incident() == 2);
+  EXPECT_TRUE(PzPy.get_incident() == 3);
+  EXPECT_TRUE(PyPq.get_incident() == 3);
+  EXPECT_TRUE(PqPz.get_incident() == 3);
+
+  // Test face halfedges
+  EXPECT_TRUE(F0.get_halfedge() == i_P0Px || F0.get_halfedge() == i_PxPy ||
+              F0.get_halfedge() == i_PyP0);
+  EXPECT_TRUE(F1.get_halfedge() == i_P0Pz || F1.get_halfedge() == i_PzPx ||
+              F1.get_halfedge() == i_PxP0);
+  EXPECT_TRUE(F2.get_halfedge() == i_PxPz || F2.get_halfedge() == i_PzPq ||
+              F2.get_halfedge() == i_PqPx);
+  EXPECT_TRUE(F3.get_halfedge() == i_PzPy || F3.get_halfedge() == i_PyPq ||
+              F3.get_halfedge() == i_PqPz);
+
+  // Test active edges list
+  EXPECT_FALSE(M.has_active_edge(0));
+  EXPECT_TRUE(M.has_active_edge(1));
+  EXPECT_TRUE(M.has_active_edge(2));
+  EXPECT_FALSE(M.has_active_edge(3));
+  EXPECT_TRUE(M.has_active_edge(4));
+  EXPECT_FALSE(M.has_active_edge(5));
+  EXPECT_FALSE(M.has_active_edge(6));
+  EXPECT_FALSE(M.has_active_edge(7));
+  EXPECT_TRUE(M.has_active_edge(8));
+  EXPECT_FALSE(M.has_active_edge(9));
+  EXPECT_TRUE(M.has_active_edge(10));
+  EXPECT_TRUE(M.has_active_edge(11));
 }
 }  // namespace

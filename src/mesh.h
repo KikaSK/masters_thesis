@@ -17,14 +17,14 @@ class Mesh {
   vector<Face> _mesh_triangles;
   vector<HalfEdge> _mesh_edges;
 
-  void _bound_consecutive(HalfEdge *previous, HalfEdgeIndex i_previous,
-                          HalfEdge *next, HalfEdgeIndex i_next) const;
-  void _bound_opposite(HalfEdge *AB, HalfEdgeIndex i_AB, HalfEdge *BA,
-                       HalfEdgeIndex i_BA);
-  void _bound_face(FaceIndex i_face, HalfEdge *edge1, HalfEdge *edge2,
+  void _bound_consecutive(HalfEdge *previous, const HalfEdgeIndex i_previous,
+                          HalfEdge *next, const HalfEdgeIndex i_next) const;
+  void _bound_opposite(HalfEdge *AB, const HalfEdgeIndex i_AB, HalfEdge *BA,
+                       const HalfEdgeIndex i_BA);
+  void _bound_face(const FaceIndex i_face, HalfEdge *edge1, HalfEdge *edge2,
                    HalfEdge *edge3) const;
-  void _bound_opposite_outgoing(const MeshPoint &A, MeshPointIndex i_B,
-                                HalfEdge *BA, HalfEdgeIndex i_BA);
+  void _bound_opposite_outgoing(const MeshPoint &A, const MeshPointIndex i_B,
+                                const HalfEdgeIndex i_BA);
 
  public:
   // TODO set as private after tests
@@ -63,7 +63,9 @@ class Mesh {
   bool has_active_edge(const HalfEdgeIndex &index) const;
   size_t get_active_edges_size() const;
 
-  void _assert_halfedge_index(const HalfEdgeIndex &index) const;
-  void _assert_meshpoint_index(const MeshPointIndex &index) const;
-  void _assert_face_index(const FaceIndex &index) const;
+  void _assert_halfedge_index(const HalfEdgeIndex &index,
+                              std::string function) const;
+  void _assert_meshpoint_index(const MeshPointIndex &index,
+                               std::string function) const;
+  void _assert_face_index(const FaceIndex &index, std::string function) const;
 };

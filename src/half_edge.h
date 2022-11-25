@@ -1,5 +1,4 @@
-#ifndef HALF_EDGE_H
-#define HALF_EDGE_H
+#pragma once
 
 #include <ginac/ginac.h>
 
@@ -124,5 +123,3 @@ struct hash<HalfEdge> {
   }
 };
 }  // namespace std
-
-#endif

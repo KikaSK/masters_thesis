@@ -1,6 +1,6 @@
 # https://devhints.io/makefile
 CC = g++
-CCFLAGS = -std=c++17 -Wall -Wextra -pedantic -fPIC -O2 #-O3 -march=native
+CCFLAGS = -std=c++17 -Wall -Wextra -pedantic -fPIC -O2 # debug mode "-O0 -g"
 GINAC = -lginac -lcln -lgtest -lgtest_main
 BUILD_DIR = build
 SRC_DIR = src
@@ -20,10 +20,10 @@ prepare:
 reformat:
 	clang-format -i -style=Google main.cpp $(SRC_DIR)/*.cpp $(SRC_DIR)/*.h $(TEST_DIR)/*.cpp
 
-main: clean reformat prepare run_main
-	$(BUILD_DIR)/main.out
+main: clean reformat prepare run_main # for debug mode add "gdb" on the beginning
+	$(BUILD_DIR)/main.out 
 
-test: clean reformat prepare run_test
+test: clean reformat prepare run_test # for debug mode add "gdb" on the beginning
 	$(BUILD_DIR)/test.out
 
 run_main: build/main.o $(build_dependencies)

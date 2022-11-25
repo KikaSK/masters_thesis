@@ -52,9 +52,13 @@ void Mesh::cout_triangles() const {
 }
 
 bool Mesh::is_active(HalfEdgeIndex index) const {
+  assertm(index < _mesh_edges.size(),
+          "Invalid halfedge index in is_active function!");
   return _mesh_edges[index].is_active();
 }
 bool Mesh::is_checked(HalfEdgeIndex index) const {
+  assertm(index < _mesh_edges.size(),
+          "Invalid halfedge index in is_cheked function!");
   return _mesh_edges[index].is_checked();
   //_checked_edges.find(_mesh_edges[index]) != _checked_edges.end();
 }
@@ -71,12 +75,20 @@ bool Mesh::is_in_mesh(const HalfEdge &halfedge) const {
 }
 
 HalfEdge Mesh::get_halfedge(HalfEdgeIndex index) const {
+  assertm(index < _mesh_edges.size(),
+          "Invalid halfedge index in get_halfedge function!");
   return _mesh_edges[index];
 }
 MeshPoint Mesh::get_meshpoint(MeshPointIndex index) const {
+  assertm(index < _mesh_edges.size(),
+          "Invalid halfedge index in get_meshpoint function!");
   return _mesh_points[index];
 }
-Face Mesh::get_face(FaceIndex index) const { return _mesh_triangles[index]; }
+Face Mesh::get_face(FaceIndex index) const {
+  assertm(index < _mesh_edges.size(),
+          "Invalid halfedge index in get_face function!");
+  return _mesh_triangles[index];
+}
 
 HalfEdge Mesh::get_previous_halfedge(const HalfEdge &halfedge) const {
   auto i_previous = halfedge.get_previous();
@@ -105,22 +117,30 @@ std::optional<HalfEdge> Mesh::get_opposite_halfedge(
   return _mesh_edges[i_opposite];
 }
 std::optional<HalfEdge> Mesh::get_opposite_halfedge(HalfEdgeIndex index) const {
+  assertm(index < _mesh_edges.size(),
+          "Invalid halfedge index in get_opposite_halfedge function!");
   auto i_opposite = _mesh_edges[index].get_opposite();
   if (i_opposite == -1) return std::nullopt;
   return _mesh_edges[i_opposite];
 }
 
 HalfEdgeIndex Mesh::get_previous_index(HalfEdgeIndex index) const {
+  assertm(index < _mesh_edges.size(),
+          "Invalid halfedge index in get_previous_index function!");
   auto i_previous = _mesh_edges[index].get_previous();
   assertm(i_previous != -1, "No previous halfedge");
   return i_previous;
 }
 HalfEdgeIndex Mesh::get_next_index(HalfEdgeIndex index) const {
+  assertm(index < _mesh_edges.size(),
+          "Invalid halfedge index in get_next_index function!");
   auto i_next = _mesh_edges[index].get_next();
   assertm(i_next != -1, "No next halfedge");
   return i_next;
 }
 HalfEdgeIndex Mesh::get_opposite_index(HalfEdgeIndex index) const {
+  assertm(index < _mesh_edges.size(),
+          "Invalid halfedge index in get_opposite_index function!");
   return _mesh_edges[index].get_opposite();
 }
 
@@ -131,20 +151,22 @@ bool Mesh::has_active_edge(const HalfEdge &halfedge) const {
 }
 
 bool Mesh::has_active_edge(const HalfEdgeIndex &index) const {
-  assertm(index < _mesh_edges.size(), "Invalid halfedge index!");
+  assertm(index < _mesh_edges.size(),
+          "Invalid halfedge index in has_active_edge function!");
   return _active_edges.find(_mesh_edges[index]) != _active_edges.end();
 }
 
 size_t Mesh::get_active_edges_size() const { return _active_edges.size(); }
 
-void Mesh::_bound_consecutive(HalfEdge *previous, HalfEdgeIndex i_previous,
-                              HalfEdge *next, HalfEdgeIndex i_next) const {
+void Mesh::_bound_consecutive(HalfEdge *previous,
+                              const HalfEdgeIndex i_previous, HalfEdge *next,
+                              const HalfEdgeIndex i_next) const {
   previous->set_next(i_next);
   next->set_previous(i_previous);
 }
 
-void Mesh::_bound_opposite(HalfEdge *edge1, HalfEdgeIndex i_edge1,
-                           HalfEdge *edge2, HalfEdgeIndex i_edge2) {
+void Mesh::_bound_opposite(HalfEdge *edge1, const HalfEdgeIndex i_edge1,
+                           HalfEdge *edge2, const HalfEdgeIndex i_edge2) {
   edge1->set_opposite(i_edge2);
   edge2->set_opposite(i_edge1);
   edge1->set_inside();
@@ -153,7 +175,7 @@ void Mesh::_bound_opposite(HalfEdge *edge1, HalfEdgeIndex i_edge1,
   _active_edges.erase(*edge2);
 }
 
-void Mesh::_bound_face(FaceIndex i_face, HalfEdge *edge1, HalfEdge *edge2,
+void Mesh::_bound_face(const FaceIndex i_face, HalfEdge *edge1, HalfEdge *edge2,
                        HalfEdge *edge3) const {
   edge1->set_incident(i_face);
   edge2->set_incident(i_face);
@@ -162,15 +184,20 @@ void Mesh::_bound_face(FaceIndex i_face, HalfEdge *edge1, HalfEdge *edge2,
 
 // having edge BA, we are trying to bound it with edge AB if it exists, setting
 // AB inside edge
-void Mesh::_bound_opposite_outgoing(const MeshPoint &A, MeshPointIndex i_B,
-                                    HalfEdge *BA, HalfEdgeIndex i_BA) {
+void Mesh::_bound_opposite_outgoing(const MeshPoint &A,
+                                    const MeshPointIndex i_B,
+                                    const HalfEdgeIndex i_BA) {
   const std::vector<HalfEdgeIndex> A_outgoing =
       A.get_outgoing();  // all edges outgoing from A
   for (auto outgoing : A_outgoing) {
+    // std::cout << outgoing << endl;
+    assertm(outgoing < _mesh_edges.size(),
+            "Invalid halfedge index in _bound_opposite_outgoing function!");
     if (_mesh_edges[outgoing].get_B() /*second point of outgoing edge*/ ==
         i_B)  // we found edge AB
     {
-      _bound_opposite(&(_mesh_edges[outgoing]), outgoing, BA, i_BA);
+      _bound_opposite(&(_mesh_edges[outgoing]), outgoing, &(_mesh_edges[i_BA]),
+                      i_BA);
     }
   }
 }
@@ -190,10 +217,14 @@ void Mesh::add_triangle(HalfEdgeIndex i_AB, Point new_point,
     Create meshpoint P (j)
   */
 
+  if (type != "new") assertm(i_P >= 0, "Invalid index of given meshpoint.");
+
   HalfEdgeIndex i_edge = _mesh_edges.size();
   MeshPointIndex i_point = _mesh_points.size();
   FaceIndex i_face = _mesh_triangles.size();
 
+  assertm(i_AB < _mesh_edges.size(),
+          "Invalid halfedge index in add_triangle function!");
   HalfEdge &AB = _mesh_edges[i_AB];
   MeshPointIndex i_A = AB.get_A();
   MeshPointIndex i_B = AB.get_B();
@@ -205,14 +236,16 @@ void Mesh::add_triangle(HalfEdgeIndex i_AB, Point new_point,
   HalfEdgeIndex i_BA = i_edge;
   _bound_opposite(&AB, i_AB, &BA, i_BA);
 
-  std::cout << (AB.is_inside() ? "Correctly set" : "Incorrectly set")
-            << std::endl;
+  assertm(AB.is_inside() && BA.is_inside(),
+          "The edge is not set to inside edge!");
 
-  MeshPoint P(new_point);
-  if (type == "new")
+  MeshPoint new_meshpoint(new_point);
+  if (type == "new") {
+    _mesh_points.push_back(new_meshpoint);
     i_P = i_point;
-  else
-    P = _mesh_points[i_P];
+  }
+
+  MeshPoint &P = _mesh_points[i_P];
 
   /*
   Create halfedge AP (i+1) (boundary edge)
@@ -236,7 +269,12 @@ void Mesh::add_triangle(HalfEdgeIndex i_AB, Point new_point,
   A.add_outgoing(i_AP);
   P.add_outgoing(i_PB);
   B.add_outgoing(i_BA);
-
+  /*
+  std::cout << "Adding outgoing " << i_AP << " to " << A << endl
+            << i_PB << " to " << P << ", " << i_BA << " to " << B << endl;
+  std::cout << "current state of " << P << endl;
+  for (auto o : P.get_outgoing()) std::cout << o << endl;
+  */
   /*
     create face F(triangle ABP, halfedge AP) (k)
     bound_face(F(k), AP(i+1), PB(i+2), BA(i));
@@ -250,45 +288,33 @@ void Mesh::add_triangle(HalfEdgeIndex i_AB, Point new_point,
     Find out which edges are the new active edges
   */
 
-  if (type == "fill") {  // the edges are inside and we need to bound them with
-                         // opposite edges
-    _bound_opposite_outgoing(P, i_A, &AP, i_AP);  // try to bound AP with PA
-    _bound_opposite_outgoing(B, i_P, &PB, i_PB);  // try to bound PB with BP
-  } else if (type == "previous") {                // only edge PB is active edge
-    _bound_opposite_outgoing(P, i_A, &AP, i_AP);  // try to bound AP with PA
-    PB.set_active();
-    _active_edges.insert(PB);
-  } else if (type == "next") {                    // only edge AP is active edge
-    _bound_opposite_outgoing(B, i_P, &PB, i_PB);  // try to bound PB with BP
-    AP.set_active();
-    _active_edges.insert(AP);
-  } else if (type == "new" ||
-             type == "overlap") {  // both AP and PB are new active edges
-    AP.set_active();
-    PB.set_active();
-    _active_edges.insert(PB);
-    _active_edges.insert(AP);
-  }
-  /*
-    Insert the new edges, faces and vertices to lists
-  */
-
   _mesh_edges.push_back(BA);
   _mesh_edges.push_back(AP);
   _mesh_edges.push_back(PB);
 
-  std::cout << ((PB.is_active() && AP.is_active()) ? "correct" : "incorrect")
-            << std::endl;
-  _mesh_points.push_back(P);
+  if (type == "fill") {  // the edges are inside and we need to bound them with
+                         // opposite edges
+    _bound_opposite_outgoing(P, i_A, i_AP);  // try to bound AP with PA
+    _bound_opposite_outgoing(B, i_P, i_PB);  // try to bound PB with BP
+  } else if (type == "previous") {           // only edge PB is active edge
+    _bound_opposite_outgoing(P, i_A, i_AP);  // try to bound AP with PA
+    _mesh_edges[i_PB].set_active();
+    _active_edges.insert(_mesh_edges[i_PB]);
+  } else if (type == "next") {               // only edge AP is active edge
+    _bound_opposite_outgoing(B, i_P, i_PB);  // try to bound PB with BP
+    _mesh_edges[i_AP].set_active();
+    _active_edges.insert(_mesh_edges[i_AP]);
+  } else if (type == "new" ||
+             type == "overlap") {  // both AP and PB are new active edges
+    _mesh_edges[i_AP].set_active();
+    _mesh_edges[i_PB].set_active();
+    _active_edges.insert(_mesh_edges[i_PB]);
+    _active_edges.insert(_mesh_edges[i_AP]);
+  }
+  /*
+    Insert the new faces to lists
+  */
   _mesh_triangles.push_back(F);
-}
 
-void Mesh::_assert_halfedge_index(const HalfEdgeIndex &index) const {
-  assertm(index < _mesh_edges.size(), "Invalid halfedge index!");
-}
-void Mesh::_assert_meshpoint_index(const MeshPointIndex &index) const {
-  assertm(index < _mesh_points.size(), "Invalid meshpoint index!");
-}
-void Mesh::_assert_face_index(const FaceIndex &index) const {
-  assertm(index < _mesh_triangles.size(), "Invalid face index!");
+  if (type == "new") _mesh_points.push_back(P);
 }
