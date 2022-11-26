@@ -52,12 +52,12 @@ void Mesh::cout_triangles() const {
 }
 
 bool Mesh::is_active(HalfEdgeIndex index) const {
-  assertm(index < _mesh_edges.size(),
+  assertm(index < _mesh_edges.size() && index >= 0,
           "Invalid halfedge index in is_active function!");
   return _mesh_edges[index].is_active();
 }
 bool Mesh::is_checked(HalfEdgeIndex index) const {
-  assertm(index < _mesh_edges.size(),
+  assertm(index < _mesh_edges.size() && index >= 0,
           "Invalid halfedge index in is_cheked function!");
   return _mesh_edges[index].is_checked();
   //_checked_edges.find(_mesh_edges[index]) != _checked_edges.end();
@@ -75,17 +75,17 @@ bool Mesh::is_in_mesh(const HalfEdge &halfedge) const {
 }
 
 HalfEdge Mesh::get_halfedge(HalfEdgeIndex index) const {
-  assertm(index < _mesh_edges.size(),
+  assertm(index < _mesh_edges.size() && index >= 0,
           "Invalid halfedge index in get_halfedge function!");
   return _mesh_edges[index];
 }
 MeshPoint Mesh::get_meshpoint(MeshPointIndex index) const {
-  assertm(index < _mesh_edges.size(),
+  assertm(index < _mesh_edges.size() && index >= 0,
           "Invalid halfedge index in get_meshpoint function!");
   return _mesh_points[index];
 }
 Face Mesh::get_face(FaceIndex index) const {
-  assertm(index < _mesh_edges.size(),
+  assertm(index < _mesh_edges.size() && index >= 0,
           "Invalid halfedge index in get_face function!");
   return _mesh_triangles[index];
 }
@@ -93,49 +93,67 @@ Face Mesh::get_face(FaceIndex index) const {
 HalfEdge Mesh::get_previous_halfedge(const HalfEdge &halfedge) const {
   auto i_previous = halfedge.get_previous();
   assertm(i_previous != -1, "No previous halfedge");
+  assertm(i_previous < _mesh_edges.size() && i_previous >= 0,
+          "Invalid previous halfedge index in get_previous_halfedge function!");
   return _mesh_edges[i_previous];
 }
 HalfEdge Mesh::get_previous_halfedge(HalfEdgeIndex index) const {
   auto i_previous = _mesh_edges[index].get_previous();
   assertm(i_previous != -1, "No previous halfedge");
+  assertm(i_previous < _mesh_edges.size() && i_previous >= 0,
+          "Invalid previous halfedge index in get_previous_halfedge function!");
   return _mesh_edges[i_previous];
 }
 HalfEdge Mesh::get_next_halfedge(const HalfEdge &halfedge) const {
   auto i_next = halfedge.get_next();
   assertm(i_next != -1, "No next halfedge");
+  assertm(i_next < _mesh_edges.size() && i_next >= 0,
+          "Invalid next halfedge index in get_next_halfedge function!");
   return _mesh_edges[i_next];
 }
 HalfEdge Mesh::get_next_halfedge(HalfEdgeIndex index) const {
+  assertm(index < _mesh_edges.size() && index >= 0,
+          "Invalid halfedge index in get_next_halfedge function!");
   auto i_next = _mesh_edges[index].get_next();
   assertm(i_next != -1, "No next halfedge");
+  assertm(i_next < _mesh_edges.size() && i_next >= 0,
+          "Invalid next halfedge index in get_next_halfedge function!");
   return _mesh_edges[i_next];
 }
 std::optional<HalfEdge> Mesh::get_opposite_halfedge(
     const HalfEdge &halfedge) const {
   auto i_opposite = halfedge.get_opposite();
   if (i_opposite == -1) return std::nullopt;
+  assertm(i_opposite < _mesh_edges.size() && i_opposite >= 0,
+          "Invalid halfedge index in get_opposite_halfedge function!");
   return _mesh_edges[i_opposite];
 }
 std::optional<HalfEdge> Mesh::get_opposite_halfedge(HalfEdgeIndex index) const {
-  assertm(index < _mesh_edges.size(),
+  assertm(index < _mesh_edges.size() && index >= 0,
           "Invalid halfedge index in get_opposite_halfedge function!");
   auto i_opposite = _mesh_edges[index].get_opposite();
   if (i_opposite == -1) return std::nullopt;
+  assertm(i_opposite < _mesh_edges.size() && i_opposite >= 0,
+          "Invalid halfedge index in get_opposite_halfedge function!");
   return _mesh_edges[i_opposite];
 }
 
 HalfEdgeIndex Mesh::get_previous_index(HalfEdgeIndex index) const {
-  assertm(index < _mesh_edges.size(),
+  assertm(index < _mesh_edges.size() && index >= 0,
           "Invalid halfedge index in get_previous_index function!");
   auto i_previous = _mesh_edges[index].get_previous();
   assertm(i_previous != -1, "No previous halfedge");
+  assertm(i_previous < _mesh_edges.size() && i_previous >= 0,
+          "Invalid previous halfedge index in get_previous_index function!");
   return i_previous;
 }
 HalfEdgeIndex Mesh::get_next_index(HalfEdgeIndex index) const {
-  assertm(index < _mesh_edges.size(),
+  assertm(index < _mesh_edges.size() && index >= 0,
           "Invalid halfedge index in get_next_index function!");
   auto i_next = _mesh_edges[index].get_next();
   assertm(i_next != -1, "No next halfedge");
+  assertm(i_next < _mesh_edges.size() && i_next >= 0,
+          "Invalid next halfedge index in get_next_index function!");
   return i_next;
 }
 HalfEdgeIndex Mesh::get_opposite_index(HalfEdgeIndex index) const {
@@ -151,7 +169,7 @@ bool Mesh::has_active_edge(const HalfEdge &halfedge) const {
 }
 
 bool Mesh::has_active_edge(const HalfEdgeIndex &index) const {
-  assertm(index < _mesh_edges.size(),
+  assertm(index < _mesh_edges.size() && index >= 0,
           "Invalid halfedge index in has_active_edge function!");
   return _active_edges.find(_mesh_edges[index]) != _active_edges.end();
 }

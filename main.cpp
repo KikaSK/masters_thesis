@@ -32,7 +32,6 @@ int main() {
             << *std::next(M._active_edges.begin(), 2);
 
   // add triangle
-  auto active_edge_index = 0;  // p0-px
   M.add_triangle(0, Pz, "new");
 
   M.cout_triangles();
