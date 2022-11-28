@@ -31,7 +31,7 @@ class Mesh {
   unordered_set<HalfEdge> _active_edges;
   unordered_set<HalfEdge> _checked_edges;
   unordered_set<HalfEdge> _mesh_edges_set;
-  Mesh(Face F);
+  Mesh(const Triangle &T);
   Mesh() = delete;
 
   void cout_triangles() const;
