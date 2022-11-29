@@ -9,7 +9,9 @@ HalfEdge::HalfEdge(Edge edge, MeshPointIndex A, MeshPointIndex B,
       _previous(previous),
       _next(next),
       _opposite(opposite),
-      _incident(incident) {}
+      _incident(incident),
+      _is_active(false),
+      _is_checked(false) {}
 
 MeshPointIndex HalfEdge::get_A() const { return _A; }
 MeshPointIndex HalfEdge::get_B() const { return _B; }

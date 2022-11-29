@@ -36,6 +36,10 @@ Mesh::Mesh(Face F) {
               0    // incident face is F
   );
 
+  AB.set_active();
+  BC.set_active();
+  CA.set_active();
+  
   _mesh_edges.push_back(AB);
   _mesh_edges.push_back(BC);
   _mesh_edges.push_back(CA);

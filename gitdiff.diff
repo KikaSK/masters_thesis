@@ -1,0 +1,96 @@
+diff --git a/src/mesh.cpp b/src/mesh.cpp
+index d13f24f..1cb87e7 100644
+--- a/src/mesh.cpp
++++ b/src/mesh.cpp
+@@ -1,6 +1,7 @@
+ #include "mesh.h"
+ 
+-Mesh::Mesh(Face F) {
++Mesh::Mesh(Triangle T) {
++  Face F(T);
+   F.set_halfedge(0);
+   _mesh_triangles.push_back(F);
+   MeshPoint A(F.get_triangle().A(), 0);  // the outgoing halfedge will be AB
+diff --git a/src/mesh.h b/src/mesh.h
+index c367a73..cdf289c 100644
+--- a/src/mesh.h
++++ b/src/mesh.h
+@@ -31,7 +31,7 @@ class Mesh {
+   unordered_set<HalfEdge> _active_edges;
+   unordered_set<HalfEdge> _checked_edges;
+   unordered_set<HalfEdge> _mesh_edges_set;
+-  Mesh(Face F);
++  Mesh(Triangle T);
+   Mesh() = delete;
+ 
+   void cout_triangles() const;
+diff --git a/test/test.cpp b/test/test.cpp
+index 79caaec..eeda63a 100644
+--- a/test/test.cpp
++++ b/test/test.cpp
+@@ -250,8 +250,8 @@ TEST(MESH, CreateMesh) {
+   Point Pz(0, 0, 1);
+   Edge Exy(Px, Py);
+   Triangle T1(P0, Px, Py);
+-  Face F0xy(T1);
+-  Mesh M(F0xy);
++  // Face F0xy(T1);
++  Mesh M(T1);
+ 
+   // Test all previous, next, opposite relationships of P0Px
+   EXPECT_TRUE((M.get_previous_halfedge(0)).get_edge() ==
+@@ -312,8 +312,8 @@ TEST(MESH, AddNewTriangle) {
+   Point Pz(0, 0, 1);
+   Edge Exy(Px, Py);
+   Triangle T1(P0, Px, Py);
+-  Face F0xy(T1);
+-  Mesh M(F0xy);
++  // Face F0xy(T1);
++  Mesh M(T1);
+ 
+   // Add triangle P0PxPz to edge P0Px
+   HalfEdgeIndex i_P0Px(0), i_PxPy(1), i_PyP0(2);
+@@ -405,8 +405,8 @@ TEST(MESH, AddNextTriangle) {
+   Point Pz(0, 0, 1);
+   Edge Exy(Px, Py);
+   Triangle T1(P0, Px, Py);
+-  Face F0xy(T1);
+-  Mesh M(F0xy);
++  // Face F0xy(T1);
++  Mesh M(T1);
+ 
+   // Add triangle P0PzPx to edge P0Px
+   HalfEdgeIndex i_P0Px(0), i_PxPy(1), i_PyP0(2);
+@@ -528,8 +528,8 @@ TEST(MESH, AddPreviousTriangle) {
+   Point Pz(0, 0, 1);
+   Edge Exy(Px, Py);
+   Triangle T1(P0, Px, Py);
+-  Face F0xy(T1);
+-  Mesh M(F0xy);
++  // Face F0xy(T1);
++  Mesh M(T1);
+ 
+   // Add triangle P0PzPx to edge P0Px
+   HalfEdgeIndex i_P0Px(0), i_PxPy(1), i_PyP0(2);
+@@ -651,8 +651,8 @@ TEST(MESH, AddFillTriangle) {
+   Point Pz(0, 0, 1);
+   Edge Exy(Px, Py);
+   Triangle T1(P0, Px, Py);
+-  Face F0xy(T1);
+-  Mesh M(F0xy);
++  // Face F0xy(T1);
++  Mesh M(T1);
+ 
+   // Add triangle P0PzPx to edge P0Px
+   HalfEdgeIndex i_P0Px(0), i_PxPy(1), i_PyP0(2);
+@@ -806,8 +806,8 @@ TEST(MESH, AddOverlapTriangle) {
+   Point Pq(1, 0, 1);
+   Edge Exy(Px, Py);
+   Triangle T1(P0, Px, Py);
+-  Face F0xy(T1);
+-  Mesh M(F0xy);
++  // Face F0xy(T1);
++  Mesh M(T1);
+ 
+   // Add triangle P0PzPx to edge P0Px
+   HalfEdgeIndex i_P0Px(0), i_PxPy(1), i_PyP0(2);
