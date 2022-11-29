@@ -1,6 +1,7 @@
 #include "mesh.h"
 
-Mesh::Mesh(Face F) {
+Mesh::Mesh(const Triangle &T) {
+  Face F(T);
   F.set_halfedge(0);
   _mesh_triangles.push_back(F);
   MeshPoint A(F.get_triangle().A(), 0);  // the outgoing halfedge will be AB
@@ -39,7 +40,7 @@ Mesh::Mesh(Face F) {
   AB.set_active();
   BC.set_active();
   CA.set_active();
-  
+
   _mesh_edges.push_back(AB);
   _mesh_edges.push_back(BC);
   _mesh_edges.push_back(CA);

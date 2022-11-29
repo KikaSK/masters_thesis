@@ -251,7 +251,11 @@ TEST(MESH, CreateMesh) {
   Edge Exy(Px, Py);
   Triangle T1(P0, Px, Py);
   Face F0xy(T1);
-  Mesh M(F0xy);
+  Mesh M(T1);
+
+  EXPECT_TRUE(M.get_halfedge(0).is_active());
+  EXPECT_TRUE(M.get_halfedge(1).is_active());
+  EXPECT_TRUE(M.get_halfedge(2).is_active());
 
   // Test all previous, next, opposite relationships of P0Px
   EXPECT_TRUE((M.get_previous_halfedge(0)).get_edge() ==
@@ -313,7 +317,7 @@ TEST(MESH, AddNewTriangle) {
   Edge Exy(Px, Py);
   Triangle T1(P0, Px, Py);
   Face F0xy(T1);
-  Mesh M(F0xy);
+  Mesh M(T1);
 
   // Add triangle P0PxPz to edge P0Px
   HalfEdgeIndex i_P0Px(0), i_PxPy(1), i_PyP0(2);
@@ -406,7 +410,7 @@ TEST(MESH, AddNextTriangle) {
   Edge Exy(Px, Py);
   Triangle T1(P0, Px, Py);
   Face F0xy(T1);
-  Mesh M(F0xy);
+  Mesh M(T1);
 
   // Add triangle P0PzPx to edge P0Px
   HalfEdgeIndex i_P0Px(0), i_PxPy(1), i_PyP0(2);
@@ -529,7 +533,7 @@ TEST(MESH, AddPreviousTriangle) {
   Edge Exy(Px, Py);
   Triangle T1(P0, Px, Py);
   Face F0xy(T1);
-  Mesh M(F0xy);
+  Mesh M(T1);
 
   // Add triangle P0PzPx to edge P0Px
   HalfEdgeIndex i_P0Px(0), i_PxPy(1), i_PyP0(2);
@@ -652,7 +656,7 @@ TEST(MESH, AddFillTriangle) {
   Edge Exy(Px, Py);
   Triangle T1(P0, Px, Py);
   Face F0xy(T1);
-  Mesh M(F0xy);
+  Mesh M(T1);
 
   // Add triangle P0PzPx to edge P0Px
   HalfEdgeIndex i_P0Px(0), i_PxPy(1), i_PyP0(2);
@@ -807,7 +811,7 @@ TEST(MESH, AddOverlapTriangle) {
   Edge Exy(Px, Py);
   Triangle T1(P0, Px, Py);
   Face F0xy(T1);
-  Mesh M(F0xy);
+  Mesh M(T1);
 
   // Add triangle P0PzPx to edge P0Px
   HalfEdgeIndex i_P0Px(0), i_PxPy(1), i_PyP0(2);
