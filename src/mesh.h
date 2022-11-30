@@ -36,6 +36,7 @@ class Mesh {
   Mesh(const Mesh &M) = delete;
 
   void cout_triangles() const;
+  void cout_mesh() const;
   void add_triangle(HalfEdgeIndex index_AB, Point P, std::string type,
                     MeshPointIndex index_P = kInvalidPointIndex);
 

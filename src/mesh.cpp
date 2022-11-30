@@ -55,6 +55,38 @@ void Mesh::cout_triangles() const {
     std::cout << T.get_triangle() << endl;
   }
 }
+void Mesh::cout_mesh() const {
+  std::cout << "Triangles: " << endl;
+  for (int i = 0; i < _mesh_triangles.size(); ++i) {
+    std::cout << "Triangle " << i << ": " << endl
+              << _mesh_triangles[i].get_triangle();
+    std::cout << "  halfedge: " << _mesh_triangles[i].get_halfedge();
+  }
+
+  std::cout << endl << "Edges: " << endl;
+  for (int i = 0; i < _mesh_edges.size(); ++i) {
+    std::cout << "Edge " << i << ": " << endl << _mesh_edges[i].get_edge();
+    std::cout << (_mesh_edges[i].is_active() ? "  is active" : "  is inside")
+              << endl;
+    std::cout << "  meshpoint1: " << _mesh_edges[i].get_A()
+              << "meshpoint2: " << _mesh_edges[i].get_B() << endl;
+    std::cout << "  opposite: " << _mesh_edges[i].get_opposite() << endl;
+    std::cout << "  previous: " << _mesh_edges[i].get_previous() << endl;
+    std::cout << "  next: " << _mesh_edges[i].get_next() << endl;
+    std::cout << "  incident face: " << _mesh_edges[i].get_incident() << endl;
+  }
+
+  std::cout << "Points: " << endl;
+  for (int i = 0; i < _mesh_points.size(); ++i) {
+    std::cout << "Point " << i << endl
+              << _mesh_points[i].get_point() << ":" << endl;
+    std::cout << "  outgoing: " << endl;
+    for (auto e : _mesh_points[i].get_outgoing()) {
+      std::cout << "    " << e << endl;
+    }
+  }
+  std::cout << endl;
+}
 
 bool Mesh::is_active(HalfEdgeIndex index) const {
   assertm(index < _mesh_edges.size() && index >= 0,

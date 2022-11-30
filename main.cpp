@@ -24,16 +24,11 @@ int main() {
   Triangle T1(P0, Px, Py);
   HalfEdge HExy(Exy, 1, 2);
   Mesh M(T1);
-  M.cout_triangles();
-
-  std::cout << *M._active_edges.begin() << endl
-            << *std::next(M._active_edges.begin()) << endl
-            << *std::next(M._active_edges.begin(), 2);
+  M.cout_mesh();
 
   // add triangle
   M.add_triangle(0, Pz, "new");
-
-  M.cout_triangles();
+  M.cout_mesh();
 
   std::cout << "SUCCESS" << std::endl;
 }
