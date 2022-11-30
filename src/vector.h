@@ -20,9 +20,8 @@ class Vector {
  public:
   Vector(numeric x, numeric y, numeric z);
   Vector(Point A, Point B);
+  Vector(const Vector &v) = default;
   Vector() = delete;
-
-  Vector(const Vector &v);
 
   numeric x() const;
   numeric y() const;

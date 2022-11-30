@@ -1,7 +1,6 @@
 #include "vector.h"
 
 Vector::Vector(numeric x, numeric y, numeric z) : _x(x), _y(y), _z(z){};
-Vector::Vector(const Vector &v) : _x(v.x()), _y(v.y()), _z(v.z()){};
 Vector::Vector(Point A, Point B)
     : _x(B.x() - A.x()), _y(B.y() - A.y()), _z(B.z() - A.z()){};
 

@@ -22,6 +22,7 @@ class MeshPoint : public Point {
   MeshPoint(const MeshPoint &A, const Vector &u,
             HalfEdgeIndex outgoing = kInvalidEdgeIndex);
   MeshPoint() = delete;
+  MeshPoint(const MeshPoint &A) = default;
 
   numeric x() const;
   numeric y() const;

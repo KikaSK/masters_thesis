@@ -23,8 +23,7 @@ int main() {
   Edge Exy(Px, Py);
   Triangle T1(P0, Px, Py);
   HalfEdge HExy(Exy, 1, 2);
-  Face F0xy(T1);
-  Mesh M(F0xy);
+  Mesh M(T1);
   M.cout_triangles();
 
   std::cout << *M._active_edges.begin() << endl

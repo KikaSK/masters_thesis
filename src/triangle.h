@@ -21,6 +21,7 @@ class Triangle {
  public:
   Triangle(Point A, Point B, Point C);
   Triangle() = delete;
+  Triangle(const Triangle &T) = default;
 
   Point A() const;
   Point B() const;

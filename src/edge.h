@@ -26,6 +26,7 @@ class Edge {
   Edge(Point A, Vector u);
   Edge(Point A, Point B);
   Edge() = delete;
+  Edge(const Edge &edge) = default;
 
   Point A() const;
   Point B() const;

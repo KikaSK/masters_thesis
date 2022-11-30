@@ -47,6 +47,7 @@ class HalfEdge {
            HalfEdgeIndex opposite = kInvalidEdgeIndex,
            FaceIndex incident = kInvalidFaceIndex);
   HalfEdge() = delete;
+  HalfEdge(const HalfEdge &edge) = default;
 
   MeshPointIndex get_A() const;
   MeshPointIndex get_B() const;

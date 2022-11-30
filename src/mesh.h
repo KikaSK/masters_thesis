@@ -33,6 +33,7 @@ class Mesh {
   unordered_set<HalfEdge> _mesh_edges_set;
   explicit Mesh(const Triangle &T);
   Mesh() = delete;
+  Mesh(const Mesh &M) = delete;
 
   void cout_triangles() const;
   void add_triangle(HalfEdgeIndex index_AB, Point P, std::string type,

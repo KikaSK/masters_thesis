@@ -25,6 +25,7 @@ class Point {
   Point(const Point &A, const Vector &u);
   // default constructor
   Point() = default;
+  Point(const Point &P) = default;
 
   numeric x() const;
   numeric y() const;
