@@ -30,26 +30,28 @@ Point project(const Point &point_to_project, const Vector &normal,
               const Function &F, const std::optional<numeric> e_size);
 
 // connects two vectors of edges
-// vector<Edge> connect_edges(const vector<Edge> &v1, const vector<Edge> &v2);
+vector<HalfEdgeIndex> connect_edges(const vector<HalfEdgeIndex> &v1,
+                                    const vector<HalfEdgeIndex> &v2);
 
 // connects two vectors of points
 // vector<Point> connect_points(const vector<Point> &v1, const vector<Point>
 // &v2);
 
 // angle BAP in range (-Pi, Pi) with respect to neighbour triangle
-numeric angle(const Edge &working_edge, const Point &P, const Triangle &N);
+numeric angle(const Mesh &mesh, const HalfEdge &working_edge, const Point &P,
+              const Face &incident_face, const bool clockwise);
 
 // true if angle is between 0 and 3*pi/4 with respect to neighbour triangle
-bool good_orientation(const Edge &working_edge, const Point &P,
-                      const Triangle &N);
+bool good_orientation(const Mesh &mesh, const HalfEdge &working_edge,
+                      const Point &P, const Face &incident_face);
 
 // https://math.stackexchange.com/questions/1905533/find-perpendicular-distance-from-point-to-line-in-3d
 // returns ditance between point and line given by working edge
-numeric line_point_dist(const Edge &working_edge, const Point &P,
-                        const Triangle &neighbour_triangle);
+numeric line_point_dist(const Mesh &mesh, const HalfEdge &working_edge,
+                        const Point &P, const Face &incident_face);
 
 // Returns unit vector in the plane of triangle T, pointing outside from T from
 // the midpoint of edge e, perpendicular to e
-Vector find_direction(const Edge &e, const Triangle &T);
+Vector find_direction(const HalfEdge &working_edge, const Face &F);
 
 #endif

@@ -166,14 +166,15 @@ Point project(const Point &point_to_project, const Vector &normal,
 }
 
 // connects two vectors of edges
-/*vector<Edge> connect_edges(const vector<Edge> &v1, const vector<Edge> &v2) {
-  vector<Edge> connected = v1;
+vector<HalfEdgeIndex> connect_edges(const vector<HalfEdgeIndex> &v1,
+                                    const vector<HalfEdgeIndex> &v2) {
+  vector<HalfEdgeIndex> connected = v1;
   for (auto edge : v2) {
     connected.push_back(edge);
   }
   return connected;
 }
-
+/*
 // connects two vectors of points
 vector<Point> connect_points(const vector<Point> &v1, const vector<Point> &v2) {
   vector<Point> connected = v1;
@@ -183,33 +184,32 @@ vector<Point> connect_points(const vector<Point> &v1, const vector<Point> &v2) {
   return connected;
 }
 */
+
 // angle BAP in range (-Pi, Pi) with respect to neighbour triangle
-numeric angle(const Edge &working_edge, const Point &P, const Triangle &N) {
-  if (P == working_edge.A() || P == working_edge.B()) return false;
-  Triangle T = Triangle(working_edge.A(), working_edge.B(), P);
+numeric angle(const Mesh &mesh, const HalfEdge &working_edge, const Point &P,
+              const Face &incident_face, const bool clockwise) {
+  if (P == working_edge.get_point_A() || P == working_edge.get_point_B())
+    return false;
+
+  Point A = mesh.get_meshpoint(working_edge.get_A()).get_point();
+  Point B = mesh.get_meshpoint(working_edge.get_B()).get_point();
+
+  // change the points for other direction
+  if (clockwise) std::swap(A, B);
+
+  Triangle T = Triangle(A, B, P);
   if (!T.is_triangle()) return false;
-  assertm(N.is_triangle(), "Invalid neighbour triangle!");
+  assertm(incident_face.is_triangle(), "Invalid incident triangle!");
 
   // third point in neighbour triangle
+  Point C = mesh.get_meshpoint(mesh.get_next_halfedge(working_edge).get_B())
+                .get_point();
 
-  std::optional<Point> NPoint = std::nullopt;
+  Vector AB = Vector(A, B);
+  Vector AP = Vector(A, P);
+  Vector AC = Vector(A, C);
 
-  if (N.A() != working_edge.A() && N.A() != working_edge.B())
-    NPoint = N.A();
-
-  else if (N.B() != working_edge.A() && N.B() != working_edge.B())
-    NPoint = N.B();
-
-  else if (N.C() != working_edge.A() && N.C() != working_edge.B())
-    NPoint = N.C();
-
-  assertm(NPoint.has_value(), "Not found neighbour point!");
-
-  Vector AB = Vector(working_edge.A(), working_edge.B());
-  Vector AP = Vector(working_edge.A(), P);
-  Vector AN = Vector(working_edge.A(), NPoint.value());
-
-  assertm(!AB.is_zero() && !AP.is_zero() && !AN.is_zero(), "Zero vectors!");
+  assertm(!AB.is_zero() && !AP.is_zero() && !AC.is_zero(), "Zero vectors!");
 
   numeric cos = (AB.unit() * AP.unit());
   assertm(abs(cos) <= numeric(1), "Wrong value of cosine!");
@@ -218,11 +218,13 @@ numeric angle(const Edge &working_edge, const Point &P, const Triangle &N) {
 
   assertm(angle >= 0, "Angle in the wrong range!");
 
-  Vector ABcrossAN = (AB ^ AN);
+  Vector ABcrossAN = (AB ^ AC);
   Vector ABcrossAP = (AB ^ AP);
 
   // if same_direction is > 0 the normals are pointing in aprox same direction
   // thus the points lie on the same side
+
+  // TODO check if we need this if I have good normals
 
   numeric same_direction = ABcrossAP * ABcrossAN;
 
@@ -236,35 +238,38 @@ numeric angle(const Edge &working_edge, const Point &P, const Triangle &N) {
 }
 
 // true if angle is between 0 and 3*pi/4 with respect to neighbour triangle
-bool good_orientation(const Edge &working_edge, const Point &P,
-                      const Triangle &N) {
-  return angle(working_edge, P, N) > 0 &&
-         angle(working_edge, P, N) < 3 * ex_to<numeric>(Pi.evalf()) / 4;
+bool good_orientation(const Mesh &mesh, const HalfEdge &working_edge,
+                      const Point &P, const Face &incident_face) {
+  return angle(mesh, working_edge, P, incident_face, true) > 0 &&
+         angle(mesh, working_edge, P, incident_face, true) <
+             3 * ex_to<numeric>(Pi.evalf()) / 4;
 }
 
 // https://math.stackexchange.com/questions/1905533/find-perpendicular-distance-from-point-to-line-in-3d
 
 // returns ditance between point and line segment given by working edge
-numeric line_point_dist(const Edge &working_edge, const Point &P,
-                        const Triangle &neighbour_triangle) {
-  assertm(!Vector(working_edge.A(), working_edge.B()).is_zero(),
-          "Edge is zero vector!");
-  Vector AB_unit = Vector(working_edge.A(), working_edge.B()).unit();
-  Vector AP = Vector(working_edge.A(), P);
+numeric line_point_dist(const Mesh &mesh, const HalfEdge &working_edge,
+                        const Point &P, const Face &incident_face) {
+  assertm(
+      !Vector(working_edge.get_point_A(), working_edge.get_point_B()).is_zero(),
+      "Edge is zero vector!");
+  Vector AB_unit =
+      Vector(working_edge.get_point_A(), working_edge.get_point_B()).unit();
+  Vector AP = Vector(working_edge.get_point_A(), P);
   numeric t = AP * AB_unit;
-  Point p = Point(working_edge.A(), t * AB_unit);
+  Point p = Point(working_edge.get_point_A(), t * AB_unit);
 
-  numeric angle1 = angle(working_edge, P, neighbour_triangle);
+  numeric angle1 = angle(mesh, working_edge, P, incident_face, true);
   numeric angle2 =
-      angle(Edge(working_edge.B(), working_edge.A()), P, neighbour_triangle);
+      angle(mesh, working_edge, P, incident_face, false);  // anticlockwise
 
   if (abs(angle1) <= ex_to<numeric>(Pi.evalf()) / 2 &&
       abs(angle2) <= ex_to<numeric>(Pi.evalf()) / 2) {
     return Vector(P, p).get_length();
   } else if (abs(angle1) > ex_to<numeric>(Pi.evalf()) / 2) {
-    return Vector(working_edge.A(), P).get_length();
+    return Vector(working_edge.get_point_A(), P).get_length();
   } else {
-    return Vector(working_edge.B(), P).get_length();
+    return Vector(working_edge.get_point_B(), P).get_length();
   }
   assertm(false, "Wrong line point distance!");
   return 1000;
@@ -272,33 +277,35 @@ numeric line_point_dist(const Edge &working_edge, const Point &P,
 
 // Returns unit vector in the plane of triangle T, pointing outside from T from
 // the midpoint of edge e, perpendicular to e
-Vector find_direction(const Edge &e, const Triangle &T) {
-  assertm(T.is_triangle(), "Getting normal of non-valid triangle!");
-  Vector normal = T.get_normal();
-  Vector edge_vector(e.A(), e.B());
+Vector find_direction(const HalfEdge &working_edge, const Face &F) {
+  assertm(F.is_triangle(), "Getting normal of non-valid triangle!");
+  Vector normal = F.get_normal();
+  Vector edge_vector(working_edge.get_point_A(), working_edge.get_point_B());
   assertm(!(normal ^ edge_vector).is_zero(), "Zero vector!");
   Vector direction = (normal ^ edge_vector).unit();
   numeric min_side_length = std::min(
-      T.AB().get_length(), std::min(T.BC().get_length(), T.CA().get_length()));
+      F.AB().get_length(), std::min(F.BC().get_length(), F.CA().get_length()));
   numeric min_median_length =
-      std::min(Vector(T.A(), T.BC().get_midpoint()).get_length(),
-               std::min(Vector(T.B(), T.CA().get_midpoint()).get_length(),
-                        Vector(T.C(), T.AB().get_midpoint()).get_length()));
+      std::min(Vector(F.A(), F.BC().get_midpoint()).get_length(),
+               std::min(Vector(F.B(), F.CA().get_midpoint()).get_length(),
+                        Vector(F.C(), F.AB().get_midpoint()).get_length()));
   numeric delta = min_median_length / 20;
 
   bool repeat = true;
   int round = 0;
   while (repeat && round < 10) {
-    Point P1 = Point(e.get_midpoint(), delta * direction);
+    Point P1 = Point(working_edge.get_midpoint(), delta * direction);
     delta = delta / 2;
     round++;
-    if (T.is_in_triangle(P1)) {
-      if (!T.is_in_triangle(Point(e.get_midpoint(), -delta * direction))) {
+    if (F.is_in_triangle(P1)) {
+      if (!F.is_in_triangle(
+              Point(working_edge.get_midpoint(), -delta * direction))) {
         direction = numeric(-1) * direction;
         repeat = false;
       } else
         assertm(false, "Both points in triangle!");
-    } else if (!T.is_in_triangle(Point(e.get_midpoint(), -delta * direction))) {
+    } else if (!F.is_in_triangle(
+                   Point(working_edge.get_midpoint(), -delta * direction))) {
       repeat = true;
     } else {
       repeat = false;

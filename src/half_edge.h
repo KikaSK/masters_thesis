@@ -39,13 +39,15 @@ class HalfEdge {
   HalfEdgeIndex _self;
   bool _is_active;
   bool _is_checked;
+  bool _is_bounding;
 
  public:
   HalfEdge(Edge edge, MeshPointIndex A, MeshPointIndex B,
            HalfEdgeIndex previous = kInvalidEdgeIndex,
            HalfEdgeIndex next = kInvalidEdgeIndex,
            HalfEdgeIndex opposite = kInvalidEdgeIndex,
-           FaceIndex incident = kInvalidFaceIndex);
+           FaceIndex incident = kInvalidFaceIndex,
+           HalfEdgeIndex self = kInvalidEdgeIndex);
   HalfEdge() = delete;
   HalfEdge(const HalfEdge &edge) = default;
 
@@ -65,11 +67,13 @@ class HalfEdge {
 
   void set_active();
   void set_checked();
+  void set_bounding();
   void set_inside();
 
   bool is_active() const;
   bool is_checked() const;
   bool is_boundary() const;
+  bool is_bounding() const;
   bool is_inside() const;
 
   numeric get_length() const;
@@ -81,11 +85,11 @@ class HalfEdge {
 
   // partial equality of half edges, opposite edges are partially equal
   friend bool operator%(const HalfEdge &e1, const HalfEdge &e2) {
-    return (e1._edge == e2._edge);
+    return (e1._edge % e2._edge);
   }
   // total equality of half edges, including the direction
   friend bool operator==(const HalfEdge &e1, const HalfEdge &e2) {
-    return (e1._A == e2._A && e1._B == e2._B);
+    return (e1._edge == e2._edge);
   }
   friend bool operator!=(const HalfEdge &e1, const HalfEdge &e2) {
     return !(e1 == e2);

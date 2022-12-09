@@ -2,7 +2,8 @@
 
 HalfEdge::HalfEdge(Edge edge, MeshPointIndex A, MeshPointIndex B,
                    HalfEdgeIndex previous, HalfEdgeIndex next,
-                   HalfEdgeIndex opposite, FaceIndex incident)
+                   HalfEdgeIndex opposite, FaceIndex incident,
+                   HalfEdgeIndex self)
     : _edge(edge),
       _A(A),
       _B(B),
@@ -10,8 +11,10 @@ HalfEdge::HalfEdge(Edge edge, MeshPointIndex A, MeshPointIndex B,
       _next(next),
       _opposite(opposite),
       _incident(incident),
+      _self(self),
       _is_active(false),
-      _is_checked(false) {}
+      _is_checked(false),
+      _is_bounding(false) {}
 
 MeshPointIndex HalfEdge::get_A() const { return _A; }
 MeshPointIndex HalfEdge::get_B() const { return _B; }
@@ -36,17 +39,28 @@ Point HalfEdge::get_point_B() const { return _edge.B(); }
 void HalfEdge::set_active() {
   _is_active = true;
   _is_checked = false;
+  _is_bounding = false;
 }
 void HalfEdge::set_checked() {
   _is_active = false;
   _is_checked = true;
+  _is_bounding = false;
 }
 void HalfEdge::set_inside() {
   _is_active = false;
   _is_checked = false;
+  _is_bounding = false;
+}
+void HalfEdge::set_bounding() {
+  _is_active = false;
+  _is_checked = false;
+  _is_bounding = true;
 }
 
 bool HalfEdge::is_active() const { return _is_active; }
 bool HalfEdge::is_checked() const { return _is_checked; }
-bool HalfEdge::is_boundary() const { return _is_active || _is_checked; }
+bool HalfEdge::is_bounding() const { return _is_bounding; }
+bool HalfEdge::is_boundary() const {
+  return _is_active || _is_checked || _is_bounding;
+}
 bool HalfEdge::is_inside() const { return !is_boundary(); }

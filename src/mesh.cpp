@@ -7,6 +7,9 @@ Mesh::Mesh(const Triangle &T) {
   MeshPoint A(F.get_triangle().A(), 0);  // the outgoing halfedge will be AB
   MeshPoint B(F.get_triangle().B(), 1);  // the outgoing halfedge will be BC
   MeshPoint C(F.get_triangle().C(), 2);  // the outgoing halfedge will be CA
+  A.set_index(0);
+  B.set_index(1);
+  C.set_index(2);
 
   _mesh_points.push_back(A);
   _mesh_points.push_back(B);
@@ -37,6 +40,10 @@ Mesh::Mesh(const Triangle &T) {
               0    // incident face is F
   );
 
+  AB.set_index(0);
+  BC.set_index(1);
+  CA.set_index(2);
+
   AB.set_active();
   BC.set_active();
   CA.set_active();
@@ -45,15 +52,20 @@ Mesh::Mesh(const Triangle &T) {
   _mesh_edges.push_back(BC);
   _mesh_edges.push_back(CA);
 
-  _active_edges.insert(AB);
-  _active_edges.insert(BC);
-  _active_edges.insert(CA);
+  _active_edges.insert(0);
+  _active_edges.insert(1);
+  _active_edges.insert(2);
+
+  // cout_mesh();
 }
 
 void Mesh::cout_triangles() const {
   for (auto T : _mesh_triangles) {
     std::cout << T.get_triangle() << endl;
   }
+}
+void Mesh::cout_triangles_number() const {
+  std::cout << "Number of faces: " << _mesh_triangles.size() << endl;
 }
 void Mesh::cout_mesh() const {
   std::cout << "Triangles: " << endl;
@@ -99,16 +111,31 @@ bool Mesh::is_checked(HalfEdgeIndex index) const {
   return _mesh_edges[index].is_checked();
   //_checked_edges.find(_mesh_edges[index]) != _checked_edges.end();
 }
-bool Mesh::is_boundary(HalfEdgeIndex index) const {
-  return is_active(index) || is_checked(index);
+bool Mesh::is_bounding(HalfEdgeIndex index) const {
+  assertm(index < _mesh_edges.size() && index >= 0,
+          "Invalid halfedge index in is_bounding function!");
+  return _mesh_edges[index].is_bounding();
 }
-bool Mesh::is_in_mesh(const HalfEdge &halfedge) const {
-  for (auto edge : _mesh_edges) {
-    if (edge == halfedge) {
+bool Mesh::is_boundary(HalfEdgeIndex index) const {
+  return is_active(index) || is_checked(index) || is_bounding(index);
+}
+bool Mesh::is_in_mesh(const Edge &edge) const {
+  for (auto mesh_edge : _mesh_edges) {
+    // comparing only endpoints in respective order
+    if (edge == mesh_edge.get_edge()) {
       return true;
     }
   }
   return false;
+}
+HalfEdgeIndex Mesh::get_edge_index(const Edge &edge) const {
+  for (auto mesh_edge : _mesh_edges) {
+    // comparing only endpoints in respective order
+    if (edge == mesh_edge.get_edge()) {
+      return mesh_edge.get_index();
+    }
+  }
+  return kInvalidEdgeIndex;
 }
 
 HalfEdge Mesh::get_halfedge(HalfEdgeIndex index) const {
@@ -199,62 +226,81 @@ HalfEdgeIndex Mesh::get_opposite_index(HalfEdgeIndex index) const {
   return _mesh_edges[index].get_opposite();
 }
 
-unordered_set<HalfEdge> Mesh::get_active_edges() const { return _active_edges; }
-
-bool Mesh::has_active_edge(const HalfEdge &halfedge) const {
-  return _active_edges.find(halfedge) != _active_edges.end();
+FaceIndex Mesh::get_incident_face(const HalfEdgeIndex &index) const {
+  return _mesh_edges[index].get_incident();
 }
 
+unordered_set<HalfEdgeIndex> Mesh::get_active_edges() const {
+  return _active_edges;
+}
+unordered_set<HalfEdgeIndex> Mesh::get_checked_edges() const {
+  return _checked_edges;
+}
+unordered_set<HalfEdgeIndex> Mesh::get_bounding_edges() const {
+  return _bounding_edges;
+}
+vector<MeshPoint> Mesh::get_mesh_points() const { return _mesh_points; }
+vector<Face> Mesh::get_mesh_faces() const { return _mesh_triangles; }
+HalfEdgeIndex Mesh::get_active_edge() const {
+  assertm(!active_edges_empty(), "Picing edge from empty active edges list!");
+  return *_active_edges.begin();
+}
+HalfEdgeIndex Mesh::get_checked_edge() const {
+  assertm(!checked_edges_empty(), "Picing edge from empty checked edges list!");
+  return *_checked_edges.begin();
+}
+void Mesh::remove_active_edge(const HalfEdgeIndex &index) {
+  assertm(_active_edges.find(index) != _active_edges.end(),
+          "Removing non-existent active edge!");
+  _active_edges.erase(index);
+  _mesh_edges[index].set_inside();
+}
+void Mesh::add_edge_to_active(const HalfEdgeIndex &index) {
+  assertm(_active_edges.find(index) == _active_edges.end(),
+          "Inserting active edge twice!");
+  _active_edges.insert(index);
+  _mesh_edges[index].set_active();
+}
+void Mesh::remove_checked_edge(const HalfEdgeIndex &index) {
+  assertm(_checked_edges.find(index) != _checked_edges.end(),
+          "Removing non-existent checked edge!");
+  _checked_edges.erase(index);
+  _mesh_edges[index].set_inside();
+}
+void Mesh::add_edge_to_checked(const HalfEdgeIndex &index) {
+  assertm(_checked_edges.find(index) == _checked_edges.end(),
+          "Inserting checked edge twice!");
+  _checked_edges.insert(index);
+  _mesh_edges[index].set_checked();
+}
+bool Mesh::has_active_edge(const HalfEdge &halfedge) const {
+  return _active_edges.find(halfedge.get_index()) != _active_edges.end();
+}
 bool Mesh::has_active_edge(const HalfEdgeIndex &index) const {
-  assertm(index < _mesh_edges.size() && index >= 0,
-          "Invalid halfedge index in has_active_edge function!");
-  return _active_edges.find(_mesh_edges[index]) != _active_edges.end();
+  return _active_edges.find(index) != _active_edges.end();
+}
+bool Mesh::has_checked_edge(const HalfEdge &halfedge) const {
+  return _checked_edges.find(halfedge.get_index()) != _checked_edges.end();
+}
+bool Mesh::has_checked_edge(const HalfEdgeIndex &index) const {
+  return _checked_edges.find(index) != _checked_edges.end();
 }
 
 size_t Mesh::get_active_edges_size() const { return _active_edges.size(); }
-
-void Mesh::_bound_consecutive(HalfEdge *previous,
-                              const HalfEdgeIndex i_previous, HalfEdge *next,
-                              const HalfEdgeIndex i_next) const {
-  previous->set_next(i_next);
-  next->set_previous(i_previous);
+size_t Mesh::get_checked_edges_size() const { return _checked_edges.size(); }
+bool Mesh::active_edges_empty() const { return (get_active_edges_size() == 0); }
+bool Mesh::checked_edges_empty() const {
+  return (get_checked_edges_size() == 0);
 }
-
-void Mesh::_bound_opposite(HalfEdge *edge1, const HalfEdgeIndex i_edge1,
-                           HalfEdge *edge2, const HalfEdgeIndex i_edge2) {
-  edge1->set_opposite(i_edge2);
-  edge2->set_opposite(i_edge1);
-  edge1->set_inside();
-  edge2->set_inside();
-  _active_edges.erase(*edge1);
-  _active_edges.erase(*edge2);
-}
-
-void Mesh::_bound_face(const FaceIndex i_face, HalfEdge *edge1, HalfEdge *edge2,
-                       HalfEdge *edge3) const {
-  edge1->set_incident(i_face);
-  edge2->set_incident(i_face);
-  edge3->set_incident(i_face);
-}
-
-// having edge BA, we are trying to bound it with edge AB if it exists, setting
-// AB inside edge
-void Mesh::_bound_opposite_outgoing(const MeshPoint &A,
-                                    const MeshPointIndex i_B,
-                                    const HalfEdgeIndex i_BA) {
-  const std::vector<HalfEdgeIndex> A_outgoing =
-      A.get_outgoing();  // all edges outgoing from A
-  for (auto outgoing : A_outgoing) {
-    // std::cout << outgoing << endl;
-    assertm(outgoing < _mesh_edges.size(),
-            "Invalid halfedge index in _bound_opposite_outgoing function!");
-    if (_mesh_edges[outgoing].get_B() /*second point of outgoing edge*/ ==
-        i_B)  // we found edge AB
-    {
-      _bound_opposite(&(_mesh_edges[outgoing]), outgoing, &(_mesh_edges[i_BA]),
-                      i_BA);
-    }
+bool Mesh::is_boundary_point(const MeshPoint &P) const {
+  for (auto halfedge : P.get_outgoing()) {
+    if (_mesh_edges[halfedge].is_boundary()) return true;
   }
+  for (auto halfedge : P.get_outgoing()) {
+    HalfEdgeIndex incoming = get_previous_index(halfedge);
+    if (_mesh_edges[incoming].is_boundary()) return true;
+  }
+  return false;
 }
 
 // Adding triangle ABP where P is new_point
@@ -272,12 +318,22 @@ void Mesh::add_triangle(HalfEdgeIndex i_AB, Point new_point,
     Create meshpoint P (j)
   */
 
+  std::cout << "in add triangle" << endl;
+
   if (type != "new") assertm(i_P >= 0, "Invalid index of given meshpoint.");
 
   HalfEdgeIndex i_edge = _mesh_edges.size();
   MeshPointIndex i_point = _mesh_points.size();
   FaceIndex i_face = _mesh_triangles.size();
 
+  MeshPoint new_meshpoint(new_point);
+  new_meshpoint.set_index(i_point);
+
+  if (type == "new") {
+    _mesh_points.push_back(new_meshpoint);
+    i_P = i_point;
+  }
+  std::cout << i_AB << endl;
   assertm(i_AB < _mesh_edges.size(),
           "Invalid halfedge index in add_triangle function!");
   HalfEdge &AB = _mesh_edges[i_AB];
@@ -289,16 +345,11 @@ void Mesh::add_triangle(HalfEdgeIndex i_AB, Point new_point,
   Edge e_BA(AB.get_point_B(), AB.get_point_A());
   HalfEdge BA(e_BA, i_B, i_A);  // i_edge
   HalfEdgeIndex i_BA = i_edge;
+  BA.set_index(i_BA);
   _bound_opposite(&AB, i_AB, &BA, i_BA);
 
   assertm(AB.is_inside() && BA.is_inside(),
           "The edge is not set to inside edge!");
-
-  MeshPoint new_meshpoint(new_point);
-  if (type == "new") {
-    _mesh_points.push_back(new_meshpoint);
-    i_P = i_point;
-  }
 
   MeshPoint &P = _mesh_points[i_P];
 
@@ -312,10 +363,12 @@ void Mesh::add_triangle(HalfEdgeIndex i_AB, Point new_point,
   Edge e_AP(AB.get_point_A(), new_point);
   HalfEdge AP(e_AP, AB.get_A(), i_P);
   HalfEdgeIndex i_AP = i_edge + 1;
-
   Edge e_PB(new_point, AB.get_point_B());
   HalfEdge PB(e_PB, i_P, i_B);
   HalfEdgeIndex i_PB = i_edge + 2;
+
+  AP.set_index(i_AP);
+  PB.set_index(i_PB);
 
   _bound_consecutive(&BA, i_BA, &AP, i_AP);
   _bound_consecutive(&AP, i_AP, &PB, i_PB);
@@ -354,22 +407,167 @@ void Mesh::add_triangle(HalfEdgeIndex i_AB, Point new_point,
   } else if (type == "previous") {           // only edge PB is active edge
     _bound_opposite_outgoing(P, i_A, i_AP);  // try to bound AP with PA
     _mesh_edges[i_PB].set_active();
-    _active_edges.insert(_mesh_edges[i_PB]);
+    _active_edges.insert(i_PB);
   } else if (type == "next") {               // only edge AP is active edge
     _bound_opposite_outgoing(B, i_P, i_PB);  // try to bound PB with BP
     _mesh_edges[i_AP].set_active();
-    _active_edges.insert(_mesh_edges[i_AP]);
+    _active_edges.insert(i_AP);
   } else if (type == "new" ||
              type == "overlap") {  // both AP and PB are new active edges
     _mesh_edges[i_AP].set_active();
     _mesh_edges[i_PB].set_active();
-    _active_edges.insert(_mesh_edges[i_PB]);
-    _active_edges.insert(_mesh_edges[i_AP]);
+    _active_edges.insert(i_PB);
+    _active_edges.insert(i_AP);
   }
   /*
     Insert the new faces to lists
   */
   _mesh_triangles.push_back(F);
+}
 
-  if (type == "new") _mesh_points.push_back(P);
+// checks Delaunay constraint for triangle T
+bool Mesh::check_Delaunay(const Mesh &mesh, const Triangle &new_triangle,
+                          const HalfEdge &working_edge,
+                          const Face &incident_face) const {
+  // std::cout << "in Delaunay: " << endl;
+  // std::cout << "Face: " << incident_face.get_triangle() << endl;
+  // std::cout << "Working edge: " << working_edge.get_edge() << endl;
+  MeshPoint other_point =
+      mesh.get_meshpoint(mesh.get_next_halfedge(working_edge).get_B());
+  // std::cout << "Other point: " << other_point << endl;
+
+  assertm(new_triangle.is_triangle(),
+          "Checking Delaunay of non valid triangle!");
+
+  Point circumcenter = new_triangle.get_circumcenter();
+
+  numeric distA = Vector(circumcenter, new_triangle.A()).get_length();
+  numeric distB = Vector(circumcenter, new_triangle.B()).get_length();
+  numeric distC = Vector(circumcenter, new_triangle.C()).get_length();
+  assertm(abs(distA - distB) + abs(distB - distC) + abs(distC - distA) < kEps,
+          "Wrong circumcenter in Delaunay!");
+  numeric dist = distA;
+  std::cout << "Dist: " << dist << endl;
+  const Triangle &T = new_triangle;
+
+  // gravity center condition
+  for (Face face : mesh.get_mesh_faces()) {
+    Point gravity_center = face.get_gravity_center();
+    numeric gc_dist = Vector(circumcenter, gravity_center).get_length();
+    std::cout << "GC Dist: " << gc_dist << endl;
+
+    if (gc_dist < dist) {
+      if (!(T.AB() % face.AB() || T.AB() % face.BC() || T.AB() % face.CA() ||
+            T.BC() % face.AB() || T.BC() % face.BC() || T.BC() % face.CA() ||
+            T.CA() % face.AB() || T.CA() % face.BC() || T.CA() % face.CA())) {
+        std::cout << "Failing on " << endl
+                  << T << endl
+                  << face.get_triangle() << endl;
+        std::cout << "Delaunay returned FALSE0!" << endl;
+        return false;
+      }
+    }
+
+    /*
+    Point Tr_circumcenter = Tr.get_circumcenter();
+    numeric tr_radius = Vector(Tr_circumcenter, Tr.A()).get_length();
+    numeric tr_dist = Vector(Tr_circumcenter, T.C()).get_length();
+    if(tr_dist<tr_radius)
+    {
+      //breaking others triangle delaunay
+      return false;
+    }
+    */
+
+    if (face.A() != T.A() && face.A() != T.B() && face.A() != T.C() &&
+        face.A() != other_point.get_point()) {
+      numeric dist1 = Vector(circumcenter, face.A()).get_length();
+      if (dist1 < dist) {
+        std::cout << "Delaunay returned FALSE1!" << endl;
+        return false;
+      }
+    }
+    if (face.B() != T.A() && face.B() != T.B() && face.B() != T.C() &&
+        face.B() != other_point.get_point()) {
+      numeric dist1 = Vector(circumcenter, face.B()).get_length();
+      if (dist1 < dist) {
+        std::cout << "Delaunay returned FALSE2!" << endl;
+        return false;
+      }
+    }
+    if (face.C() != T.A() && face.C() != T.B() && face.C() != T.C() &&
+        face.C() != other_point.get_point()) {
+      numeric dist1 = Vector(circumcenter, face.C()).get_length();
+      if (dist1 < dist) {
+        std::cout << "Delaunay returned FALSE3!" << endl;
+        return false;
+      }
+    }
+  }
+
+  // std::cout << "Delaunay returned TRUE!" << endl;
+  return true;
+}
+
+// makes .obj file from mesh triangles
+void Mesh::obj_format(const std::string &name) const {
+  // std::cout << "in obj_format" << endl;
+  std::ofstream out(name + ".obj");
+  for (size_t i = 0; i < _mesh_points.size(); ++i) {
+    out << "v " << _mesh_points[i].x() << " " << _mesh_points[i].y() << " "
+        << _mesh_points[i].z() << endl;
+  }
+  for (size_t i = 0; i < _mesh_triangles.size(); ++i) {
+    HalfEdge halfedge = get_halfedge(_mesh_triangles[i].get_halfedge());
+    HalfEdge next_halfedge =
+        get_next_halfedge(_mesh_triangles[i].get_halfedge());
+    out << "f " << halfedge.get_A() + 1 << " " << halfedge.get_B() + 1 << " "
+        << next_halfedge.get_B() + 1 << endl;
+  }
+}
+
+// private member functions
+
+void Mesh::_bound_consecutive(HalfEdge *previous,
+                              const HalfEdgeIndex i_previous, HalfEdge *next,
+                              const HalfEdgeIndex i_next) const {
+  previous->set_next(i_next);
+  next->set_previous(i_previous);
+}
+
+void Mesh::_bound_opposite(HalfEdge *edge1, const HalfEdgeIndex i_edge1,
+                           HalfEdge *edge2, const HalfEdgeIndex i_edge2) {
+  edge1->set_opposite(i_edge2);
+  edge2->set_opposite(i_edge1);
+  edge1->set_inside();
+  edge2->set_inside();
+  _active_edges.erase(i_edge1);
+  _active_edges.erase(i_edge2);
+}
+
+void Mesh::_bound_face(const FaceIndex i_face, HalfEdge *edge1, HalfEdge *edge2,
+                       HalfEdge *edge3) const {
+  edge1->set_incident(i_face);
+  edge2->set_incident(i_face);
+  edge3->set_incident(i_face);
+}
+
+// having edge BA, we are trying to bound it with edge AB if it exists, setting
+// AB inside edge
+void Mesh::_bound_opposite_outgoing(const MeshPoint &A,
+                                    const MeshPointIndex i_B,
+                                    const HalfEdgeIndex i_BA) {
+  const std::vector<HalfEdgeIndex> A_outgoing =
+      A.get_outgoing();  // all edges outgoing from A
+  for (auto outgoing : A_outgoing) {
+    // std::cout << outgoing << endl;
+    assertm(outgoing < _mesh_edges.size(),
+            "Invalid halfedge index in _bound_opposite_outgoing function!");
+    if (_mesh_edges[outgoing].get_B() /*second point of outgoing edge*/ ==
+        i_B)  // we found edge AB
+    {
+      _bound_opposite(&(_mesh_edges[outgoing]), outgoing, &(_mesh_edges[i_BA]),
+                      i_BA);
+    }
+  }
 }

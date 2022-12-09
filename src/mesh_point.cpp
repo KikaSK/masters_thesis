@@ -35,4 +35,11 @@ void MeshPoint::add_outgoing(HalfEdgeIndex outgoing) {
   if (!has_outgoing(outgoing)) _outgoing.push_back(outgoing);
 }
 
+void MeshPoint::set_index(MeshPointIndex index) {
+  assertm(index != kInvalidPointIndex, "Setting invalid index!");
+  _self = index;
+}
+
 std::vector<HalfEdgeIndex> MeshPoint::get_outgoing() const { return _outgoing; }
+
+MeshPointIndex MeshPoint::get_index() const { return _self; }

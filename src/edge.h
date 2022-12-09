@@ -34,9 +34,14 @@ class Edge {
   numeric get_length() const;
   Point get_midpoint() const;
 
-  friend bool operator==(const Edge &e1, const Edge &e2) {
+  // partial equality of edges, opposite edges are partially equal
+  friend bool operator%(const Edge &e1, const Edge &e2) {
     return (e1._A == e2._A && e1._B == e2._B) ||
            (e1._A == e2._B && e1._B == e2._A);
+  }
+  // total equality of edges, including direction
+  friend bool operator==(const Edge &e1, const Edge &e2) {
+    return (e1._A == e2._A && e1._B == e2._B);
   }
   friend bool operator!=(const Edge &e1, const Edge &e2) { return !(e1 == e2); }
 
