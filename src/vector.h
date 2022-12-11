@@ -63,7 +63,7 @@ class Vector {
     return Vector(a._x * k, a._y * k, a._z * k);
   }
   friend Vector operator/(const Vector &a, const numeric k) {
-    assertm(abs(k) >= kEps, "Division by 0.");
+    assertm(abs(k) >= (10e-4) * kEps, "Division by 0.");
     numeric frac = inverse(k);
     return Vector(a._x * frac, a._y * frac, a._z * frac);
   }

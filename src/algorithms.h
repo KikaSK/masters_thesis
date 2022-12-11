@@ -4,9 +4,11 @@
 #include <optional>
 #include <vector>
 
+#include "assertm.h"
 #include "edge.h"
 #include "function.h"
 #include "mesh.h"
+#include "point.h"
 #include "triangle.h"
 
 using std::vector;

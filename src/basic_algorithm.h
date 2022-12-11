@@ -3,6 +3,8 @@
 
 #include <vector>
 
+#include "algorithms.h"
+#include "assertm.h"
 #include "bounding_box.h"
 #include "function.h"
 #include "mesh.h"
@@ -46,25 +48,24 @@ class BasicAlgorithm {
   bool fix_proj(const HalfEdge &working_edge, const Point &projected,
                 const Face &incident_face, const MeshPoint &prev,
                 const MeshPoint &next);
-  bool fix_prev_next(const Edge &working_edge,
-                     const Triangle &neighbour_triangle, const bool is_prev,
-                     const bool Delaunay);
-  bool fix_overlap(const Edge &working_edge, const Triangle &neighbour_triangle,
-                   Point overlap_point, const bool Delaunay);
-  int fix_holes(const Edge &working_edge, const Triangle &neighbour_triangle);
-  bool fix_holes2(const Edge &working_edge);
-  bool fix_breakers(const Edge &working_edge, const Point &projected,
-                    const Triangle &neighbour_triangle, const bool Delaunay);
-  bool fix_same_points(const Edge &working_edge, const Point &projected,
-                       const Triangle &neighbour_triangle);
+  bool fix_prev_next(const HalfEdge &working_edge, const Face &incident_face,
+                     const bool is_prev, const bool Delaunay);
+  bool fix_overlap(const HalfEdge &working_edge, const Face &incident_face,
+                   const MeshPoint &overlap_point, const bool Delaunay);
+  int fix_holes(const HalfEdge &working_edge, const Face &incident_face);
+  bool fix_holes2(const HalfEdge &working_edge);
+  bool fix_breakers(const HalfEdge &working_edge, const Point &projected,
+                    const Face &incident_face, const bool Delaunay);
+  bool fix_same_points(const HalfEdge &working_edge, const Point &projected,
+                       const Face &incident_face);
 
   pair<MeshPoint, MeshPoint> find_prev_next(const HalfEdge &working_edge,
                                             const Face &incident_face) const;
 
   Point get_projected(const HalfEdge &working_edge,
                       const Face &incident_face) const;
-  bool overlap_normals_check(const Point candidate,
-                             const Edge &working_edge) const;
+  bool overlap_normals_check(const MeshPoint &candidate,
+                             const HalfEdge &working_edge) const;
   std::optional<vector<MeshPoint>> find_close_points(
       const Point &P, const HalfEdge &working_edge,
       const Face &incident_face) const;
@@ -75,7 +76,8 @@ class BasicAlgorithm {
                                const Face &incident_face) const;
 
   void create_triangle(const HalfEdge &working_edge, const Point &P,
-                       const std::string type);
+                       const std::string type,
+                       const MeshPointIndex index_P = -1);
   bool good_edges(const HalfEdge &working_edge, const Point &P) const;
   bool basic_triangle(const HalfEdge &working_edge, const Face &incident_face,
                       const MeshPoint &prev, const MeshPoint &next);
@@ -85,6 +87,7 @@ class BasicAlgorithm {
   bool is_bounding(const HalfEdgeIndex &halfedge_index) const;
   bool is_border(const HalfEdgeIndex &halfedge_index) const;
   bool is_border_point(const MeshPoint &P) const;
+  bool is_border_point(const Point &P) const;
   void delete_from_active(const HalfEdgeIndex &halfedge_index);
   void delete_from_checked(const HalfEdgeIndex &halfedge_index);
   void push_edge_to_active(const HalfEdgeIndex &halfedge_index);

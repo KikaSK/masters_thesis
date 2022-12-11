@@ -12,6 +12,7 @@
 #include "assertm.h"
 #include "basic_algorithm.h"
 #include "bounding_box.h"
+#include "constants.h"
 #include "edge.h"
 #include "function.h"
 #include "mesh.h"
@@ -144,6 +145,7 @@ void run_input(const int i, const string folder, const string index) {
   numeric seed_point_z = ex_to<numeric>(stod(parsed_input[12]));
   Point seed_point(seed_point_x, seed_point_y, seed_point_z);
 
+  set_epsylon(e_size);
   vector<ex> input_dF;
   input_dF.push_back(diff(input_F, x));
   input_dF.push_back(diff(input_F, y));
@@ -153,6 +155,14 @@ void run_input(const int i, const string folder, const string index) {
 
   Triangle seed_triangle =
       find_seed_triangle(F, seed_point, e_size, my_bounding_box);
+
+  assertm(seed_triangle.AB().get_length() > e_size / 2 &&
+              seed_triangle.AB().get_length() < 2 * e_size &&
+              seed_triangle.BC().get_length() > e_size / 2 &&
+              seed_triangle.BC().get_length() < 2 * e_size &&
+              seed_triangle.CA().get_length() > e_size / 2 &&
+              seed_triangle.CA().get_length() < 2 * e_size,
+          "Wrong seed triangle!");
 
   assertm(seed_triangle.AB() != seed_triangle.BC() &&
               seed_triangle.AB() != seed_triangle.CA() &&
@@ -181,7 +191,8 @@ int main() {
   // spusti vstup "input0" v priecinku "inputs/finite_surfaces/sphere",
   // vystupny subor vlozi do priecinka "/outputs" a nazve ho s predponou
   // "my_run_input"
-  run_input(0, "/finite_surfaces/sphere", "my_run_input");
+  // run_input(0, "/finite_surfaces/sphere", "my_run_input");
+  run_input(4, "/finite_surfaces/sphere", "my_run_input");
 
   // spusti vstupy "input0", "input1", "input2" v priecinku
   // "inputs/infinite_surfaces/hyperboloid", vystupny subor vlozi do priecinka

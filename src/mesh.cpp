@@ -307,6 +307,9 @@ bool Mesh::is_boundary_point(const MeshPoint &P) const {
 void Mesh::add_triangle(HalfEdgeIndex i_AB, Point new_point,
                         std::string type /*new, next, previous, overlap, fill*/,
                         MeshPointIndex i_P) {
+  assertm(type == "new" || type == "next" || type == "previous" ||
+              type == "overlap" || type == "fill",
+          "Invalid type!");
   /*
   Get AB from the list of halfedges (edges[i_AB])
   i = edges.size
@@ -318,7 +321,7 @@ void Mesh::add_triangle(HalfEdgeIndex i_AB, Point new_point,
     Create meshpoint P (j)
   */
 
-  std::cout << "in add triangle" << endl;
+  // std::cout << "in add triangle" << endl;
 
   if (type != "new") assertm(i_P >= 0, "Invalid index of given meshpoint.");
 
@@ -333,7 +336,7 @@ void Mesh::add_triangle(HalfEdgeIndex i_AB, Point new_point,
     _mesh_points.push_back(new_meshpoint);
     i_P = i_point;
   }
-  std::cout << i_AB << endl;
+  // std::cout << i_AB << endl;
   assertm(i_AB < _mesh_edges.size(),
           "Invalid halfedge index in add_triangle function!");
   HalfEdge &AB = _mesh_edges[i_AB];
@@ -425,6 +428,26 @@ void Mesh::add_triangle(HalfEdgeIndex i_AB, Point new_point,
   _mesh_triangles.push_back(F);
 }
 
+// returns vector of points inside Delaunay sphere
+vector<MeshPoint> Mesh::get_breakers(const Triangle &triangle) const {
+  assertm(triangle.is_triangle(), "Getting breakers of non valid triangle!");
+  Point circumcenter = triangle.get_circumcenter();
+  numeric dist = Vector(circumcenter, triangle.A()).get_length();
+
+  vector<MeshPoint> breakers;
+  for (MeshPoint vertex : _mesh_points) {
+    numeric dist1 = Vector(circumcenter, vertex.get_point()).get_length();
+    if (dist1 < 1.1 * dist && vertex.get_point() != triangle.A() &&
+        vertex.get_point() != triangle.B() &&
+        vertex.get_point() != triangle.C()) {
+      bool found = false;
+
+      if (is_boundary_point(vertex)) breakers.push_back(vertex);
+    }
+  }
+  return breakers;
+}
+
 // checks Delaunay constraint for triangle T
 bool Mesh::check_Delaunay(const Mesh &mesh, const Triangle &new_triangle,
                           const HalfEdge &working_edge,
@@ -446,23 +469,19 @@ bool Mesh::check_Delaunay(const Mesh &mesh, const Triangle &new_triangle,
   numeric distC = Vector(circumcenter, new_triangle.C()).get_length();
   assertm(abs(distA - distB) + abs(distB - distC) + abs(distC - distA) < kEps,
           "Wrong circumcenter in Delaunay!");
-  numeric dist = distA;
-  std::cout << "Dist: " << dist << endl;
+  numeric dist = std::min(std::min(distA, distB), distC);
   const Triangle &T = new_triangle;
 
   // gravity center condition
   for (Face face : mesh.get_mesh_faces()) {
     Point gravity_center = face.get_gravity_center();
     numeric gc_dist = Vector(circumcenter, gravity_center).get_length();
-    std::cout << "GC Dist: " << gc_dist << endl;
 
-    if (gc_dist < dist) {
+    if (gc_dist < dist + kEps) {
       if (!(T.AB() % face.AB() || T.AB() % face.BC() || T.AB() % face.CA() ||
             T.BC() % face.AB() || T.BC() % face.BC() || T.BC() % face.CA() ||
-            T.CA() % face.AB() || T.CA() % face.BC() || T.CA() % face.CA())) {
-        std::cout << "Failing on " << endl
-                  << T << endl
-                  << face.get_triangle() << endl;
+            T.CA() % face.AB() || T.CA() % face.BC() || T.CA() % face.CA() ||
+            T.C() == face.A() || T.C() == face.B() || T.C() == face.C())) {
         std::cout << "Delaunay returned FALSE0!" << endl;
         return false;
       }
@@ -482,7 +501,7 @@ bool Mesh::check_Delaunay(const Mesh &mesh, const Triangle &new_triangle,
     if (face.A() != T.A() && face.A() != T.B() && face.A() != T.C() &&
         face.A() != other_point.get_point()) {
       numeric dist1 = Vector(circumcenter, face.A()).get_length();
-      if (dist1 < dist) {
+      if (dist1 < dist + kEps) {
         std::cout << "Delaunay returned FALSE1!" << endl;
         return false;
       }
@@ -490,7 +509,7 @@ bool Mesh::check_Delaunay(const Mesh &mesh, const Triangle &new_triangle,
     if (face.B() != T.A() && face.B() != T.B() && face.B() != T.C() &&
         face.B() != other_point.get_point()) {
       numeric dist1 = Vector(circumcenter, face.B()).get_length();
-      if (dist1 < dist) {
+      if (dist1 < dist + kEps) {
         std::cout << "Delaunay returned FALSE2!" << endl;
         return false;
       }
@@ -498,7 +517,7 @@ bool Mesh::check_Delaunay(const Mesh &mesh, const Triangle &new_triangle,
     if (face.C() != T.A() && face.C() != T.B() && face.C() != T.C() &&
         face.C() != other_point.get_point()) {
       numeric dist1 = Vector(circumcenter, face.C()).get_length();
-      if (dist1 < dist) {
+      if (dist1 < dist + kEps) {
         std::cout << "Delaunay returned FALSE3!" << endl;
         return false;
       }

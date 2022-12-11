@@ -92,6 +92,7 @@ class Mesh {
   bool check_Delaunay(const Mesh &mesh, const Triangle &new_triangle,
                       const HalfEdge &working_edge,
                       const Face &incident_face) const;
+  vector<MeshPoint> get_breakers(const Triangle &T) const;
 
   void obj_format(const std::string &name) const;
 };

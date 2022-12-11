@@ -4,10 +4,6 @@
 
 #include <utility>
 
-#include "assertm.h"
-#include "function.h"
-#include "point.h"
-
 using namespace GiNaC;
 using std::pair;
 
@@ -218,7 +214,7 @@ numeric angle(const Mesh &mesh, const HalfEdge &working_edge, const Point &P,
 
   assertm(angle >= 0, "Angle in the wrong range!");
 
-  Vector ABcrossAN = (AB ^ AC);
+  Vector ABcrossAC = (AB ^ AC);
   Vector ABcrossAP = (AB ^ AP);
 
   // if same_direction is > 0 the normals are pointing in aprox same direction
@@ -226,7 +222,7 @@ numeric angle(const Mesh &mesh, const HalfEdge &working_edge, const Point &P,
 
   // TODO check if we need this if I have good normals
 
-  numeric same_direction = ABcrossAP * ABcrossAN;
+  numeric same_direction = ABcrossAP * ABcrossAC;
 
   if (same_direction > 0) {
     angle = -angle;
@@ -240,8 +236,8 @@ numeric angle(const Mesh &mesh, const HalfEdge &working_edge, const Point &P,
 // true if angle is between 0 and 3*pi/4 with respect to neighbour triangle
 bool good_orientation(const Mesh &mesh, const HalfEdge &working_edge,
                       const Point &P, const Face &incident_face) {
-  return angle(mesh, working_edge, P, incident_face, true) > 0 &&
-         angle(mesh, working_edge, P, incident_face, true) <
+  return angle(mesh, working_edge, P, incident_face, false) > 0 &&
+         angle(mesh, working_edge, P, incident_face, false) <
              3 * ex_to<numeric>(Pi.evalf()) / 4;
 }
 

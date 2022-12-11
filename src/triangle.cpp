@@ -2,8 +2,6 @@
 
 #include <iostream>
 
-#include "assertm.h"
-
 Triangle::Triangle(Point A, Point B, Point C)
     : _A(A), _B(B), _C(C), _AB(A, B), _BC(B, C), _CA(C, A) {
   assertm(A != B && B != C && A != C,
@@ -39,7 +37,8 @@ bool Triangle::is_triangle() const {
   auto a = _AB.get_length();
   auto b = _BC.get_length();
   auto c = _CA.get_length();
-  return (a + b > c + kEps) && (b + c > a + kEps) && (a + c > b + kEps);
+  return (a + b > c + 100 * kEps) && (b + c > a + 100 * kEps) &&
+         (a + c > b + 100 * kEps);
 }
 
 // returns unit normal vector of triangle
@@ -81,7 +80,7 @@ bool Triangle::is_in_triangle(Point P) const {
   // std::cout << endl << endl << "In the is_in_triangle algorithm!" << endl;
   // std::cout<< "Points: " << endl << "A: " << _A << " B: " <<_B << " C: " <<
   // _C << " P: " << P <<endl;
-
+  // std::cout << "triangle " << *this << endl;
   assertm(is_triangle(), "Non valid triangle!");
 
   // vectors
@@ -101,7 +100,7 @@ bool Triangle::is_in_triangle(Point P) const {
 
   numeric denominator = dot00 * dot11 - dot01 * dot01;
 
-  assertm(abs(denominator) > kEps, "Denominator is zero!");
+  assertm(abs(denominator) > (10e-4) * kEps, "Denominator is zero!");
 
   numeric u = (dot11 * dot02 - dot01 * dot12) / denominator;
   numeric v = (dot00 * dot12 - dot01 * dot02) / denominator;
