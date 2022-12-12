@@ -56,6 +56,7 @@ Mesh::Mesh(const Triangle &T) {
   _active_edges.insert(1);
   _active_edges.insert(2);
 
+  edges_check("in mesh constructor:");
   // cout_mesh();
 }
 
@@ -103,17 +104,22 @@ void Mesh::cout_mesh() const {
 bool Mesh::is_active(HalfEdgeIndex index) const {
   assertm(index < _mesh_edges.size() && index >= 0,
           "Invalid halfedge index in is_active function!");
+  assertm(_mesh_edges[index].is_active() == has_active_edge(index),
+          "Active edges inconsistent!");
   return _mesh_edges[index].is_active();
 }
 bool Mesh::is_checked(HalfEdgeIndex index) const {
   assertm(index < _mesh_edges.size() && index >= 0,
           "Invalid halfedge index in is_cheked function!");
+  assertm(_mesh_edges[index].is_checked() == has_checked_edge(index),
+          "Checked edges inconsistent!");
   return _mesh_edges[index].is_checked();
   //_checked_edges.find(_mesh_edges[index]) != _checked_edges.end();
 }
 bool Mesh::is_bounding(HalfEdgeIndex index) const {
   assertm(index < _mesh_edges.size() && index >= 0,
           "Invalid halfedge index in is_bounding function!");
+  assertm(!_mesh_edges[index].is_bounding(), "Found bounding edge!");
   return _mesh_edges[index].is_bounding();
 }
 bool Mesh::is_boundary(HalfEdgeIndex index) const {
@@ -129,7 +135,7 @@ bool Mesh::is_in_mesh(const Edge &edge) const {
   return false;
 }
 HalfEdgeIndex Mesh::get_edge_index(const Edge &edge) const {
-  for (auto mesh_edge : _mesh_edges) {
+  for (HalfEdge mesh_edge : _mesh_edges) {
     // comparing only endpoints in respective order
     if (edge == mesh_edge.get_edge()) {
       return mesh_edge.get_index();
@@ -240,6 +246,7 @@ unordered_set<HalfEdgeIndex> Mesh::get_bounding_edges() const {
   return _bounding_edges;
 }
 vector<MeshPoint> Mesh::get_mesh_points() const { return _mesh_points; }
+vector<HalfEdge> Mesh::get_mesh_edges() const { return _mesh_edges; }
 vector<Face> Mesh::get_mesh_faces() const { return _mesh_triangles; }
 HalfEdgeIndex Mesh::get_active_edge() const {
   assertm(!active_edges_empty(), "Picing edge from empty active edges list!");
@@ -476,17 +483,17 @@ bool Mesh::check_Delaunay(const Mesh &mesh, const Triangle &new_triangle,
   for (Face face : mesh.get_mesh_faces()) {
     Point gravity_center = face.get_gravity_center();
     numeric gc_dist = Vector(circumcenter, gravity_center).get_length();
-
-    if (gc_dist < dist + kEps) {
-      if (!(T.AB() % face.AB() || T.AB() % face.BC() || T.AB() % face.CA() ||
-            T.BC() % face.AB() || T.BC() % face.BC() || T.BC() % face.CA() ||
-            T.CA() % face.AB() || T.CA() % face.BC() || T.CA() % face.CA() ||
-            T.C() == face.A() || T.C() == face.B() || T.C() == face.C())) {
-        std::cout << "Delaunay returned FALSE0!" << endl;
-        return false;
-      }
-    }
-
+    /*
+          if (gc_dist < dist - kEps) {
+            if (!(T.AB() % face.AB() || T.AB() % face.BC() || T.AB() % face.CA()
+       || T.BC() % face.AB() || T.BC() % face.BC() || T.BC() % face.CA() ||
+                  T.CA() % face.AB() || T.CA() % face.BC() || T.CA() % face.CA()
+       || T.C() == face.A() || T.C() == face.B() || T.C() == face.C())) {
+              std::cout << "Delaunay returned FALSE0!" << endl;
+              return false;
+            }
+          }
+      */
     /*
     Point Tr_circumcenter = Tr.get_circumcenter();
     numeric tr_radius = Vector(Tr_circumcenter, Tr.A()).get_length();
@@ -501,7 +508,7 @@ bool Mesh::check_Delaunay(const Mesh &mesh, const Triangle &new_triangle,
     if (face.A() != T.A() && face.A() != T.B() && face.A() != T.C() &&
         face.A() != other_point.get_point()) {
       numeric dist1 = Vector(circumcenter, face.A()).get_length();
-      if (dist1 < dist + kEps) {
+      if (dist1 < dist - 10 * kEps) {
         std::cout << "Delaunay returned FALSE1!" << endl;
         return false;
       }
@@ -509,7 +516,7 @@ bool Mesh::check_Delaunay(const Mesh &mesh, const Triangle &new_triangle,
     if (face.B() != T.A() && face.B() != T.B() && face.B() != T.C() &&
         face.B() != other_point.get_point()) {
       numeric dist1 = Vector(circumcenter, face.B()).get_length();
-      if (dist1 < dist + kEps) {
+      if (dist1 < dist - 10 * kEps) {
         std::cout << "Delaunay returned FALSE2!" << endl;
         return false;
       }
@@ -517,7 +524,7 @@ bool Mesh::check_Delaunay(const Mesh &mesh, const Triangle &new_triangle,
     if (face.C() != T.A() && face.C() != T.B() && face.C() != T.C() &&
         face.C() != other_point.get_point()) {
       numeric dist1 = Vector(circumcenter, face.C()).get_length();
-      if (dist1 < dist + kEps) {
+      if (dist1 < dist - 10 * kEps) {
         std::cout << "Delaunay returned FALSE3!" << endl;
         return false;
       }
@@ -571,8 +578,8 @@ void Mesh::_bound_face(const FaceIndex i_face, HalfEdge *edge1, HalfEdge *edge2,
   edge3->set_incident(i_face);
 }
 
-// having edge BA, we are trying to bound it with edge AB if it exists, setting
-// AB inside edge
+// having edge BA, we are trying to bound it with edge AB if it exists,
+// setting AB inside edge
 void Mesh::_bound_opposite_outgoing(const MeshPoint &A,
                                     const MeshPointIndex i_B,
                                     const HalfEdgeIndex i_BA) {
@@ -588,5 +595,50 @@ void Mesh::_bound_opposite_outgoing(const MeshPoint &A,
       _bound_opposite(&(_mesh_edges[outgoing]), outgoing, &(_mesh_edges[i_BA]),
                       i_BA);
     }
+  }
+}
+
+void Mesh::edges_check(const std::string &message) const {
+  std::cout << "Edges check " << message << endl;
+  for (auto edge : _mesh_edges) {
+    const auto edge_index = edge.get_index();
+    bool is_ok = true;
+    if (edge.is_checked() != is_checked(edge_index)) {
+      std::cout << "Inconsistent checked edges!" << endl;
+      is_ok = false;
+    }
+    if (edge.is_active() != is_active(edge_index)) {
+      std::cout << "Inconsistent active edges!" << endl;
+      is_ok = false;
+    }
+    if (edge.is_bounding()) {
+      std::cout << "Found bounding edge!" << endl;
+      is_ok = false;
+    }
+    if (edge.is_inside() !=
+        (!is_active(edge_index) && !is_checked(edge_index))) {
+      std::cout << "Inconsistent inside edges!" << endl;
+      is_ok = false;
+    }
+    if (edge.is_boundary() && edge.get_opposite() != kInvalidEdgeIndex) {
+      std::cout << "Inconsistent boundary edges case 1!" << endl;
+      is_ok = false;
+    }
+    if (edge.is_inside() && edge.get_opposite() == kInvalidEdgeIndex) {
+      std::cout << "Inconsistent boundary edges case 2!" << endl;
+      is_ok = false;
+    }
+    if (edge.is_boundary() &&
+        is_in_mesh(Edge(edge.get_point_B(), edge.get_point_A()))) {
+      std::cout << "Inconsistent opposite edges!" << endl;
+      is_ok = false;
+    }
+    if (edge != _mesh_edges[edge.get_index()]) {
+      std::cout << "Inconsistent indices!" << endl;
+      is_ok = false;
+    }
+
+    if (!is_ok) assertm(false, "Edge check failed!");
+    return;
   }
 }

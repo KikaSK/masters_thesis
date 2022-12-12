@@ -40,8 +40,9 @@ vector<HalfEdgeIndex> connect_edges(const vector<HalfEdgeIndex> &v1,
 // &v2);
 
 // angle BAP in range (-Pi, Pi) with respect to neighbour triangle
-numeric angle(const Mesh &mesh, const HalfEdge &working_edge, const Point &P,
-              const Face &incident_face, const bool clockwise);
+std::optional<numeric> angle(const Mesh &mesh, const HalfEdge &working_edge,
+                             const Point &P, const Face &incident_face,
+                             const bool clockwise);
 
 // true if angle is between 0 and 3*pi/4 with respect to neighbour triangle
 bool good_orientation(const Mesh &mesh, const HalfEdge &working_edge,

@@ -182,10 +182,11 @@ vector<Point> connect_points(const vector<Point> &v1, const vector<Point> &v2) {
 */
 
 // angle BAP in range (-Pi, Pi) with respect to neighbour triangle
-numeric angle(const Mesh &mesh, const HalfEdge &working_edge, const Point &P,
-              const Face &incident_face, const bool clockwise) {
+std::optional<numeric> angle(const Mesh &mesh, const HalfEdge &working_edge,
+                             const Point &P, const Face &incident_face,
+                             const bool clockwise) {
   if (P == working_edge.get_point_A() || P == working_edge.get_point_B())
-    return false;
+    return std::nullopt;
 
   Point A = mesh.get_meshpoint(working_edge.get_A()).get_point();
   Point B = mesh.get_meshpoint(working_edge.get_B()).get_point();
@@ -194,7 +195,7 @@ numeric angle(const Mesh &mesh, const HalfEdge &working_edge, const Point &P,
   if (clockwise) std::swap(A, B);
 
   Triangle T = Triangle(A, B, P);
-  if (!T.is_triangle()) return false;
+  if (!T.is_triangle()) return std::nullopt;
   assertm(incident_face.is_triangle(), "Invalid incident triangle!");
 
   // third point in neighbour triangle
@@ -236,9 +237,14 @@ numeric angle(const Mesh &mesh, const HalfEdge &working_edge, const Point &P,
 // true if angle is between 0 and 3*pi/4 with respect to neighbour triangle
 bool good_orientation(const Mesh &mesh, const HalfEdge &working_edge,
                       const Point &P, const Face &incident_face) {
-  return angle(mesh, working_edge, P, incident_face, false) > 0 &&
-         angle(mesh, working_edge, P, incident_face, false) <
-             3 * ex_to<numeric>(Pi.evalf()) / 4;
+  std::optional<numeric> angle1 =
+      angle(mesh, working_edge, P, incident_face, false);
+  std::optional<numeric> angle2 =
+      angle(mesh, working_edge, P, incident_face, false);
+  assertm(angle1.has_value() && angle2.has_value(),
+          "Angle does not have value!");
+  return angle1.value() > 0 &&
+         angle2.value() < 3 * ex_to<numeric>(Pi.evalf()) / 4;
 }
 
 // https://math.stackexchange.com/questions/1905533/find-perpendicular-distance-from-point-to-line-in-3d
@@ -255,14 +261,18 @@ numeric line_point_dist(const Mesh &mesh, const HalfEdge &working_edge,
   numeric t = AP * AB_unit;
   Point p = Point(working_edge.get_point_A(), t * AB_unit);
 
-  numeric angle1 = angle(mesh, working_edge, P, incident_face, true);
-  numeric angle2 =
+  std::optional<numeric> angle1 =
+      angle(mesh, working_edge, P, incident_face, true);
+  std::optional<numeric> angle2 =
       angle(mesh, working_edge, P, incident_face, false);  // anticlockwise
 
-  if (abs(angle1) <= ex_to<numeric>(Pi.evalf()) / 2 &&
-      abs(angle2) <= ex_to<numeric>(Pi.evalf()) / 2) {
+  assertm(angle1.has_value() && angle2.has_value(),
+          "Angles does not have value!");
+
+  if (abs(angle1.value()) <= ex_to<numeric>(Pi.evalf()) / 2 &&
+      abs(angle2.value()) <= ex_to<numeric>(Pi.evalf()) / 2) {
     return Vector(P, p).get_length();
-  } else if (abs(angle1) > ex_to<numeric>(Pi.evalf()) / 2) {
+  } else if (abs(angle1.value()) > ex_to<numeric>(Pi.evalf()) / 2) {
     return Vector(working_edge.get_point_A(), P).get_length();
   } else {
     return Vector(working_edge.get_point_B(), P).get_length();

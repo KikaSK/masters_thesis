@@ -32,7 +32,8 @@ class Point {
   numeric z() const;
 
   friend std::ostream &operator<<(std::ostream &os, const Point &A) {
-    os << '[' << A._x << ',' << A._y << ',' << A._z << ']';
+    os << '[' << (A._x).to_double() << ',' << (A._y).to_double() << ','
+       << (A._z).to_double() << ']';
     return os;
   }
   friend std::ostream &operator<<(std::ostream &os, const Point *const A) {

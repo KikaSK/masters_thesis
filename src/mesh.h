@@ -71,6 +71,7 @@ class Mesh {
   unordered_set<HalfEdgeIndex> get_checked_edges() const;
   unordered_set<HalfEdgeIndex> get_bounding_edges() const;
   vector<MeshPoint> get_mesh_points() const;
+  vector<HalfEdge> get_mesh_edges() const;
   vector<Face> get_mesh_faces() const;
   HalfEdgeIndex get_active_edge() const;
   HalfEdgeIndex get_checked_edge() const;
@@ -95,4 +96,6 @@ class Mesh {
   vector<MeshPoint> get_breakers(const Triangle &T) const;
 
   void obj_format(const std::string &name) const;
+
+  void edges_check(const std::string &message) const;
 };

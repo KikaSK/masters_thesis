@@ -19,7 +19,7 @@ class Triangle {
   Edge _AB, _BC, _CA;
 
  public:
-  Triangle(Point A, Point B, Point C);
+  explicit Triangle(Point A, Point B, Point C);
   Triangle() = delete;
   Triangle(const Triangle &T) = default;
 

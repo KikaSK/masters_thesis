@@ -192,7 +192,7 @@ int main() {
   // vystupny subor vlozi do priecinka "/outputs" a nazve ho s predponou
   // "my_run_input"
   // run_input(0, "/finite_surfaces/sphere", "my_run_input");
-  run_input(4, "/finite_surfaces/sphere", "my_run_input");
+  run_input(2, "/finite_surfaces/sphere", "my_run_input");
 
   // spusti vstupy "input0", "input1", "input2" v priecinku
   // "inputs/infinite_surfaces/hyperboloid", vystupny subor vlozi do priecinka

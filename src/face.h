@@ -11,7 +11,7 @@ class Face {
   HalfEdgeIndex _halfedge;
 
  public:
-  Face(Triangle triangle, HalfEdgeIndex halfedge = kInvalidEdgeIndex);
+  explicit Face(Triangle triangle, HalfEdgeIndex halfedge = kInvalidEdgeIndex);
   Face(const Face &F) = default;
   Face() = delete;
 
