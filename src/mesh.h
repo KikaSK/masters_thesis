@@ -43,6 +43,8 @@ class Mesh {
 
   void add_triangle(HalfEdgeIndex index_AB, Point P, std::string type,
                     MeshPointIndex index_P = kInvalidPointIndex);
+  void add_triangle2(HalfEdgeIndex index_AB, Point P, std::string type,
+                     MeshPointIndex index_P = kInvalidPointIndex);
 
   bool is_active(HalfEdgeIndex index) const;
   bool is_checked(HalfEdgeIndex index) const;
@@ -84,6 +86,10 @@ class Mesh {
   bool has_active_edge(const HalfEdgeIndex &index) const;
   bool has_checked_edge(const HalfEdge &halfedge) const;
   bool has_checked_edge(const HalfEdgeIndex &index) const;
+  bool has_outgoing_next(const HalfEdge &working_edge,
+                         const Point &point) const;
+  bool has_incoming_prev(const HalfEdge &working_edge,
+                         const Point &point) const;
 
   size_t get_active_edges_size() const;
   size_t get_checked_edges_size() const;
@@ -97,5 +103,8 @@ class Mesh {
 
   void obj_format(const std::string &name) const;
 
-  void edges_check(const std::string &message) const;
+  void edges_check(const std::string &message,
+                   const HalfEdgeIndex working_edge = kInvalidEdgeIndex) const;
+  std::string _find_type(const HalfEdgeIndex index_AB, const MeshPoint &P,
+                         MeshPointIndex index_P = kInvalidPointIndex) const;
 };

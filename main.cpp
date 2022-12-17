@@ -156,12 +156,12 @@ void run_input(const int i, const string folder, const string index) {
   Triangle seed_triangle =
       find_seed_triangle(F, seed_point, e_size, my_bounding_box);
 
-  assertm(seed_triangle.AB().get_length() > e_size / 2 &&
-              seed_triangle.AB().get_length() < 2 * e_size &&
-              seed_triangle.BC().get_length() > e_size / 2 &&
-              seed_triangle.BC().get_length() < 2 * e_size &&
-              seed_triangle.CA().get_length() > e_size / 2 &&
-              seed_triangle.CA().get_length() < 2 * e_size,
+  assertm(seed_triangle.AB().get_length() > e_size / 3 &&
+              seed_triangle.AB().get_length() < 3 * e_size &&
+              seed_triangle.BC().get_length() > e_size / 3 &&
+              seed_triangle.BC().get_length() < 3 * e_size &&
+              seed_triangle.CA().get_length() > e_size / 3 &&
+              seed_triangle.CA().get_length() < 3 * e_size,
           "Wrong seed triangle!");
 
   assertm(seed_triangle.AB() != seed_triangle.BC() &&
@@ -192,7 +192,11 @@ int main() {
   // vystupny subor vlozi do priecinka "/outputs" a nazve ho s predponou
   // "my_run_input"
   // run_input(0, "/finite_surfaces/sphere", "my_run_input");
-  run_input(2, "/finite_surfaces/sphere", "my_run_input");
+  // run_all(0, 4, "/finite_surfaces/sphere", "my_run_input");
+  // run_all(1, 3, "/finite_surfaces/blobby", "my_run_input");
+  run_all(3, 3, "/finite_surfaces/cubed_sphere", "my_run_input");
+  run_all(0, 3, "/finite_surfaces/ellipsoid", "my_run_input");
+  run_all(0, 3, "/finite_surfaces/torus", "my_run_input");
 
   // spusti vstupy "input0", "input1", "input2" v priecinku
   // "inputs/infinite_surfaces/hyperboloid", vystupny subor vlozi do priecinka

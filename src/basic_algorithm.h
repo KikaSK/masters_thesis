@@ -46,10 +46,12 @@ class BasicAlgorithm {
   void ending();
   bool step(const HalfEdgeIndex &working_edge);
   bool fix_proj(const HalfEdge &working_edge, const Point &projected,
-                const Face &incident_face, const MeshPoint &prev,
-                const MeshPoint &next);
-  bool fix_prev_next(const HalfEdge &working_edge, const Face &incident_face,
-                     const bool is_prev, const bool Delaunay);
+                const Face &incident_face);
+  /*bool fix_prev_next(const HalfEdge &working_edge, const Face &incident_face,
+                     const MeshPoint &point, const bool is_prev,
+                     const bool Delaunay);*/
+  bool fix_close_points(const HalfEdge &working_edge, const Face &incident_face,
+                        const Point &projected);
   bool fix_overlap(const HalfEdge &working_edge, const Face &incident_face,
                    const MeshPoint &overlap_point, const bool Delaunay);
   int fix_holes(const HalfEdge &working_edge, const Face &incident_face);
@@ -61,6 +63,7 @@ class BasicAlgorithm {
 
   pair<MeshPoint, MeshPoint> find_prev_next(const HalfEdge &working_edge,
                                             const Face &incident_face) const;
+  MeshPointIndex find_triangle_hole(const HalfEdge &working_edge);
 
   Point get_projected(const HalfEdge &working_edge,
                       const Face &incident_face) const;
@@ -80,7 +83,7 @@ class BasicAlgorithm {
                        const MeshPointIndex index_P = -1);
   bool good_edges(const HalfEdge &working_edge, const Point &P) const;
   bool basic_triangle(const HalfEdge &working_edge, const Face &incident_face,
-                      const MeshPoint &prev, const MeshPoint &next);
+                      const MeshPoint &point);
 
   bool is_active(const HalfEdgeIndex &halfedge_index) const;
   bool is_checked(const HalfEdgeIndex &halfedge_index) const;
