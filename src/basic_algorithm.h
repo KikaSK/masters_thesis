@@ -64,6 +64,12 @@ class BasicAlgorithm {
   pair<MeshPoint, MeshPoint> find_prev_next(const HalfEdge &working_edge,
                                             const Face &incident_face) const;
   MeshPointIndex find_triangle_hole(const HalfEdge &working_edge);
+  std::pair<FaceIndex, FaceIndex> find_neighbor_faces(
+      const HalfEdge &working_edge, const MeshPoint &P) const;
+  bool neighbor_triangles_normal_check(const Triangle &T1,
+                                       const Triangle &T2) const;
+  bool orientability_check(const HalfEdge &working_edge,
+                           const MeshPoint &point) const;
 
   Point get_projected(const HalfEdge &working_edge,
                       const Face &incident_face) const;

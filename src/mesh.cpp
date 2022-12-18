@@ -335,6 +335,7 @@ bool Mesh::is_boundary_point(const MeshPoint &P) const {
 void Mesh::add_triangle(HalfEdgeIndex i_AB, Point new_point,
                         std::string type /*new, next, previous, overlap, fill*/,
                         MeshPointIndex i_P) {
+  // edges_check("add triangle beg", i_AB);
   assertm(type == "new" || type == "next" || type == "previous" ||
               type == "overlap" || type == "fill",
           "Invalid type!");
@@ -351,7 +352,6 @@ void Mesh::add_triangle(HalfEdgeIndex i_AB, Point new_point,
     _mesh_points.push_back(new_meshpoint);
     i_P = i_point;
   }
-  // std::cout << i_AB << endl;
   assertm(i_AB < _mesh_edges.size(),
           "Invalid halfedge index in add_triangle function!");
   HalfEdge &AB = _mesh_edges[i_AB];
@@ -415,9 +415,16 @@ void Mesh::add_triangle(HalfEdgeIndex i_AB, Point new_point,
   if (type != "new") {
     type = _find_type(i_AB, P, i_P);
   }
-
+  // edges_check("before bounding", i_AB);
+  /*std::cout << "AB:" << i_AB << endl;
+  std::cout << "BA:" << i_BA << endl;
+  std::cout << "AP:" << i_AP << endl;
+  std::cout << "PB:" << i_PB << endl;
+  */
   if (type == "fill") {  // the edges are inside and we need to bound them with
                          // opposite edges
+    // std::cout << "PA:" << endl;
+    // std::cout << "BP:" << endl;
     _bound_opposite_outgoing(P, i_A, i_AP);  // try to bound AP with PA
     _bound_opposite_outgoing(B, i_P, i_PB);  // try to bound PB with BP
   } else if (type == "previous") {           // only edge PB is active edge
@@ -491,7 +498,7 @@ bool Mesh::check_Delaunay(const Mesh &mesh, const Triangle &new_triangle,
             T.BC() % face.AB() || T.BC() % face.BC() || T.BC() % face.CA() ||
             T.CA() % face.AB() || T.CA() % face.BC() || T.CA() % face.CA() ||
             T.C() == face.A() || T.C() == face.B() || T.C() == face.C())) {
-        //std::cout << "Delaunay returned FALSE0!" << endl;
+        // std::cout << "Delaunay returned FALSE0!" << endl;
         return false;
       }
     }
@@ -511,7 +518,7 @@ bool Mesh::check_Delaunay(const Mesh &mesh, const Triangle &new_triangle,
         face.A() != other_point.get_point()) {
       numeric dist1 = Vector(circumcenter, face.A()).get_length();
       if (dist1 < dist - 10 * kEps) {
-        //std::cout << "Delaunay returned FALSE1!" << endl;
+        // std::cout << "Delaunay returned FALSE1!" << endl;
         return false;
       }
     }
@@ -519,7 +526,7 @@ bool Mesh::check_Delaunay(const Mesh &mesh, const Triangle &new_triangle,
         face.B() != other_point.get_point()) {
       numeric dist1 = Vector(circumcenter, face.B()).get_length();
       if (dist1 < dist - 10 * kEps) {
-        //std::cout << "Delaunay returned FALSE2!" << endl;
+        // std::cout << "Delaunay returned FALSE2!" << endl;
         return false;
       }
     }
@@ -527,7 +534,7 @@ bool Mesh::check_Delaunay(const Mesh &mesh, const Triangle &new_triangle,
         face.C() != other_point.get_point()) {
       numeric dist1 = Vector(circumcenter, face.C()).get_length();
       if (dist1 < dist - 10 * kEps) {
-        //std::cout << "Delaunay returned FALSE3!" << endl;
+        // std::cout << "Delaunay returned FALSE3!" << endl;
         return false;
       }
     }
@@ -568,6 +575,8 @@ void Mesh::_bound_opposite(HalfEdge *edge1, const HalfEdgeIndex i_edge1,
   edge2->set_inside();
   _active_edges.erase(i_edge1);
   _active_edges.erase(i_edge2);
+  _checked_edges.erase(i_edge1);
+  _checked_edges.erase(i_edge2);
 }
 
 void Mesh::_bound_face(const FaceIndex i_face, HalfEdge *edge1, HalfEdge *edge2,
@@ -586,11 +595,13 @@ void Mesh::_bound_opposite_outgoing(const MeshPoint &A,
       A.get_outgoing();  // all edges outgoing from A
   for (auto outgoing : A_outgoing) {
     // std::cout << outgoing << endl;
-    assertm(outgoing < _mesh_edges.size(),
+    assertm(outgoing > -1 && outgoing < _mesh_edges.size(),
             "Invalid halfedge index in _bound_opposite_outgoing function!");
     if (_mesh_edges[outgoing].get_B() /*second point of outgoing edge*/ ==
         i_B)  // we found edge AB
     {
+      // std::cout << "index inside bound opposite outgoing: " << outgoing <<
+      // endl; std::cout << "bounding " << outgoing << " with " << i_BA << endl;
       _bound_opposite(&(_mesh_edges[outgoing]), outgoing, &(_mesh_edges[i_BA]),
                       i_BA);
     }
@@ -600,7 +611,6 @@ void Mesh::_bound_opposite_outgoing(const MeshPoint &A,
 void Mesh::edges_check(const std::string &message,
                        const HalfEdgeIndex working_edge) const {
   std::cout << "Edges check " << message << endl;
-  std::cout << _mesh_edges.size() << endl;
   for (int i = 0; i < _mesh_edges.size(); ++i) {
     const HalfEdge &edge = _mesh_edges[i];
     if (edge.get_index() == working_edge) {
@@ -609,10 +619,15 @@ void Mesh::edges_check(const std::string &message,
 
     const auto edge_index = edge.get_index();
     bool is_ok = true;
+    // std::cout << "a" << endl;
+    // std::cout << "Edges count: " << _mesh_edges.size() << endl;
+    // std::cout << "Edge index: " << edge_index << endl;
     if (edge.is_checked() != is_checked(edge_index)) {
       std::cout << "Inconsistent checked edges!" << endl;
       is_ok = false;
     }
+    if (edge_index == 545) std::cout << "ok?" << is_ok << endl;
+    // std::cout << "b" << endl;
     if (edge.is_active() != is_active(edge_index)) {
       std::cout << "Inconsistent active edges!" << endl;
       is_ok = false;
