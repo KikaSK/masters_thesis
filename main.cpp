@@ -201,7 +201,7 @@ int main() {
   // run_input(0, "/finite_surfaces/sphere", "my_run_input");
   // run_all(3, 4, "/finite_surfaces/sphere", "my_run_input");
   // run_input(0, "/sing_surfaces/cone", "my_run_input");
-  run_input(2, "/finite_surfaces/sphere", "my_run_input");
+  run_all(0, 2, "/finite_surfaces/sphere", "my_run_input");
   //  run_all(3, 3, "/finite_surfaces/cubed_sphere", "my_run_input");
   //  run_all(0, 0, "/finite_surfaces/ellipsoid", "my_run_input");
   //  run_all(1, 3, "/finite_surfaces/tetrahedron", "my_run_input");

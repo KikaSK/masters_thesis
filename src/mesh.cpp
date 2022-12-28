@@ -531,11 +531,13 @@ vector<MeshPoint> Mesh::get_meshpoints_in_interval(numeric min_x, numeric max_x,
 }
 
 // checks Delaunay constraint for triangle T
-bool Mesh::check_Delaunay(const Mesh &mesh, const Triangle &new_triangle,
-                          const HalfEdge &working_edge,
-                          const Face &incident_face) const {
+bool Mesh::check_Delaunay(const HalfEdge &working_edge,
+                          const Point &new_point) const {
   MeshPoint other_point =
-      mesh.get_meshpoint(mesh.get_next_halfedge(working_edge).get_B());
+      get_meshpoint(get_next_halfedge(working_edge).get_B());
+
+  const Triangle new_triangle(working_edge.get_point_B(),
+                              working_edge.get_point_A(), new_point);
 
   assertm(new_triangle.is_triangle(),
           "Checking Delaunay of non valid triangle!");
@@ -551,16 +553,15 @@ bool Mesh::check_Delaunay(const Mesh &mesh, const Triangle &new_triangle,
   const Triangle &T = new_triangle;
 
   // gravity center condition
-  for (Face face : mesh.get_mesh_faces()) {
+  for (Face face : get_mesh_faces()) {
     Point gravity_center = face.get_gravity_center();
     numeric gc_dist = Vector(circumcenter, gravity_center).get_length();
 
     if (gc_dist < dist - 10 * kEps) {
       if (!(T.AB() % face.AB() || T.AB() % face.BC() || T.AB() % face.CA() ||
             T.BC() % face.AB() || T.BC() % face.BC() || T.BC() % face.CA() ||
-            T.CA() % face.AB() || T.CA() % face.BC() || T.CA() % face.CA()
-            // || T.C() == face.A() || T.C() == face.B() || T.C() == face.C()
-            )) {
+            T.CA() % face.AB() || T.CA() % face.BC() || T.CA() % face.CA() ||
+            T.C() == face.A() || T.C() == face.B() || T.C() == face.C())) {
         // std::cout << "Delaunay returned FALSE0!" << endl;
         return false;
       }

@@ -1,5 +1,3 @@
-#pragma once
-
 #include "basic_algorithm.h"
 
 /*

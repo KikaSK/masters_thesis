@@ -80,10 +80,11 @@ class BasicAlgorithm {
       const Point &P, const HalfEdge &working_edge,
       const Face &incident_face) const;
   int update_border(const Edge &new_edge1, const Edge &new_edge2);
-  bool Delaunay_conditions(const HalfEdge &working_edge, const Point &P,
-                           const Face &incident_face) const;
-  bool non_Delaunay_conditions(const HalfEdge &working_edge, const Point &P,
-                               const Face &incident_face) const;
+  bool check_conditions(const HalfEdge &working_edge, const Point &P,
+                        const bool Delaunay) const;
+  bool Delaunay_conditions(const HalfEdge &working_edge, const Point &P) const;
+  bool non_Delaunay_conditions(const HalfEdge &working_edge,
+                               const Point &P) const;
 
   void create_triangle(const HalfEdge &working_edge, const Point &P,
                        const std::string type,

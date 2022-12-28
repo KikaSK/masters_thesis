@@ -104,9 +104,8 @@ class Mesh {
   bool active_edges_empty() const;
   bool checked_edges_empty() const;
 
-  bool check_Delaunay(const Mesh &mesh, const Triangle &new_triangle,
-                      const HalfEdge &working_edge,
-                      const Face &incident_face) const;
+  bool check_Delaunay(const HalfEdge &working_edge,
+                      const Point &new_point) const;
   vector<MeshPoint> get_breakers(const Triangle &T) const;
   vector<MeshPoint> get_meshpoints_in_interval(numeric min_x, numeric max_x,
                                                numeric min_y, numeric max_y,
