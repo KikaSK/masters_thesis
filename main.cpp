@@ -30,7 +30,6 @@ using namespace GiNaC;
 numeric substitute(const Function F, GiNaC::ex il) {
   return ex_to<numeric>(F.get_function().subs(il).evalf());
 }
-
 // finds first edge from seed point
 Edge get_seed_edge(Point seed_point, const Function &F, numeric edge_size,
                    const BoundingBox &bounding_box) {
@@ -103,7 +102,7 @@ Triangle find_seed_triangle(const Function &F, Point seed, numeric e_size,
 void run_input(const int i, const string folder, const string index) {
   string index_str = index;
 
-  std::ifstream input_file("./inputs" + folder + "/input" + to_string(i),
+  std::ifstream input_file("./inputs" + folder + "/input" + std::to_string(i),
                            std::ifstream::in);
   assertm(input_file.is_open(), "Failed opening the file!");
   vector<string> parsed_input;
@@ -155,6 +154,7 @@ void run_input(const int i, const string folder, const string index) {
 
   Triangle seed_triangle =
       find_seed_triangle(F, seed_point, e_size, my_bounding_box);
+  // triangulate_A1_starter(F, e_size, sing_point, sing_dir);
 
   assertm(seed_triangle.AB().get_length() > e_size / 3 &&
               seed_triangle.AB().get_length() < 3 * e_size &&
@@ -172,6 +172,13 @@ void run_input(const int i, const string folder, const string index) {
   BasicAlgorithm alg("./outputs/" + name, F, seed_triangle, e_size, x, y, z,
                      my_bounding_box);
   cout << "Basic algorithm created, calling for calculate()!" << endl;
+  // alg.my_mesh.obj_format("./outputs/" + name);
+
+  /*assertm(seed_triangle.A() == sing_point,
+          "Triangle not created with singular point.");
+  assertm(F.eval_at_point(sing_point) < kEps,
+          "Singular point not lying on surface!");
+  assertm(false, "breakpoint");*/
   alg.calculate();
 }
 
@@ -192,13 +199,14 @@ int main() {
   // vystupny subor vlozi do priecinka "/outputs" a nazve ho s predponou
   // "my_run_input"
   // run_input(0, "/finite_surfaces/sphere", "my_run_input");
-  // run_all(0, 4, "/finite_surfaces/sphere", "my_run_input");
-  // run_all(1, 3, "/finite_surfaces/blobby", "my_run_input");
-  // run_all(3, 3, "/finite_surfaces/cubed_sphere", "my_run_input");
-  // run_all(0, 0, "/finite_surfaces/ellipsoid", "my_run_input");
-  run_all(1, 3, "/finite_surfaces/tetrahedron", "my_run_input");
-  run_all(0, 3, "/finite_surfaces/joined_spheres", "my_run_input");
-  run_all(0, 3, "/finite_surfaces/genus", "my_run_input");
+  // run_all(3, 4, "/finite_surfaces/sphere", "my_run_input");
+  // run_input(0, "/sing_surfaces/cone", "my_run_input");
+  run_input(2, "/finite_surfaces/sphere", "my_run_input");
+  //  run_all(3, 3, "/finite_surfaces/cubed_sphere", "my_run_input");
+  //  run_all(0, 0, "/finite_surfaces/ellipsoid", "my_run_input");
+  //  run_all(1, 3, "/finite_surfaces/tetrahedron", "my_run_input");
+  //  run_all(0, 3, "/finite_surfaces/joined_spheres", "my_run_input");
+  //  run_all(0, 3, "/finite_surfaces/genus", "my_run_input");
 
   // spusti vstupy "input0", "input1", "input2" v priecinku
   // "inputs/infinite_surfaces/hyperboloid", vystupny subor vlozi do priecinka
@@ -207,6 +215,7 @@ int main() {
 }
 
 // testing
+/*
 void test_find_seed_triangle() {
   realsymbol x("x"), y("y"), z("z");
   numeric e_size = 0.01;
@@ -267,3 +276,4 @@ void test_find_seed_triangle() {
     assertm(value1 < 10e-6 && value2 < 10e-6 && value3 < 10e-6, "Bad test!");
   }
 }
+*/

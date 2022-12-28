@@ -1,5 +1,4 @@
-#ifndef BASIC_ALGORITHM_H
-#define BASIC_ALGORITHM_H
+#pragma once
 
 #include <vector>
 
@@ -9,6 +8,10 @@
 #include "function.h"
 #include "mesh.h"
 #include "triangle.h"
+
+using GiNaC::realsymbol;
+using std::pair;
+using std::string;
 
 class BasicAlgorithm {
  public:
@@ -41,15 +44,13 @@ class BasicAlgorithm {
     */
   }
 
-  Mesh calculate();
+  void calculate();
   void starting();
   void ending();
   bool step(const HalfEdgeIndex &working_edge);
   bool fix_proj(const HalfEdge &working_edge, const Point &projected,
-                const Face &incident_face);
-  /*bool fix_prev_next(const HalfEdge &working_edge, const Face &incident_face,
-                     const MeshPoint &point, const bool is_prev,
-                     const bool Delaunay);*/
+                const Face &incident_face, const bool Delaunay);
+  bool fix_prev_next(const HalfEdge &working_edge, const bool Delaunay);
   bool fix_close_points(const HalfEdge &working_edge, const Face &incident_face,
                         const Point &projected);
   bool fix_overlap(const HalfEdge &working_edge, const Face &incident_face,
@@ -88,6 +89,7 @@ class BasicAlgorithm {
                        const std::string type,
                        const MeshPointIndex index_P = -1);
   bool good_edges(const HalfEdge &working_edge, const Point &P) const;
+  bool good_new_point(const MeshPoint &point) const;
   bool basic_triangle(const HalfEdge &working_edge, const Face &incident_face,
                       const MeshPoint &point);
 
@@ -102,8 +104,8 @@ class BasicAlgorithm {
   void push_edge_to_active(const HalfEdgeIndex &halfedge_index);
   void push_edge_to_checked(const HalfEdgeIndex &halfedge_index);
 
-  std::optional<Point> get_closest_point(const HalfEdge &working_edge,
-                                         const Face &incident_face) const;
+  std::optional<MeshPoint> get_closest_point(const HalfEdge &working_edge,
+                                             const Face &incident_face) const;
   std::optional<pair<Edge, numeric>> get_closest_edge(const Point &P,
                                                       const Triangle &N) const;
 
@@ -125,12 +127,19 @@ class BasicAlgorithm {
                            const Face &incident_face) const;
   HalfEdgeIndex _find_next(const HalfEdge &working_edge,
                            const Face &incident_face) const;
+  bool _fix_prev_next(const HalfEdge &working_edge, const MeshPoint &prev,
+                      const bool Delaunay);
   std::optional<HalfEdgeIndex> _find_closest_prev(
       const HalfEdge &working_edge, const Face &incident_face,
       const vector<HalfEdgeIndex> &prev) const;
   std::optional<HalfEdgeIndex> _find_closest_next(
       const HalfEdge &working_edge, const Face &incident_face,
       const vector<HalfEdgeIndex> &next) const;
+  std::optional<vector<MeshPoint>> _linear_close_points_finder(
+      const Point &P, const HalfEdge &working_edge,
+      const Face &incident_face) const;
+  std::optional<vector<MeshPoint>> _tree_close_points_finder(
+      const Point &P, const HalfEdge &working_edge,
+      const Face &incident_face) const;
+  bool _check_normals(const HalfEdge &working_edge, const Point &point) const;
 };
-
-#endif

@@ -11,6 +11,9 @@
 #include "point.h"
 #include "triangle.h"
 
+using GiNaC::ex;
+using GiNaC::numeric;
+using GiNaC::realsymbol;
 using std::vector;
 
 // N-R method for root finding, not necessarily the closest root

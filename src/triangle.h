@@ -10,7 +10,7 @@
 #include "edge.h"
 #include "point.h"
 
-using namespace GiNaC;
+using GiNaC::numeric;
 using std::endl;
 
 class Triangle {

@@ -22,8 +22,15 @@ class MeshPoint : public Point {
             HalfEdgeIndex outgoing = kInvalidEdgeIndex);
   MeshPoint(const MeshPoint &A, const Vector &u,
             HalfEdgeIndex outgoing = kInvalidEdgeIndex);
-  MeshPoint() = delete;
+  MeshPoint() = default;
   MeshPoint(const MeshPoint &A) = default;
+
+  template <std::size_t Index>
+  std::tuple_element_t<Index, MeshPoint> get() const {
+    if constexpr (Index == 0) return _point.x();
+    if constexpr (Index == 1) return _point.y();
+    if constexpr (Index == 2) return _point.z();
+  }
 
   numeric x() const;
   numeric y() const;
@@ -55,3 +62,22 @@ class MeshPoint : public Point {
     return !(A == B);
   }
 };
+
+namespace std {
+template <>
+struct tuple_size<::MeshPoint> {
+  static constexpr size_t value = 3;
+};
+template <>
+struct tuple_element<0, ::MeshPoint> {
+  using type = numeric;
+};
+template <>
+struct tuple_element<1, ::MeshPoint> {
+  using type = numeric;
+};
+template <>
+struct tuple_element<2, ::MeshPoint> {
+  using type = numeric;
+};
+}  // namespace std

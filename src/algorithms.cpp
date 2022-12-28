@@ -4,7 +4,9 @@
 
 #include <utility>
 
-using namespace GiNaC;
+using GiNaC::ex;
+using GiNaC::numeric;
+using GiNaC::realsymbol;
 using std::pair;
 
 // N-R method for root finding, not necessarily the closest root
@@ -18,8 +20,8 @@ numeric Newton_Raphson(const realsymbol my_x, const ex &f, const ex &df,
     iterations++;
     assertm(abs(df.subs(my_x == iter).evalf()) > 10e-6,
             "Division by 0 in N-R method!");
-    iter -= ex_to<numeric>(f.subs(my_x == iter).evalf() /
-                           df.subs(my_x == iter).evalf());
+    iter -= GiNaC::ex_to<numeric>(f.subs(my_x == iter).evalf() /
+                                  df.subs(my_x == iter).evalf());
   }
   return iter;
 }
@@ -77,14 +79,15 @@ numeric Bisection(const realsymbol my_x, const ex &f, numeric starting_point,
 
   if (f.subs(my_x == new_point1).evalf() *
           f.subs(my_x == last_point1).evalf() <=
-      0)
+      0) {
     projected = Bisect(my_x, f, new_point1, last_point1, 0);
-  else if (f.subs(my_x == new_point2).evalf() *
-               f.subs(my_x == last_point2).evalf() <=
-           0)
+  } else if (f.subs(my_x == new_point2).evalf() *
+                 f.subs(my_x == last_point2).evalf() <=
+             0) {
     projected = Bisect(my_x, f, new_point2, last_point2, 0);
-  else
+  } else {
     assertm(false, "Wrong call in Bisection function!");
+  }
 
   assertm(projected.has_value(), "Projected point without value!");
   return projected.value();
@@ -127,16 +130,19 @@ Point project(const Point &point_to_project, const Vector &normal,
   // after this in param_x, param_y and param_z are equations of only one
   // variable my_x substitute to F to get function for Newton-Raphson method
 
-  ex f = F.get_function().subs(
-      lst{F.get_x() == param_x, F.get_y() == param_y, F.get_z() == param_z});
+  ex f = F.get_function().subs(GiNaC::lst{
+      F.get_x() == param_x, F.get_y() == param_y, F.get_z() == param_z});
   ex df = f.diff(my_x, 1);
 
   std::optional<Point> projected = std::nullopt;
 
   numeric root = Newton_Raphson(my_x, f, df, starting_point);
-  numeric projected_x = ex_to<numeric>(param_x.subs(my_x == root).evalf());
-  numeric projected_y = ex_to<numeric>(param_y.subs(my_x == root).evalf());
-  numeric projected_z = ex_to<numeric>(param_z.subs(my_x == root).evalf());
+  numeric projected_x =
+      GiNaC::ex_to<numeric>(param_x.subs(my_x == root).evalf());
+  numeric projected_y =
+      GiNaC::ex_to<numeric>(param_y.subs(my_x == root).evalf());
+  numeric projected_z =
+      GiNaC::ex_to<numeric>(param_z.subs(my_x == root).evalf());
 
   projected = Point(projected_x, projected_y, projected_z);
   if (e_size.has_value() &&
@@ -144,11 +150,15 @@ Point project(const Point &point_to_project, const Vector &normal,
           4 * e_size.value()) {
     root = Bisection(my_x, f, starting_point, e_size.value());
 
-    numeric projected_x = ex_to<numeric>(param_x.subs(my_x == root).evalf());
-    numeric projected_y = ex_to<numeric>(param_y.subs(my_x == root).evalf());
-    numeric projected_z = ex_to<numeric>(param_z.subs(my_x == root).evalf());
-    assertm(F.substitute(lst{F.get_x() == projected_x, F.get_y() == projected_y,
-                             F.get_z() == projected_z}) < 10e-6,
+    numeric projected_x =
+        GiNaC::ex_to<numeric>(param_x.subs(my_x == root).evalf());
+    numeric projected_y =
+        GiNaC::ex_to<numeric>(param_y.subs(my_x == root).evalf());
+    numeric projected_z =
+        GiNaC::ex_to<numeric>(param_z.subs(my_x == root).evalf());
+    assertm(F.substitute(GiNaC::lst{F.get_x() == projected_x,
+                                    F.get_y() == projected_y,
+                                    F.get_z() == projected_z}) < 10e-6,
             "Wrong Bisection calculation!");
   }
   assertm(projected.has_value(), "Not found projected point!");
@@ -221,14 +231,14 @@ std::optional<numeric> angle(const Mesh &mesh, const HalfEdge &working_edge,
   // if same_direction is > 0 the normals are pointing in aprox same direction
   // thus the points lie on the same side
 
-  // TODO check if we need this if I have good normals
+  // TODO(kuska) check if we need this if I have good normals
 
   numeric same_direction = ABcrossAP * ABcrossAC;
 
   if (same_direction > 0) {
     angle = -angle;
   }
-  assertm(abs(angle) <= ex_to<numeric>(Pi.evalf()),
+  assertm(abs(angle) <= GiNaC::ex_to<numeric>(GiNaC::Pi.evalf()),
           "Angle in the wrong range!");
 
   return angle;
@@ -244,7 +254,7 @@ bool good_orientation(const Mesh &mesh, const HalfEdge &working_edge,
   assertm(angle1.has_value() && angle2.has_value(),
           "Angle does not have value!");
   return angle1.value() > 0 &&
-         angle2.value() < 3 * ex_to<numeric>(Pi.evalf()) / 4;
+         angle2.value() < 3 * GiNaC::ex_to<numeric>(GiNaC::Pi.evalf()) / 4;
 }
 
 // https://math.stackexchange.com/questions/1905533/find-perpendicular-distance-from-point-to-line-in-3d
@@ -269,10 +279,11 @@ numeric line_point_dist(const Mesh &mesh, const HalfEdge &working_edge,
   assertm(angle1.has_value() && angle2.has_value(),
           "Angles does not have value!");
 
-  if (abs(angle1.value()) <= ex_to<numeric>(Pi.evalf()) / 2 &&
-      abs(angle2.value()) <= ex_to<numeric>(Pi.evalf()) / 2) {
+  if (abs(angle1.value()) <= GiNaC::ex_to<numeric>(GiNaC::Pi.evalf()) / 2 &&
+      abs(angle2.value()) <= GiNaC::ex_to<numeric>(GiNaC::Pi.evalf()) / 2) {
     return Vector(P, p).get_length();
-  } else if (abs(angle1.value()) > ex_to<numeric>(Pi.evalf()) / 2) {
+  } else if (abs(angle1.value()) >
+             GiNaC::ex_to<numeric>(GiNaC::Pi.evalf()) / 2) {
     return Vector(working_edge.get_point_A(), P).get_length();
   } else {
     return Vector(working_edge.get_point_B(), P).get_length();
@@ -308,8 +319,9 @@ Vector find_direction(const HalfEdge &working_edge, const Face &F) {
               Point(working_edge.get_midpoint(), -delta * direction))) {
         direction = numeric(-1) * direction;
         repeat = false;
-      } else
+      } else {
         assertm(false, "Both points in triangle!");
+      }
     } else if (!F.is_in_triangle(
                    Point(working_edge.get_midpoint(), -delta * direction))) {
       repeat = true;
@@ -318,6 +330,5 @@ Vector find_direction(const HalfEdge &working_edge, const Face &F) {
     }
   }
   assertm(!repeat, "No Points in triangle!");
-
   return direction;
 }

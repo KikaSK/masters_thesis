@@ -15,6 +15,10 @@ Mesh::Mesh(const Triangle &T) {
   _mesh_points.push_back(B);
   _mesh_points.push_back(C);
 
+  _point_tree.insert(A);
+  _point_tree.insert(B);
+  _point_tree.insert(C);
+
   HalfEdge AB(F.get_triangle().AB(),
               0,   // A index is 0
               1,   // B index is 1
@@ -238,11 +242,33 @@ FaceIndex Mesh::get_incident_face(const HalfEdgeIndex &index) const {
 unordered_set<HalfEdgeIndex> Mesh::get_active_edges() const {
   return _active_edges;
 }
+void Mesh::set_active_edges(const unordered_set<HalfEdgeIndex> &edges) {
+  _active_edges.clear();
+  _active_edges = edges;
+  return;
+}
 unordered_set<HalfEdgeIndex> Mesh::get_checked_edges() const {
   return _checked_edges;
 }
+void Mesh::set_checked_edges(const unordered_set<HalfEdgeIndex> &edges) {
+  _active_edges.clear();
+  _active_edges = edges;
+  return;
+}
 unordered_set<HalfEdgeIndex> Mesh::get_bounding_edges() const {
   return _bounding_edges;
+}
+void Mesh::move_active_edges_to_checked() {
+  assertm(!checked_edges_empty(), "Moving empty checked edges!");
+  _active_edges.clear();
+  while (!checked_edges_empty()) {
+    HalfEdgeIndex edge = get_checked_edge();
+    remove_checked_edge(edge);
+    add_edge_to_active(edge);
+  }
+  assertm(!active_edges_empty() && checked_edges_empty(),
+          "Problem in moving checked edges!");
+  return;
 }
 vector<MeshPoint> Mesh::get_mesh_points() const { return _mesh_points; }
 vector<HalfEdge> Mesh::get_mesh_edges() const { return _mesh_edges; }
@@ -256,6 +282,34 @@ HalfEdgeIndex Mesh::get_checked_edge() const {
           "Picking edge from empty checked edges list!");
   return *_checked_edges.begin();
 }
+
+vector<MeshPoint> Mesh::get_prev(const HalfEdge &halfedge) const {
+  vector<MeshPoint> prev;
+  const MeshPoint &A = _mesh_points[halfedge.get_A()];
+  for (HalfEdgeIndex outgoing_index : A.get_outgoing()) {
+    HalfEdgeIndex previous_halfedge_index =
+        _mesh_edges[outgoing_index].get_previous();
+    if (is_boundary(previous_halfedge_index)) {
+      const HalfEdge &previous_halfedge = _mesh_edges[previous_halfedge_index];
+      prev.push_back(_mesh_points[previous_halfedge.get_A()]);
+    }
+  }
+  return prev;
+}
+
+vector<MeshPoint> Mesh::get_next(const HalfEdge &halfedge) const {
+  vector<MeshPoint> next;
+  // const MeshPoint &A = _mesh_points[halfedge.get_A()];
+  const MeshPoint &B = _mesh_points[halfedge.get_B()];
+  for (HalfEdgeIndex next_halfedge_index : B.get_outgoing()) {
+    if (is_boundary(next_halfedge_index)) {
+      const HalfEdge &next_halfedge = _mesh_edges[next_halfedge_index];
+      next.push_back(_mesh_points[next_halfedge.get_B()]);
+    }
+  }
+  return next;
+}
+
 void Mesh::remove_active_edge(const HalfEdgeIndex &index) {
   assertm(_active_edges.find(index) != _active_edges.end(),
           "Removing non-existent active edge!");
@@ -370,14 +424,6 @@ void Mesh::add_triangle(HalfEdgeIndex i_AB, Point new_point,
           "The edge is not set to inside edge!");
 
   MeshPoint &P = _mesh_points[i_P];
-
-  /*
-  Create halfedge AP (i+1) (boundary edge)
-  bound_consecutive(BA(i), AP(i+1)
-  Create halfedge PB (i+2) (boundary edge)
-  bound_consecutive(PB(i+2), BA(i))
-  */
-
   Edge e_AP(AB.get_point_A(), new_point);
   HalfEdge AP(e_AP, AB.get_A(), i_P);
   HalfEdgeIndex i_AP = i_edge + 1;
@@ -395,19 +441,9 @@ void Mesh::add_triangle(HalfEdgeIndex i_AB, Point new_point,
   A.add_outgoing(i_AP);
   P.add_outgoing(i_PB);
   B.add_outgoing(i_BA);
-  /*
-    create face F(triangle ABP, halfedge AP) (k)
-    bound_face(F(k), AP(i+1), PB(i+2), BA(i));
-  */
-
   Triangle ABP(A.get_point(), B.get_point(), P.get_point());
   Face F(ABP, i_AP);
   _bound_face(i_face, &BA, &AP, &PB);
-
-  /*
-    Find out which edges are the new active edges
-  */
-
   _mesh_edges.push_back(BA);
   _mesh_edges.push_back(AP);
   _mesh_edges.push_back(PB);
@@ -415,23 +451,15 @@ void Mesh::add_triangle(HalfEdgeIndex i_AB, Point new_point,
   if (type != "new") {
     type = _find_type(i_AB, P, i_P);
   }
-  // edges_check("before bounding", i_AB);
-  /*std::cout << "AB:" << i_AB << endl;
-  std::cout << "BA:" << i_BA << endl;
-  std::cout << "AP:" << i_AP << endl;
-  std::cout << "PB:" << i_PB << endl;
-  */
-  if (type == "fill") {  // the edges are inside and we need to bound them with
-                         // opposite edges
-    // std::cout << "PA:" << endl;
-    // std::cout << "BP:" << endl;
+  if (type == "fill") {
+    // the edges are inside and we need to bound them with opposite edges
     _bound_opposite_outgoing(P, i_A, i_AP);  // try to bound AP with PA
     _bound_opposite_outgoing(B, i_P, i_PB);  // try to bound PB with BP
-  } else if (type == "previous") {           // only edge PB is active edge
+  } else if (type == "previous") {           // only edge PB is border edge
     _bound_opposite_outgoing(P, i_A, i_AP);  // try to bound AP with PA
     _mesh_edges[i_PB].set_active();
     _active_edges.insert(i_PB);
-  } else if (type == "next") {               // only edge AP is active edge
+  } else if (type == "next") {               // only edge AP is border edge
     _bound_opposite_outgoing(B, i_P, i_PB);  // try to bound PB with BP
     _mesh_edges[i_AP].set_active();
     _active_edges.insert(i_AP);
@@ -441,15 +469,14 @@ void Mesh::add_triangle(HalfEdgeIndex i_AB, Point new_point,
     _mesh_edges[i_PB].set_active();
     _active_edges.insert(i_PB);
     _active_edges.insert(i_AP);
+    _point_tree.insert(P);
   }
-  /*
-    Insert the new faces to lists
-  */
   _mesh_triangles.push_back(F);
 }
 
 // returns vector of points inside Delaunay sphere
-vector<MeshPoint> Mesh::get_breakers(const Triangle &triangle) const {
+vector<MeshPoint> Mesh::_linear_breakers_getter(
+    const Triangle &triangle) const {
   assertm(triangle.is_triangle(), "Getting breakers of non valid triangle!");
   Point circumcenter = triangle.get_circumcenter();
   numeric dist = Vector(circumcenter, triangle.A()).get_length();
@@ -466,6 +493,41 @@ vector<MeshPoint> Mesh::get_breakers(const Triangle &triangle) const {
     }
   }
   return breakers;
+}
+
+vector<MeshPoint> Mesh::_tree_breakers_getter(const Triangle &triangle) const {
+  assertm(triangle.is_triangle(), "Getting breakers of non valid triangle!");
+  Point circumcenter = triangle.get_circumcenter();
+  numeric dist = Vector(circumcenter, triangle.A()).get_length();
+
+  vector<MeshPoint> potential_breakers = get_meshpoints_in_interval(
+      circumcenter.x() - 1.1 * dist, circumcenter.x() + 1.1 * dist,
+      circumcenter.y() - 1.1 * dist, circumcenter.y() + 1.1 * dist,
+      circumcenter.z() - 1.1 * dist, circumcenter.z() + 1.1 * dist);
+
+  vector<MeshPoint> breakers;
+  for (MeshPoint meshpoint : potential_breakers) {
+    if (meshpoint.get_point() != triangle.A() &&
+        meshpoint.get_point() != triangle.B() &&
+        meshpoint.get_point() != triangle.B()) {
+      breakers.push_back(meshpoint);
+    }
+  }
+  return breakers;
+}
+
+vector<MeshPoint> Mesh::get_breakers(const Triangle &triangle) const {
+  return _tree_breakers_getter(triangle);
+}
+
+vector<MeshPoint> Mesh::get_meshpoints_in_interval(numeric min_x, numeric max_x,
+                                                   numeric min_y, numeric max_y,
+                                                   numeric min_z,
+                                                   numeric max_z) const {
+  const MeshPoint min_point = MeshPoint(min_x, min_y, min_z);
+  const MeshPoint max_point = MeshPoint(max_x, max_y, max_z);
+
+  return _point_tree.between(min_point, max_point);
 }
 
 // checks Delaunay constraint for triangle T
@@ -493,26 +555,28 @@ bool Mesh::check_Delaunay(const Mesh &mesh, const Triangle &new_triangle,
     Point gravity_center = face.get_gravity_center();
     numeric gc_dist = Vector(circumcenter, gravity_center).get_length();
 
-    if (gc_dist < dist - kEps) {
+    if (gc_dist < dist - 10 * kEps) {
       if (!(T.AB() % face.AB() || T.AB() % face.BC() || T.AB() % face.CA() ||
             T.BC() % face.AB() || T.BC() % face.BC() || T.BC() % face.CA() ||
-            T.CA() % face.AB() || T.CA() % face.BC() || T.CA() % face.CA() ||
-            T.C() == face.A() || T.C() == face.B() || T.C() == face.C())) {
+            T.CA() % face.AB() || T.CA() % face.BC() || T.CA() % face.CA()
+            // || T.C() == face.A() || T.C() == face.B() || T.C() == face.C()
+            )) {
         // std::cout << "Delaunay returned FALSE0!" << endl;
         return false;
       }
     }
 
-    /*
-    Point Tr_circumcenter = Tr.get_circumcenter();
-    numeric tr_radius = Vector(Tr_circumcenter, Tr.A()).get_length();
-    numeric tr_dist = Vector(Tr_circumcenter, T.C()).get_length();
-    if(tr_dist<tr_radius)
-    {
-      //breaking others triangle delaunay
+    Point face_circumcenter = face.get_circumcenter();
+    numeric face_radius =
+        std::min(std::min(Vector(face_circumcenter, face.A()).get_length(),
+                          Vector(face_circumcenter, face.B()).get_length()),
+                 Vector(face_circumcenter, face.C()).get_length());
+    // distance of new point from face circumcenter
+    numeric face_dist = Vector(face_circumcenter, T.C()).get_length();
+    if (face_dist < face_radius - 10 * kEps) {
+      // breaking others triangle delaunay
       return false;
     }
-    */
 
     if (face.A() != T.A() && face.A() != T.B() && face.A() != T.C() &&
         face.A() != other_point.get_point()) {
@@ -545,6 +609,7 @@ bool Mesh::check_Delaunay(const Mesh &mesh, const Triangle &new_triangle,
 
 // makes .obj file from mesh triangles
 void Mesh::obj_format(const std::string &name) const {
+  // std::cout << name << endl;
   std::ofstream out(name + ".obj");
   for (size_t i = 0; i < _mesh_points.size(); ++i) {
     out << "v " << _mesh_points[i].x() << " " << _mesh_points[i].y() << " "

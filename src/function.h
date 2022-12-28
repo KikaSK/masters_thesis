@@ -10,7 +10,8 @@
 #include "triangle.h"
 #include "vector.h"
 
-using namespace GiNaC;
+using GiNaC::ex;
+using GiNaC::numeric;
 using std::endl;
 using std::vector;
 

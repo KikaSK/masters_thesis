@@ -8,7 +8,7 @@
 #include "constants.h"
 #include "point.h"
 
-using namespace GiNaC;
+using GiNaC::numeric;
 using std::endl;
 
 class Point;

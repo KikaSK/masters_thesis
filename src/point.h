@@ -9,7 +9,7 @@
 #include "constants.h"
 #include "vector.h"
 
-using namespace GiNaC;
+using GiNaC::numeric;
 using std::endl;
 
 class Vector;

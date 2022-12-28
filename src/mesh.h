@@ -5,6 +5,7 @@
 #include <unordered_set>
 #include <vector>
 
+#include "../range-tree/nd_reb.h"
 #include "face.h"
 #include "half_edge.h"
 #include "mesh_point.h"
@@ -21,6 +22,7 @@ class Mesh {
   unordered_set<HalfEdgeIndex> _checked_edges;
   unordered_set<HalfEdgeIndex> _mesh_edges_set;
   unordered_set<HalfEdgeIndex> _bounding_edges;
+  Tree<MeshPoint> _point_tree;
 
   void _bound_consecutive(HalfEdge *previous, const HalfEdgeIndex i_previous,
                           HalfEdge *next, const HalfEdgeIndex i_next) const;
@@ -51,7 +53,6 @@ class Mesh {
   bool is_bounding(HalfEdgeIndex index) const;
   bool is_boundary(HalfEdgeIndex index) const;
   bool is_in_mesh(const Edge &edge) const;
-  HalfEdgeIndex get_edge_index(const Edge &edge) const;
   bool is_boundary_point(const MeshPoint &P) const;
 
   HalfEdge get_halfedge(HalfEdgeIndex index) const;
@@ -68,15 +69,22 @@ class Mesh {
   std::optional<HalfEdge> get_opposite_halfedge(const HalfEdge &halfedge) const;
   std::optional<HalfEdge> get_opposite_halfedge(HalfEdgeIndex index) const;
   FaceIndex get_incident_face(const HalfEdgeIndex &index) const;
+  HalfEdgeIndex get_edge_index(const Edge &edge) const;
+  vector<MeshPoint> get_prev(const HalfEdge &halfedge) const;
+  vector<MeshPoint> get_next(const HalfEdge &halfedge) const;
 
   unordered_set<HalfEdgeIndex> get_active_edges() const;
+  void set_active_edges(const unordered_set<HalfEdgeIndex> &edges);
   unordered_set<HalfEdgeIndex> get_checked_edges() const;
+  void set_checked_edges(const unordered_set<HalfEdgeIndex> &edges);
   unordered_set<HalfEdgeIndex> get_bounding_edges() const;
+  void move_active_edges_to_checked();
   vector<MeshPoint> get_mesh_points() const;
   vector<HalfEdge> get_mesh_edges() const;
   vector<Face> get_mesh_faces() const;
   HalfEdgeIndex get_active_edge() const;
   HalfEdgeIndex get_checked_edge() const;
+
   void remove_active_edge(const HalfEdgeIndex &index);
   void add_edge_to_active(const HalfEdgeIndex &index);
   void remove_checked_edge(const HalfEdgeIndex &index);
@@ -100,6 +108,10 @@ class Mesh {
                       const HalfEdge &working_edge,
                       const Face &incident_face) const;
   vector<MeshPoint> get_breakers(const Triangle &T) const;
+  vector<MeshPoint> get_meshpoints_in_interval(numeric min_x, numeric max_x,
+                                               numeric min_y, numeric max_y,
+                                               numeric min_z,
+                                               numeric max_z) const;
 
   void obj_format(const std::string &name) const;
 
@@ -107,4 +119,6 @@ class Mesh {
                    const HalfEdgeIndex working_edge = kInvalidEdgeIndex) const;
   std::string _find_type(const HalfEdgeIndex index_AB, const MeshPoint &P,
                          MeshPointIndex index_P = kInvalidPointIndex) const;
+  vector<MeshPoint> _linear_breakers_getter(const Triangle &T) const;
+  vector<MeshPoint> _tree_breakers_getter(const Triangle &T) const;
 };

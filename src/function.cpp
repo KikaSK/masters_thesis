@@ -15,12 +15,12 @@ ex Function::grad_z() const { return _dF[2]; }
 
 Vector Function::get_gradient_at_point(const Point &P) const {
   // substituing point P to gradient
-  numeric first = ex_to<numeric>(
-      _dF[0].subs(lst{_x == P.x(), _y == P.y(), _z == P.z()}).evalf());
-  numeric second = ex_to<numeric>(
-      _dF[1].subs(lst{_x == P.x(), _y == P.y(), _z == P.z()}).evalf());
-  numeric third = ex_to<numeric>(
-      _dF[2].subs(lst{_x == P.x(), _y == P.y(), _z == P.z()}).evalf());
+  numeric first = GiNaC::ex_to<numeric>(
+      _dF[0].subs(GiNaC::lst{_x == P.x(), _y == P.y(), _z == P.z()}).evalf());
+  numeric second = GiNaC::ex_to<numeric>(
+      _dF[1].subs(GiNaC::lst{_x == P.x(), _y == P.y(), _z == P.z()}).evalf());
+  numeric third = GiNaC::ex_to<numeric>(
+      _dF[2].subs(GiNaC::lst{_x == P.x(), _y == P.y(), _z == P.z()}).evalf());
 
   return Vector(first, second, third);
 }
@@ -30,8 +30,8 @@ Vector Function::get_tangent_at_point(const Point &P) const {
   return (get_gradient_at_point(P)).get_any_perpendicular();
 }
 numeric Function::eval_at_point(const Point &P) const {
-  return ex_to<numeric>(
-      _F.subs(lst{_x == P.x(), _y == P.y(), _z == P.z()}).evalf());
+  return GiNaC::ex_to<numeric>(
+      _F.subs(GiNaC::lst{_x == P.x(), _y == P.y(), _z == P.z()}).evalf());
 }
 // inside is defined as {P : F(P) < 0}
 bool Function::is_inside(const Point &P) const {
@@ -56,5 +56,5 @@ Vector Function::outside_normal(const Triangle &T, const numeric e_size) const {
 }
 
 numeric Function::substitute(GiNaC::ex il) const {
-  return ex_to<numeric>(get_function().subs(il).evalf());
+  return GiNaC::ex_to<numeric>(get_function().subs(il).evalf());
 }
