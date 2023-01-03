@@ -1,6 +1,7 @@
 #include "mesh.h"
 
 Mesh::Mesh(const Triangle &T, const BoundingBox &bounding_box) {
+  /*
   Face F(T);
   F.set_halfedge(0);
   _mesh_triangles.push_back(F);
@@ -61,6 +62,8 @@ Mesh::Mesh(const Triangle &T, const BoundingBox &bounding_box) {
   _active_edges.insert(2);
 
   edges_check("in mesh constructor:");
+  */
+  add_first_triangle(T, bounding_box);
   // cout_mesh();
 }
 
@@ -383,6 +386,179 @@ bool Mesh::is_boundary_point(const MeshPoint &P) const {
     if (_mesh_edges[incoming].is_boundary()) return true;
   }
   return false;
+}
+
+void Mesh::add_first_triangle(const Triangle &T,
+                              const BoundingBox &bounding_box) {
+  Face F(T);
+  F.set_halfedge(0);
+  _mesh_triangles.push_back(F);
+  MeshPoint A(F.get_triangle().A(), 0);  // the outgoing halfedge will be AB
+  MeshPoint B(F.get_triangle().B(), 1);  // the outgoing halfedge will be BC
+  MeshPoint C(F.get_triangle().C(), 2);  // the outgoing halfedge will be CA
+  A.set_index(0);
+  B.set_index(1);
+  C.set_index(2);
+
+  _mesh_points.push_back(A);
+  _mesh_points.push_back(B);
+  _mesh_points.push_back(C);
+
+  _point_tree.insert(A);
+  _point_tree.insert(B);
+  _point_tree.insert(C);
+
+  HalfEdge AB(F.get_triangle().AB(),
+              0,   // A index is 0
+              1,   // B index is 1
+              2,   // previous is CA
+              1,   // next is BC
+              -1,  // no opposite
+              0    // incident face is F
+  );
+  HalfEdge BC(F.get_triangle().BC(),
+              1,   // B index is 1
+              2,   // C index is 2
+              0,   // previous is AB
+              2,   // next is CA
+              -1,  // no opposite
+              0    // incident face is F
+  );
+  HalfEdge CA(F.get_triangle().CA(),
+              2,   // C index is 2
+              0,   // A index is 0
+              1,   // previous is BC
+              0,   // next is AB
+              -1,  // no opposite
+              0    // incident face is F
+  );
+
+  AB.set_index(0);
+  BC.set_index(1);
+  CA.set_index(2);
+
+  if (bounding_box.new_bounding_edge(AB.get_edge())) {
+    _bounding_edges.insert(0);
+    AB.set_bounding();
+  } else {
+    _active_edges.insert(0);
+    AB.set_active();
+  }
+  if (bounding_box.new_bounding_edge(BC.get_edge())) {
+    _bounding_edges.insert(1);
+    BC.set_bounding();
+  } else {
+    _active_edges.insert(1);
+    BC.set_active();
+  }
+  if (bounding_box.new_bounding_edge(CA.get_edge())) {
+    _bounding_edges.insert(2);
+    CA.set_bounding();
+  } else {
+    _active_edges.insert(2);
+    CA.set_active();
+  }
+
+  _mesh_edges.push_back(AB);
+  _mesh_edges.push_back(BC);
+  _mesh_edges.push_back(CA);
+
+  edges_check("in add first triangle: ");
+}
+
+void Mesh::add_triangle_to_meshpoint(MeshPointIndex i_A, Point point_B,
+                                     Point point_C,
+                                     const BoundingBox &bounding_box) {
+  Triangle T(_mesh_points[i_A].get_point(), point_B, point_C);
+  Face F(T);
+
+  HalfEdgeIndex i_AB = _mesh_edges.size();
+  HalfEdgeIndex i_BC = i_AB + 1;
+  HalfEdgeIndex i_CA = i_BC + 1;
+
+  FaceIndex i_F = _mesh_triangles.size();
+
+  F.set_halfedge(i_AB);
+  _mesh_triangles.push_back(F);
+
+  MeshPointIndex i_B = _mesh_points.size();
+  MeshPointIndex i_C = i_B + 1;
+
+  MeshPoint &A = _mesh_points[i_A];
+  A.add_outgoing(i_AB);
+  MeshPoint B(F.get_triangle().B(), i_BC);  // the outgoing halfedge will be BC
+  MeshPoint C(F.get_triangle().C(), i_CA);  // the outgoing halfedge will be CA
+  B.set_index(i_B);
+  C.set_index(i_C);
+
+  _mesh_points.push_back(B);
+  _mesh_points.push_back(C);
+
+  _point_tree.insert(B);
+  _point_tree.insert(C);
+
+  HalfEdge AB(F.get_triangle().AB(),
+              i_A,   // A index is 0
+              i_B,   // B index is 1
+              i_CA,  // previous is CA
+              i_BC,  // next is BC
+              -1,    // no opposite
+              i_F    // incident face is F
+  );
+  HalfEdge BC(F.get_triangle().BC(),
+              i_B,   // B index is 1
+              i_C,   // C index is 2
+              i_AB,  // previous is AB
+              i_CA,  // next is CA
+              -1,    // no opposite
+              i_F    // incident face is F
+  );
+  HalfEdge CA(F.get_triangle().CA(),
+              i_C,   // C index is 2
+              i_A,   // A index is 0
+              i_BC,  // previous is BC
+              i_AB,  // next is AB
+              -1,    // no opposite
+              i_F    // incident face is F
+  );
+
+  AB.set_index(i_AB);
+  BC.set_index(i_BC);
+  CA.set_index(i_CA);
+
+  _active_edges.insert(i_AB);
+  AB.set_active();
+  _active_edges.insert(i_BC);
+  BC.set_active();
+  _active_edges.insert(i_CA);
+  CA.set_active();
+
+  /*
+  if (bounding_box.new_bounding_edge(AB.get_edge())) {
+  _bounding_edges.insert(i_AB);
+  AB.set_bounding();
+  } else {
+  _active_edges.insert(i_AB);
+  AB.set_active();
+  }
+  if (bounding_box.new_bounding_edge(BC.get_edge())) {
+  _bounding_edges.insert(i_BC);
+  BC.set_bounding();
+  } else {
+  _active_edges.insert(i_BC);
+  BC.set_active();
+  }
+  if (bounding_box.new_bounding_edge(CA.get_edge())) {
+  _bounding_edges.insert(i_CA);
+  CA.set_bounding();
+  } else {
+  _active_edges.insert(i_CA);
+  CA.set_active();
+  }
+  */
+  _mesh_edges.push_back(AB);
+  _mesh_edges.push_back(BC);
+  _mesh_edges.push_back(CA);
 }
 
 // Adding triangle ABP where P is new_point

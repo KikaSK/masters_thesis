@@ -45,6 +45,10 @@ class Mesh {
   void cout_mesh() const;
   void cout_triangles_number() const;
 
+  void add_first_triangle(const Triangle &T, const BoundingBox &bounding_box);
+  void add_triangle_to_meshpoint(MeshPointIndex i_A, Point point_B,
+                                 Point point_C,
+                                 const BoundingBox &bounding_box);
   void add_triangle(HalfEdgeIndex index_AB, Point P, std::string type,
                     MeshPointIndex index_P = kInvalidPointIndex);
   void add_triangle2(HalfEdgeIndex index_AB, Point P, std::string type,
