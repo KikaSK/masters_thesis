@@ -386,21 +386,19 @@ bool Mesh::is_boundary_point(const MeshPoint &P) const {
 }
 
 // Adding triangle ABP where P is new_point
-void Mesh::add_triangle(HalfEdgeIndex i_AB, Point new_point,
-                        std::string type /*new, next, previous, overlap, fill*/,
-                        MeshPointIndex i_P) {
+void Mesh::add_triangle(
+    HalfEdgeIndex i_AB, Point new_point,
+    const bool is_new /*new, next, previous, overlap, fill*/,
+    MeshPointIndex i_P) {
   // edges_check("add triangle beg", i_AB);
-  assertm(type == "new" || type == "next" || type == "previous" ||
-              type == "overlap" || type == "fill",
-          "Invalid type!");
 
-  if (type != "new") assertm(i_P >= 0, "Invalid index of given meshpoint.");
+  if (!is_new) assertm(i_P >= 0, "Invalid index of given meshpoint.");
 
   HalfEdgeIndex i_edge = _mesh_edges.size();
   MeshPointIndex i_point = _mesh_points.size();
   FaceIndex i_face = _mesh_triangles.size();
 
-  if (type == "new") {
+  if (is_new) {
     MeshPoint new_meshpoint(new_point);
     new_meshpoint.set_index(i_point);
     _mesh_points.push_back(new_meshpoint);
@@ -448,9 +446,13 @@ void Mesh::add_triangle(HalfEdgeIndex i_AB, Point new_point,
   _mesh_edges.push_back(AP);
   _mesh_edges.push_back(PB);
 
-  if (type != "new") {
+  std::string type;
+  if (is_new) {
+    type = "new";
+  } else {
     type = _find_type(i_AB, P, i_P);
   }
+
   if (type == "fill") {
     // the edges are inside and we need to bound them with opposite edges
     _bound_opposite_outgoing(P, i_A, i_AP);  // try to bound AP with PA

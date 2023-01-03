@@ -172,14 +172,14 @@ bool BasicAlgorithm::non_Delaunay_conditions(const HalfEdge &working_edge,
 
 // creates new triangle and adds it to mesh
 void BasicAlgorithm::create_triangle(const HalfEdge &working_edge,
-                                     const Point &P, const std::string type,
+                                     const Point &P, const bool is_new,
                                      const MeshPointIndex index_P) {
   assertm(working_edge.get_point_A() != P && working_edge.get_point_B() != P,
           "Wrong new triangle!");
   Triangle new_triangle(working_edge.get_point_B(), working_edge.get_point_A(),
                         P);
   assertm(new_triangle.is_triangle(), "New triangle is not a triangle!");
-  my_mesh.add_triangle(working_edge.get_index(), P, type, index_P);
+  my_mesh.add_triangle(working_edge.get_index(), P, is_new, index_P);
   return;
 }
 
@@ -260,7 +260,7 @@ bool BasicAlgorithm::basic_triangle(const HalfEdge &working_edge,
   if (!check_conditions(working_edge, point, false)) {
     return false;
   }
-  create_triangle(working_edge, point.get_point(), "fill", point.get_index());
+  create_triangle(working_edge, point.get_point(), false, point.get_index());
   return true;
 }
 
@@ -509,7 +509,7 @@ bool BasicAlgorithm::fix_overlap(const HalfEdge &working_edge,
   assertm(!my_mesh.has_incoming_prev(working_edge, overlap_point) &&
               !my_mesh.has_outgoing_next(working_edge, overlap_point),
           "Creating overlap from non overlap point!");
-  create_triangle(working_edge, overlap_point.get_point(), "overlap",
+  create_triangle(working_edge, overlap_point.get_point(), false,
                   overlap_point.get_index());
   // cout << "overlap" << endl;
   return true;
@@ -646,7 +646,7 @@ bool BasicAlgorithm::fix_proj(const HalfEdge &working_edge,
   assertm(!my_mesh.has_incoming_prev(working_edge, projected) &&
               !my_mesh.has_outgoing_next(working_edge, projected),
           "Creating new triangle with prev or next!");
-  create_triangle(working_edge, projected, "new");
+  create_triangle(working_edge, projected, true);
   return true;
 }
 
@@ -694,7 +694,7 @@ bool BasicAlgorithm::_fix_prev_next(const HalfEdge &working_edge,
     return false;
   }
   // TODO(kuska) change the type to bool - new/not new
-  create_triangle(working_edge, point.get_point(), "next", point.get_index());
+  create_triangle(working_edge, point.get_point(), false, point.get_index());
   return true;
 }
 
