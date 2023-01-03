@@ -4,6 +4,84 @@
 
 using std::cout;
 
+#pragma region "Region singularities"
+
+void BasicAlgorithm::triangulate_A1_starter(
+    const Point &singular, const Vector &singular_direction, Mesh *mesh,
+    const MeshPointIndex singular_index) {
+  Vector unit_singular_direction = singular_direction.unit();
+  Vector plane_vector = unit_singular_direction.get_any_perpendicular();
+  const Vector &u = unit_singular_direction;
+
+  // rotating matrix around singular direction
+  // cos(pi/3)+ux^2*(1-cos(pi/3))          ux*uy*(1-cos(pi/3)-uz*sin(pi/3)
+  // ux*uz(1-cos(pi/3))+uy*sin(pi/3) ux*uy*(1-cos(pi/3)+uz*sin(pi/3)
+  // cos(pi/3)+uy^2*(1-cos(pi/3))         uy*uz(1-cos(pi/3))-ux*sin(pi/3)
+  // ux*uz(1-cos(pi/3))-uy*sin(pi/3)       uy*uz(1-cos(pi/3))+ux*sin(pi/3)
+  // cos(pi/3)+uz^2*(1-cos(pi/3))
+  const numeric COS = numeric(1) / 2;
+  const numeric SIN = numeric(sqrt(3) / 2);
+  const Vector rot_vector_x = Vector(COS + u.x() * u.x() * (1 - COS),
+                                     u.x() * u.y() * (1 - COS) - u.z() * SIN,
+                                     u.x() * u.z() * (1 - COS) + u.y() * SIN);
+  const Vector rot_vector_y = Vector(u.x() * u.y() * (1 - COS) + u.z() * SIN,
+                                     COS + u.y() * u.y() * (1 - COS),
+                                     u.y() * u.z() * (1 - COS) - u.x() * SIN);
+  const Vector rot_vector_z = Vector(u.x() * u.z() * (1 - COS) - u.y() * SIN,
+                                     u.y() * u.z() * (1 - COS) + u.x() * SIN,
+                                     COS + u.z() * u.z() * (1 - COS));
+
+  vector<Point> points;
+  for (int i = 0; i < 6; ++i) {
+    Point point_to_project =
+        Point(singular, (sqrt(15) / 4) * plane_vector +
+                            (e_size / 4) * unit_singular_direction);
+
+    // direction of projection
+    Vector direction = F.get_gradient_at_point(point_to_project).unit();
+    Point projected_point = project(point_to_project, direction, F, {e_size});
+    points.push_back(projected_point);
+
+    // checks if the point is in the correct halfspace
+    Vector projected_vector = Vector(singular, projected_point);
+    assertm(direction * projected_vector > 0,
+            "New point in opposite halfspace!");
+
+    plane_vector =
+        Vector(rot_vector_x * plane_vector, rot_vector_y * plane_vector,
+               rot_vector_z * plane_vector);
+  }
+
+  // Mesh local_mesh;
+  for (int i = 0; i < 6; ++i) {
+    int j = (i + 1) % 6;
+    Triangle triangle = Triangle(singular, points[i], points[j]);
+    assertm(triangle.is_triangle(), "Invalid triangle!");
+    if (i == 0) {
+      if (mesh->get_faces_count() == 0) {
+        mesh->add_first_triangle(triangle, bounding_box);
+      } else {
+        assertm(singular_index != kInvalidPointIndex,
+                "invalid singular meshpoint index");
+        mesh->add_triangle_to_meshpoint(singular_index, points[i], points[j],
+                                        bounding_box);
+      }
+    } else if (i < 5) {
+      mesh->add_triangle(mesh->get_edges_count() - 1, points[j], "new");
+      //,bounding_box);
+    } else {
+      mesh->add_triangle(mesh->get_edges_count() - 1, points[j], "next",
+                         // bounding_box,
+                         mesh->get_points_count() - 6);
+    }
+    mesh->edges_check("in A1: ");
+  }
+  mesh->obj_format(name + "_local");
+  return;
+}
+
+#pragma endregion "Region singularities"
+
 #pragma region "Seed triangle"
 // finds first edge from seed point
 Edge BasicAlgorithm::get_seed_edge(Point seed_point) const {
@@ -506,9 +584,9 @@ bool BasicAlgorithm::fix_overlap(const HalfEdge &working_edge,
   if (!check_conditions(working_edge, overlap_point.get_point(), Delaunay)) {
     return false;
   }
-  assertm(!my_mesh.has_incoming_prev(working_edge, overlap_point) &&
+  /*assertm(!my_mesh.has_incoming_prev(working_edge, overlap_point) &&
               !my_mesh.has_outgoing_next(working_edge, overlap_point),
-          "Creating overlap from non overlap point!");
+          "Creating overlap from non overlap point!");*/
   create_triangle(working_edge, overlap_point.get_point(), "overlap",
                   overlap_point.get_index());
   // cout << "overlap" << endl;

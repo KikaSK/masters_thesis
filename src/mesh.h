@@ -65,6 +65,10 @@ class Mesh {
   MeshPoint get_meshpoint(MeshPointIndex index) const;
   Face get_face(FaceIndex index) const;
 
+  int get_faces_count() const;
+  int get_edges_count() const;
+  int get_points_count() const;
+
   HalfEdge get_previous_halfedge(const HalfEdge &halfedge) const;
   HalfEdge get_previous_halfedge(HalfEdgeIndex index) const;
   HalfEdge get_next_halfedge(const HalfEdge &halfedge) const;
@@ -138,6 +142,11 @@ class Mesh {
   bool good_orientation(const HalfEdge &working_edge, const Point &P,
                         const Face &incident_face) const;
 
+  numeric _midpoint_line_point_distance(const HalfEdge &working_edge,
+                                        const Point &P) const;
+  numeric _linesegment_line_point_distance(const HalfEdge &working_edge,
+                                           const Point &P,
+                                           const Face &incident_face) const;
   // https://math.stackexchange.com/questions/1905533/find-perpendicular-distance-from-point-to-line-in-3d
   // returns ditance between point and line given by working edge
   numeric line_point_dist(const HalfEdge &working_edge, const Point &P,

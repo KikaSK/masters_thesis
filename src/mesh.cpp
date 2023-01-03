@@ -166,6 +166,10 @@ Face Mesh::get_face(FaceIndex index) const {
   return _mesh_triangles[index];
 }
 
+int Mesh::get_faces_count() const { return _mesh_triangles.size(); }
+int Mesh::get_edges_count() const { return _mesh_edges.size(); }
+int Mesh::get_points_count() const { return _mesh_points.size(); }
+
 HalfEdge Mesh::get_previous_halfedge(const HalfEdge &halfedge) const {
   auto i_previous = halfedge.get_previous();
   assertm(i_previous != -1, "No previous halfedge");
@@ -999,14 +1003,14 @@ bool Mesh::good_orientation(const HalfEdge &working_edge, const Point &P,
          angle2.value() < 3 * GiNaC::ex_to<numeric>(GiNaC::Pi.evalf()) / 4;
 }
 
-// https://math.stackexchange.com/questions/1905533/find-perpendicular-distance-from-point-to-line-in-3d
+numeric Mesh::_midpoint_line_point_distance(const HalfEdge &working_edge,
+                                            const Point &P) const {
+  return Vector(working_edge.get_midpoint(), P).get_length();
+}
 
-// returns ditance between point and line segment given by working edge
-numeric Mesh::line_point_dist(const HalfEdge &working_edge, const Point &P,
-                              const Face &incident_face) const {
-  assertm(
-      !Vector(working_edge.get_point_A(), working_edge.get_point_B()).is_zero(),
-      "Edge is zero vector!");
+numeric Mesh::_linesegment_line_point_distance(
+    const HalfEdge &working_edge, const Point &P,
+    const Face &incident_face) const {
   Vector AB_unit =
       Vector(working_edge.get_point_A(), working_edge.get_point_B()).unit();
   Vector AP = Vector(working_edge.get_point_A(), P);
@@ -1031,4 +1035,14 @@ numeric Mesh::line_point_dist(const HalfEdge &working_edge, const Point &P,
   }
   assertm(false, "Wrong line point distance!");
   return 1000;
+}
+
+// https://math.stackexchange.com/questions/1905533/find-perpendicular-distance-from-point-to-line-in-3d
+// returns ditance between point and line segment given by working edge
+numeric Mesh::line_point_dist(const HalfEdge &working_edge, const Point &P,
+                              const Face &incident_face) const {
+  assertm(
+      !Vector(working_edge.get_point_A(), working_edge.get_point_B()).is_zero(),
+      "Edge is zero vector!");
+  return _midpoint_line_point_distance(working_edge, P);
 }
