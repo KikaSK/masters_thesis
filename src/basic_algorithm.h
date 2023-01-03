@@ -15,17 +15,21 @@ using std::string;
 
 class BasicAlgorithm {
  public:
-  BasicAlgorithm(string name, Function f, Triangle seed_triangle,
-                 numeric e_size, realsymbol x, realsymbol y, realsymbol z,
+  BasicAlgorithm(string name, Function f, Point seed_point, numeric e_size,
+                 realsymbol x, realsymbol y, realsymbol z,
                  BoundingBox bounding_box)
       : name(name),
         F(f),
-        my_mesh(seed_triangle),
+        // my_mesh(seed_triangle),
         e_size(e_size),
         x(x),
         y(y),
         z(z),
         bounding_box(bounding_box) {
+    Triangle seed_triangle = find_seed_triangle(seed_point);
+    std::cout << "seed triangle created" << endl;
+    my_mesh = Mesh(seed_triangle, bounding_box);
+    std::cout << "in basic algorithm constructor" << endl;
     /*
     if (bounding_box.new_bounding_edge(seed_triangle.AB()))
       bounding_edges.push_back(seed_triangle.AB());
@@ -111,6 +115,12 @@ class BasicAlgorithm {
                                                       const Triangle &N) const;
 
   void fix_corners();
+
+  // section seed triangle
+  Edge get_seed_edge(Point seed_point) const;
+  Point get_seed_triangle(const Edge &e) const;
+  Triangle find_seed_triangle(Point seed) const;
+  void create_mesh(Point seed);
 
  private:
   string name;

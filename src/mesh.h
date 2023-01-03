@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "../range-tree/nd_reb.h"
+#include "bounding_box.h"
 #include "face.h"
 #include "half_edge.h"
 #include "mesh_point.h"
@@ -34,10 +35,11 @@ class Mesh {
                                 const HalfEdgeIndex i_BA);
 
  public:
-  explicit Mesh(const Triangle &T);
-  Mesh() = delete;
+  explicit Mesh(const Triangle &T, const BoundingBox &bounding_box);
+  Mesh() = default;
   Mesh(const Mesh &M) = delete;
   Mesh(Mesh &&M) = default;
+  Mesh &operator=(Mesh &&M) = default;
 
   void cout_triangles() const;
   void cout_mesh() const;
@@ -120,4 +122,20 @@ class Mesh {
                          MeshPointIndex index_P = kInvalidPointIndex) const;
   vector<MeshPoint> _linear_breakers_getter(const Triangle &T) const;
   vector<MeshPoint> _tree_breakers_getter(const Triangle &T) const;
+
+  // moved from algorithm.h
+
+  // angle BAP in range (-Pi, Pi) with respect to neighbour triangle
+  std::optional<numeric> angle(const HalfEdge &working_edge, const Point &P,
+                               const Face &incident_face,
+                               const bool clockwise) const;
+
+  // true if angle is between 0 and 3*pi/4 with respect to neighbour triangle
+  bool good_orientation(const HalfEdge &working_edge, const Point &P,
+                        const Face &incident_face) const;
+
+  // https://math.stackexchange.com/questions/1905533/find-perpendicular-distance-from-point-to-line-in-3d
+  // returns ditance between point and line given by working edge
+  numeric line_point_dist(const HalfEdge &working_edge, const Point &P,
+                          const Face &incident_face) const;
 };

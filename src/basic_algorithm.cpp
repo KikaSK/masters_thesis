@@ -4,7 +4,72 @@
 
 using std::cout;
 
-// singularities
+#pragma region "Seed triangle"
+// finds first edge from seed point
+Edge BasicAlgorithm::get_seed_edge(Point seed_point) const {
+  Vector edge_size_tangent =
+      e_size * (F.get_tangent_at_point(seed_point).unit());
+
+  Point point_to_project(seed_point, edge_size_tangent);
+
+  // direction of projection
+  Vector direction = F.get_gradient_at_point(point_to_project).unit();
+
+  Point projected_point = project(point_to_project, direction, F, {e_size});
+  // projected_point = bounding_box.crop_to_box(seed_point, projected_point,
+  // edge_size, F);
+
+  assertm(seed_point != projected_point, "Error in get_seed_edge");
+
+  return Edge(seed_point, projected_point);
+}
+
+// finds third point in first triangle from seed edge
+Point BasicAlgorithm::get_seed_triangle(const Edge &e) const {
+  Point center = e.get_midpoint();
+
+  // normals at endpoints of the edge
+  Vector n_A = F.get_gradient_at_point(e.A()).unit();
+  Vector n_B = F.get_gradient_at_point(e.B()).unit();
+
+  // average of endpoints normals
+  Vector center_normal((n_A + n_B) / 2);
+
+  Vector edge_vector(e.A(), e.B());
+  Vector center_tangent = center_normal ^ edge_vector;
+
+  assertm(abs(center_normal * center_tangent) < 1e-6, "Not perpendicular!");
+
+  // height of equilateral triangle with side edge_size
+  numeric height = sqrt(numeric(3)) / 2 * e_size;
+
+  Point point_to_project(center, height * center_tangent.unit());
+
+  Vector normal = F.get_gradient_at_point(point_to_project).unit();
+
+  Point projected = project(point_to_project, normal, F, {e_size});
+  // projected = bounding_box.crop_to_box(e.get_midpoint(), projected,
+  // edge_size, F);
+  return projected;
+}
+
+// returns first triangle
+Triangle BasicAlgorithm::find_seed_triangle(Point seed) const {
+  Vector normal = F.get_gradient_at_point(seed).unit();
+  // project point on surface just to be sure it is lying on the surface with
+  // enough precision
+  seed = project(seed, normal, F, {e_size});
+  assertm(bounding_box.is_inside(seed), "Seed point outside of bounding box!");
+  // gets seed edge
+  Edge seed_edge = get_seed_edge(seed);
+
+  // gets third point in seed triangle
+  Point Q = get_seed_triangle(seed_edge);
+
+  // return seed triangle
+  return Triangle(seed_edge.A(), seed_edge.B(), Q);
+}
+#pragma endregion "Seed triangle"
 
 // TODO(kuska) rewrite to non-optional
 std::optional<vector<MeshPoint>> BasicAlgorithm::_tree_close_points_finder(
@@ -17,9 +82,9 @@ std::optional<vector<MeshPoint>> BasicAlgorithm::_tree_close_points_finder(
 
   if (close_points.empty()) return std::nullopt;
   sort(close_points.begin(), close_points.end(),
-       [this, &working_edge, &incident_face](auto i, auto j) {
-         return line_point_dist(my_mesh, working_edge, i, incident_face) <
-                line_point_dist(my_mesh, working_edge, j, incident_face);
+       [this, &working_edge, &incident_face](const auto &i, const auto &j) {
+         return my_mesh.line_point_dist(working_edge, i, incident_face) <
+                my_mesh.line_point_dist(working_edge, j, incident_face);
        });
   return close_points;
 }
@@ -37,9 +102,9 @@ std::optional<vector<MeshPoint>> BasicAlgorithm::_linear_close_points_finder(
   if (close_points.empty()) return std::nullopt;
 
   sort(close_points.begin(), close_points.end(),
-       [this, &working_edge, &incident_face](auto i, auto j) {
-         return line_point_dist(my_mesh, working_edge, i, incident_face) <
-                line_point_dist(my_mesh, working_edge, j, incident_face);
+       [this, &working_edge, &incident_face](const auto &i, const auto &j) {
+         return my_mesh.line_point_dist(working_edge, i, incident_face) <
+                my_mesh.line_point_dist(working_edge, j, incident_face);
        });
   return close_points;
 }
@@ -265,8 +330,8 @@ std::optional<MeshPoint> BasicAlgorithm::get_closest_point(
   std::optional<numeric> min_dist;
 
   for (auto meshpoint : meshpoints) {
-    auto dist = line_point_dist(my_mesh, working_edge, meshpoint.get_point(),
-                                incident_face);
+    auto dist = my_mesh.line_point_dist(working_edge, meshpoint.get_point(),
+                                        incident_face);
     if (dist < min_dist &&
         meshpoint.get_point() != working_edge.get_point_A() &&
         meshpoint.get_point() != working_edge.get_point_B() &&
@@ -659,11 +724,12 @@ bool BasicAlgorithm::fix_breakers(const HalfEdge &working_edge,
   vector<MeshPoint> breakers = my_mesh.get_breakers(proj_T);
   // std::cout << "breakers count: " << breakers.size() << endl;
   //  sort from closest to working_edge
-  std::sort(breakers.begin(), breakers.end(),
-            [this, &working_edge, &incident_face](auto i, auto j) {
-              return line_point_dist(my_mesh, working_edge, i, incident_face) <
-                     line_point_dist(my_mesh, working_edge, j, incident_face);
-            });
+  std::sort(
+      breakers.begin(), breakers.end(),
+      [this, &working_edge, &incident_face](const auto &i, const auto &j) {
+        return my_mesh.line_point_dist(working_edge, i, incident_face) <
+               my_mesh.line_point_dist(working_edge, j, incident_face);
+      });
 
   // try create triangle with breakers
   for (auto point : breakers) {
