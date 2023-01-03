@@ -91,7 +91,8 @@ class BasicAlgorithm {
                                const Point &P) const;
 
   void create_triangle(const HalfEdge &working_edge, const Point &P,
-                       const bool is_new, const MeshPointIndex index_P = -1);
+                       const std::string type,
+                       const MeshPointIndex index_P = -1);
   bool good_edges(const HalfEdge &working_edge, const Point &P) const;
   bool good_new_point(const MeshPoint &point) const;
   bool basic_triangle(const HalfEdge &working_edge, const Face &incident_face,
