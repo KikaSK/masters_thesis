@@ -43,7 +43,7 @@ bool BoundingBox::is_on(const Point P) const {
   return (x_wall || y_wall || z_wall);
 }
 
-bool BoundingBox::new_bounding_edge(const Edge &e) const {
+bool BoundingBox::is_new_bounding_edge(const Edge &e) const {
   return is_on(e.A()) && is_on(e.B());
 }
 

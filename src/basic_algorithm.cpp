@@ -68,12 +68,12 @@ void BasicAlgorithm::triangulate_A1_starter(
                                         bounding_box);
       }
     } else if (i < 5) {
-      mesh->add_triangle(mesh->get_edges_count() - 1, points[j], "new");
+      mesh->add_triangle(mesh->get_edges_count() - 1, points[j], "new",
+                         bounding_box);
       //,bounding_box);
     } else {
       mesh->add_triangle(mesh->get_edges_count() - 1, points[j], "next",
-                         // bounding_box,
-                         mesh->get_points_count() - 6);
+                         bounding_box, mesh->get_points_count() - 6);
     }
     mesh->edges_check("in A1: ");
   }
@@ -259,7 +259,8 @@ void BasicAlgorithm::create_triangle(const HalfEdge &working_edge,
   Triangle new_triangle(working_edge.get_point_B(), working_edge.get_point_A(),
                         P);
   assertm(new_triangle.is_triangle(), "New triangle is not a triangle!");
-  my_mesh.add_triangle(working_edge.get_index(), P, type, index_P);
+  my_mesh.add_triangle(working_edge.get_index(), P, type, bounding_box,
+                       index_P);
   return;
 }
 

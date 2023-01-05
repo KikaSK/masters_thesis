@@ -50,9 +50,8 @@ class Mesh {
                                  Point point_C,
                                  const BoundingBox &bounding_box);
   void add_triangle(HalfEdgeIndex index_AB, Point P, std::string type,
+                    const BoundingBox &bounding_box,
                     MeshPointIndex index_P = kInvalidPointIndex);
-  void add_triangle2(HalfEdgeIndex index_AB, Point P, std::string type,
-                     MeshPointIndex index_P = kInvalidPointIndex);
 
   bool is_active(HalfEdgeIndex index) const;
   bool is_checked(HalfEdgeIndex index) const;

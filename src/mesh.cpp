@@ -379,21 +379,21 @@ void Mesh::add_first_triangle(const Triangle &T,
   BC.set_index(1);
   CA.set_index(2);
 
-  if (bounding_box.new_bounding_edge(AB.get_edge())) {
+  if (bounding_box.is_new_bounding_edge(AB.get_edge())) {
     _bounding_edges.insert(0);
     AB.set_bounding();
   } else {
     _active_edges.insert(0);
     AB.set_active();
   }
-  if (bounding_box.new_bounding_edge(BC.get_edge())) {
+  if (bounding_box.is_new_bounding_edge(BC.get_edge())) {
     _bounding_edges.insert(1);
     BC.set_bounding();
   } else {
     _active_edges.insert(1);
     BC.set_active();
   }
-  if (bounding_box.new_bounding_edge(CA.get_edge())) {
+  if (bounding_box.is_new_bounding_edge(CA.get_edge())) {
     _bounding_edges.insert(2);
     CA.set_bounding();
   } else {
@@ -467,37 +467,37 @@ void Mesh::add_triangle_to_meshpoint(MeshPointIndex i_A, Point point_B,
   AB.set_index(i_AB);
   BC.set_index(i_BC);
   CA.set_index(i_CA);
-
-  _active_edges.insert(i_AB);
-  AB.set_active();
-  _active_edges.insert(i_BC);
-  BC.set_active();
-  _active_edges.insert(i_CA);
-  CA.set_active();
-
   /*
-  if (bounding_box.new_bounding_edge(AB.get_edge())) {
-  _bounding_edges.insert(i_AB);
-  AB.set_bounding();
-  } else {
-  _active_edges.insert(i_AB);
-  AB.set_active();
-  }
-  if (bounding_box.new_bounding_edge(BC.get_edge())) {
-  _bounding_edges.insert(i_BC);
-  BC.set_bounding();
-  } else {
-  _active_edges.insert(i_BC);
-  BC.set_active();
-  }
-  if (bounding_box.new_bounding_edge(CA.get_edge())) {
-  _bounding_edges.insert(i_CA);
-  CA.set_bounding();
-  } else {
-  _active_edges.insert(i_CA);
-  CA.set_active();
-  }
+    _active_edges.insert(i_AB);
+    AB.set_active();
+    _active_edges.insert(i_BC);
+    BC.set_active();
+    _active_edges.insert(i_CA);
+    CA.set_active();
   */
+
+  if (bounding_box.is_new_bounding_edge(AB.get_edge())) {
+    _bounding_edges.insert(i_AB);
+    AB.set_bounding();
+  } else {
+    _active_edges.insert(i_AB);
+    AB.set_active();
+  }
+  if (bounding_box.is_new_bounding_edge(BC.get_edge())) {
+    _bounding_edges.insert(i_BC);
+    BC.set_bounding();
+  } else {
+    _active_edges.insert(i_BC);
+    BC.set_active();
+  }
+  if (bounding_box.is_new_bounding_edge(CA.get_edge())) {
+    _bounding_edges.insert(i_CA);
+    CA.set_bounding();
+  } else {
+    _active_edges.insert(i_CA);
+    CA.set_active();
+  }
+
   _mesh_edges.push_back(AB);
   _mesh_edges.push_back(BC);
   _mesh_edges.push_back(CA);
@@ -506,7 +506,7 @@ void Mesh::add_triangle_to_meshpoint(MeshPointIndex i_A, Point point_B,
 // Adding triangle ABP where P is new_point
 void Mesh::add_triangle(HalfEdgeIndex i_AB, Point new_point,
                         std::string type /*new, next, previous, overlap, fill*/,
-                        MeshPointIndex i_P) {
+                        const BoundingBox &bounding_box, MeshPointIndex i_P) {
   // edges_check("add triangle beg", i_AB);
   assertm(type == "new" || type == "next" || type == "previous" ||
               type == "overlap" || type == "fill",
@@ -524,6 +524,7 @@ void Mesh::add_triangle(HalfEdgeIndex i_AB, Point new_point,
     _mesh_points.push_back(new_meshpoint);
     i_P = i_point;
   }
+  assertm(i_P != kInvalidPointIndex, "Invalid point index!");
   assertm(i_AB < _mesh_edges.size(),
           "Invalid halfedge index in add_triangle function!");
   HalfEdge &AB = _mesh_edges[i_AB];
@@ -575,21 +576,42 @@ void Mesh::add_triangle(HalfEdgeIndex i_AB, Point new_point,
     _bound_opposite_outgoing(B, i_P, i_PB);  // try to bound PB with BP
   } else if (type == "previous") {           // only edge PB is border edge
     _bound_opposite_outgoing(P, i_A, i_AP);  // try to bound AP with PA
-    _mesh_edges[i_PB].set_active();
-    _active_edges.insert(i_PB);
+    if (bounding_box.is_new_bounding_edge(AB.get_edge())) {
+      _bounding_edges.insert(i_PB);
+      _mesh_edges[i_PB].set_bounding();
+    } else {
+      _active_edges.insert(i_PB);
+      _mesh_edges[i_PB].set_active();
+    }
   } else if (type == "next") {               // only edge AP is border edge
     _bound_opposite_outgoing(B, i_P, i_PB);  // try to bound PB with BP
-    _mesh_edges[i_AP].set_active();
-    _active_edges.insert(i_AP);
+    if (bounding_box.is_new_bounding_edge(AB.get_edge())) {
+      _bounding_edges.insert(i_AP);
+      _mesh_edges[i_AP].set_bounding();
+    } else {
+      _active_edges.insert(i_AP);
+      _mesh_edges[i_AP].set_active();
+    }
   } else if (type == "new" ||
              type == "overlap") {  // both AP and PB are new active edges
-    _mesh_edges[i_AP].set_active();
-    _mesh_edges[i_PB].set_active();
-    _active_edges.insert(i_PB);
-    _active_edges.insert(i_AP);
-    _point_tree.insert(P);
+    if (bounding_box.is_new_bounding_edge(AB.get_edge())) {
+      _bounding_edges.insert(i_PB);
+      _mesh_edges[i_PB].set_bounding();
+    } else {
+      _active_edges.insert(i_PB);
+      _mesh_edges[i_PB].set_active();
+    }
+    if (bounding_box.is_new_bounding_edge(AB.get_edge())) {
+      _bounding_edges.insert(i_AP);
+      _mesh_edges[i_AP].set_bounding();
+    } else {
+      _active_edges.insert(i_AP);
+      _mesh_edges[i_AP].set_active();
+    }
+    if (type == "new") _point_tree.insert(P);
   }
   _mesh_triangles.push_back(F);
+  return;
 }
 
 // returns vector of points inside Delaunay sphere
