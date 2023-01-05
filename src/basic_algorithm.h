@@ -65,21 +65,18 @@ class BasicAlgorithm {
   void ending();
   bool step(const HalfEdgeIndex &working_edge);
   bool fix_proj(const HalfEdge &working_edge, const Point &projected,
-                const Face &incident_face, const bool Delaunay);
+                const bool Delaunay);
   bool fix_prev_next(const HalfEdge &working_edge, const bool Delaunay);
-  bool fix_close_points(const HalfEdge &working_edge, const Face &incident_face,
-                        const Point &projected);
-  bool fix_overlap(const HalfEdge &working_edge, const Face &incident_face,
-                   const MeshPoint &overlap_point, const bool Delaunay);
-  int fix_holes(const HalfEdge &working_edge, const Face &incident_face);
+  bool fix_close_points(const HalfEdge &working_edge, const Point &projected);
+  bool fix_overlap(const HalfEdge &working_edge, const MeshPoint &overlap_point,
+                   const bool Delaunay);
+  int fix_holes(const HalfEdge &working_edge);
   bool fix_holes2(const HalfEdge &working_edge);
   bool fix_breakers(const HalfEdge &working_edge, const Point &projected,
-                    const Face &incident_face, const bool Delaunay);
-  bool fix_same_points(const HalfEdge &working_edge, const Point &projected,
-                       const Face &incident_face);
+                    const bool Delaunay);
+  bool fix_same_points(const HalfEdge &working_edge, const Point &projected);
 
-  pair<MeshPoint, MeshPoint> find_prev_next(const HalfEdge &working_edge,
-                                            const Face &incident_face) const;
+  pair<MeshPoint, MeshPoint> find_prev_next(const HalfEdge &working_edge) const;
   MeshPointIndex find_triangle_hole(const HalfEdge &working_edge);
   std::pair<FaceIndex, FaceIndex> find_neighbor_faces(
       const HalfEdge &working_edge, const MeshPoint &P) const;
@@ -88,13 +85,11 @@ class BasicAlgorithm {
   bool orientability_check(const HalfEdge &working_edge,
                            const MeshPoint &point) const;
 
-  Point get_projected(const HalfEdge &working_edge,
-                      const Face &incident_face) const;
+  Point get_projected(const HalfEdge &working_edge) const;
   bool overlap_normals_check(const MeshPoint &candidate,
                              const HalfEdge &working_edge) const;
   std::optional<vector<MeshPoint>> find_close_points(
-      const Point &P, const HalfEdge &working_edge,
-      const Face &incident_face) const;
+      const Point &P, const HalfEdge &working_edge) const;
   int update_border(const Edge &new_edge1, const Edge &new_edge2);
   bool check_conditions(const HalfEdge &working_edge, const Point &P,
                         const bool Delaunay) const;
@@ -107,8 +102,7 @@ class BasicAlgorithm {
                        const MeshPointIndex index_P = -1);
   bool good_edges(const HalfEdge &working_edge, const Point &P) const;
   bool good_new_point(const MeshPoint &point) const;
-  bool basic_triangle(const HalfEdge &working_edge, const Face &incident_face,
-                      const MeshPoint &point);
+  bool basic_triangle(const HalfEdge &working_edge, const MeshPoint &point);
 
   bool is_active(const HalfEdgeIndex &halfedge_index) const;
   bool is_checked(const HalfEdgeIndex &halfedge_index) const;
@@ -121,8 +115,8 @@ class BasicAlgorithm {
   void push_edge_to_active(const HalfEdgeIndex &halfedge_index);
   void push_edge_to_checked(const HalfEdgeIndex &halfedge_index);
 
-  std::optional<MeshPoint> get_closest_point(const HalfEdge &working_edge,
-                                             const Face &incident_face) const;
+  std::optional<MeshPoint> get_closest_point(
+      const HalfEdge &working_edge) const;
   std::optional<pair<Edge, numeric>> get_closest_edge(const Point &P,
                                                       const Triangle &N) const;
 
@@ -151,23 +145,17 @@ class BasicAlgorithm {
   realsymbol y;
   realsymbol z;
   BoundingBox bounding_box;
-  HalfEdgeIndex _find_prev(const HalfEdge &working_edge,
-                           const Face &incident_face) const;
-  HalfEdgeIndex _find_next(const HalfEdge &working_edge,
-                           const Face &incident_face) const;
+  HalfEdgeIndex _find_prev(const HalfEdge &working_edge) const;
+  HalfEdgeIndex _find_next(const HalfEdge &working_edge) const;
   bool _fix_prev_next(const HalfEdge &working_edge, const MeshPoint &prev,
                       const bool Delaunay);
   std::optional<HalfEdgeIndex> _find_closest_prev(
-      const HalfEdge &working_edge, const Face &incident_face,
-      const vector<HalfEdgeIndex> &prev) const;
+      const HalfEdge &working_edge, const vector<HalfEdgeIndex> &prev) const;
   std::optional<HalfEdgeIndex> _find_closest_next(
-      const HalfEdge &working_edge, const Face &incident_face,
-      const vector<HalfEdgeIndex> &next) const;
+      const HalfEdge &working_edge, const vector<HalfEdgeIndex> &next) const;
   std::optional<vector<MeshPoint>> _linear_close_points_finder(
-      const Point &P, const HalfEdge &working_edge,
-      const Face &incident_face) const;
+      const Point &P, const HalfEdge &working_edge) const;
   std::optional<vector<MeshPoint>> _tree_close_points_finder(
-      const Point &P, const HalfEdge &working_edge,
-      const Face &incident_face) const;
+      const Point &P, const HalfEdge &working_edge) const;
   bool _check_normals(const HalfEdge &working_edge, const Point &point) const;
 };

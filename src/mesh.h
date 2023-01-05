@@ -135,20 +135,16 @@ class Mesh {
 
   // angle BAP in range (-Pi, Pi) with respect to neighbour triangle
   std::optional<numeric> angle(const HalfEdge &working_edge, const Point &P,
-                               const Face &incident_face,
                                const bool clockwise) const;
 
   // true if angle is between 0 and 3*pi/4 with respect to neighbour triangle
-  bool good_orientation(const HalfEdge &working_edge, const Point &P,
-                        const Face &incident_face) const;
+  bool good_orientation(const HalfEdge &working_edge, const Point &P) const;
 
   numeric _midpoint_line_point_distance(const HalfEdge &working_edge,
                                         const Point &P) const;
   numeric _linesegment_line_point_distance(const HalfEdge &working_edge,
-                                           const Point &P,
-                                           const Face &incident_face) const;
+                                           const Point &P) const;
   // https://math.stackexchange.com/questions/1905533/find-perpendicular-distance-from-point-to-line-in-3d
   // returns ditance between point and line given by working edge
-  numeric line_point_dist(const HalfEdge &working_edge, const Point &P,
-                          const Face &incident_face) const;
+  numeric line_point_dist(const HalfEdge &working_edge, const Point &P) const;
 };

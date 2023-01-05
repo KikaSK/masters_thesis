@@ -1,68 +1,6 @@
 #include "mesh.h"
 
 Mesh::Mesh(const Triangle &T, const BoundingBox &bounding_box) {
-  /*
-  Face F(T);
-  F.set_halfedge(0);
-  _mesh_triangles.push_back(F);
-  MeshPoint A(F.get_triangle().A(), 0);  // the outgoing halfedge will be AB
-  MeshPoint B(F.get_triangle().B(), 1);  // the outgoing halfedge will be BC
-  MeshPoint C(F.get_triangle().C(), 2);  // the outgoing halfedge will be CA
-  A.set_index(0);
-  B.set_index(1);
-  C.set_index(2);
-
-  _mesh_points.push_back(A);
-  _mesh_points.push_back(B);
-  _mesh_points.push_back(C);
-
-  _point_tree.insert(A);
-  _point_tree.insert(B);
-  _point_tree.insert(C);
-
-  HalfEdge AB(F.get_triangle().AB(),
-              0,   // A index is 0
-              1,   // B index is 1
-              2,   // previous is CA
-              1,   // next is BC
-              -1,  // no opposite
-              0    // incident face is F
-  );
-  HalfEdge BC(F.get_triangle().BC(),
-              1,   // B index is 1
-              2,   // C index is 2
-              0,   // previous is AB
-              2,   // next is CA
-              -1,  // no opposite
-              0    // incident face is F
-  );
-  HalfEdge CA(F.get_triangle().CA(),
-              2,   // C index is 2
-              0,   // A index is 0
-              1,   // previous is BC
-              0,   // next is AB
-              -1,  // no opposite
-              0    // incident face is F
-  );
-
-  AB.set_index(0);
-  BC.set_index(1);
-  CA.set_index(2);
-
-  AB.set_active();
-  BC.set_active();
-  CA.set_active();
-
-  _mesh_edges.push_back(AB);
-  _mesh_edges.push_back(BC);
-  _mesh_edges.push_back(CA);
-
-  _active_edges.insert(0);
-  _active_edges.insert(1);
-  _active_edges.insert(2);
-
-  edges_check("in mesh constructor:");
-  */
   add_first_triangle(T, bounding_box);
   // cout_mesh();
 }
@@ -942,7 +880,6 @@ std::string Mesh::_find_type(const HalfEdgeIndex index_AB, const MeshPoint &P,
 
 // angle BAP in range (-Pi, Pi) with respect to neighbour triangle
 std::optional<numeric> Mesh::angle(const HalfEdge &working_edge, const Point &P,
-                                   const Face &incident_face,
                                    const bool clockwise) const {
   if (P == working_edge.get_point_A() || P == working_edge.get_point_B())
     return std::nullopt;
@@ -955,7 +892,6 @@ std::optional<numeric> Mesh::angle(const HalfEdge &working_edge, const Point &P,
 
   Triangle T = Triangle(A, B, P);
   if (!T.is_triangle()) return std::nullopt;
-  assertm(incident_face.is_triangle(), "Invalid incident triangle!");
 
   // third point in neighbour triangle
   Point C = get_meshpoint(get_next_halfedge(working_edge).get_B()).get_point();
@@ -993,10 +929,10 @@ std::optional<numeric> Mesh::angle(const HalfEdge &working_edge, const Point &P,
 }
 
 // true if angle is between 0 and 3*pi/4 with respect to neighbour triangle
-bool Mesh::good_orientation(const HalfEdge &working_edge, const Point &P,
-                            const Face &incident_face) const {
-  std::optional<numeric> angle1 = angle(working_edge, P, incident_face, false);
-  std::optional<numeric> angle2 = angle(working_edge, P, incident_face, false);
+bool Mesh::good_orientation(const HalfEdge &working_edge,
+                            const Point &P) const {
+  std::optional<numeric> angle1 = angle(working_edge, P, false);
+  std::optional<numeric> angle2 = angle(working_edge, P, false);
   assertm(angle1.has_value() && angle2.has_value(),
           "Angle does not have value!");
   return angle1.value() > 0 &&
@@ -1008,18 +944,17 @@ numeric Mesh::_midpoint_line_point_distance(const HalfEdge &working_edge,
   return Vector(working_edge.get_midpoint(), P).get_length();
 }
 
-numeric Mesh::_linesegment_line_point_distance(
-    const HalfEdge &working_edge, const Point &P,
-    const Face &incident_face) const {
+numeric Mesh::_linesegment_line_point_distance(const HalfEdge &working_edge,
+                                               const Point &P) const {
   Vector AB_unit =
       Vector(working_edge.get_point_A(), working_edge.get_point_B()).unit();
   Vector AP = Vector(working_edge.get_point_A(), P);
   numeric t = AP * AB_unit;
   Point p = Point(working_edge.get_point_A(), t * AB_unit);
 
-  std::optional<numeric> angle1 = angle(working_edge, P, incident_face, true);
+  std::optional<numeric> angle1 = angle(working_edge, P, true);
   std::optional<numeric> angle2 =
-      angle(working_edge, P, incident_face, false);  // anticlockwise
+      angle(working_edge, P, false);  // anticlockwise
 
   assertm(angle1.has_value() && angle2.has_value(),
           "Angles does not have value!");
@@ -1039,8 +974,8 @@ numeric Mesh::_linesegment_line_point_distance(
 
 // https://math.stackexchange.com/questions/1905533/find-perpendicular-distance-from-point-to-line-in-3d
 // returns ditance between point and line segment given by working edge
-numeric Mesh::line_point_dist(const HalfEdge &working_edge, const Point &P,
-                              const Face &incident_face) const {
+numeric Mesh::line_point_dist(const HalfEdge &working_edge,
+                              const Point &P) const {
   assertm(
       !Vector(working_edge.get_point_A(), working_edge.get_point_B()).is_zero(),
       "Edge is zero vector!");
