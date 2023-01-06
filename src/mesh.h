@@ -14,6 +14,14 @@
 using std::unordered_set;
 using std::vector;
 
+enum class NewTriangleType {
+  kNew = 0,
+  kPrevious = 1,
+  kNext = 2,
+  kOverlap = 3,
+  kFill = 4,
+};
+
 class Mesh {
  private:
   vector<MeshPoint> _mesh_points;
@@ -125,8 +133,8 @@ class Mesh {
 
   void edges_check(const std::string &message,
                    const HalfEdgeIndex working_edge = kInvalidEdgeIndex) const;
-  std::string _find_type(const HalfEdgeIndex index_AB, const MeshPoint &P,
-                         MeshPointIndex index_P = kInvalidPointIndex) const;
+  NewTriangleType _find_type(const HalfEdgeIndex index_AB,
+                             const MeshPoint &P) const;
   vector<MeshPoint> _linear_breakers_getter(const Triangle &T) const;
   vector<MeshPoint> _tree_breakers_getter(const Triangle &T) const;
 

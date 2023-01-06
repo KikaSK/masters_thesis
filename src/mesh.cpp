@@ -577,10 +577,66 @@ void Mesh::add_triangle(
   _mesh_edges.push_back(AP);
   _mesh_edges.push_back(PB);
 
-  string type = "new";
+  NewTriangleType type = NewTriangleType::kNew;
   if (!is_new) {
-    type = _find_type(i_AB, P, i_P);
+    type = _find_type(i_AB, P);
   }
+
+  switch (type) {
+    case NewTriangleType::kFill:
+      // the edges are inside and we need to bound them with opposite edges
+      _bound_opposite_outgoing(P, i_A, i_AP);  // try to bound AP with PA
+      _bound_opposite_outgoing(B, i_P, i_PB);  // try to bound PB with BP
+      break;
+
+    case NewTriangleType::kPrevious:
+      _bound_opposite_outgoing(P, i_A, i_AP);  // try to bound AP with PA
+      if (bounding_box.is_new_bounding_edge(_mesh_edges[i_PB].get_edge())) {
+        _bounding_edges.insert(i_PB);
+        _mesh_edges[i_PB].set_bounding();
+      } else {
+        _active_edges.insert(i_PB);
+        _mesh_edges[i_PB].set_active();
+      }
+      break;
+
+    case NewTriangleType::kNext:
+      _bound_opposite_outgoing(B, i_P, i_PB);  // try to bound PB with BP
+      if (bounding_box.is_new_bounding_edge(_mesh_edges[i_AP].get_edge())) {
+        _bounding_edges.insert(i_AP);
+        _mesh_edges[i_AP].set_bounding();
+      } else {
+        _active_edges.insert(i_AP);
+        _mesh_edges[i_AP].set_active();
+      }
+      break;
+
+    case NewTriangleType::kNew:
+      _point_tree.insert(P);
+    case NewTriangleType::kOverlap:
+      // both AP and PB are new active edges
+      if (bounding_box.is_new_bounding_edge(_mesh_edges[i_PB].get_edge())) {
+        _bounding_edges.insert(i_PB);
+        _mesh_edges[i_PB].set_bounding();
+      } else {
+        _active_edges.insert(i_PB);
+        _mesh_edges[i_PB].set_active();
+      }
+      if (bounding_box.is_new_bounding_edge(_mesh_edges[i_AP].get_edge())) {
+        _bounding_edges.insert(i_AP);
+        _mesh_edges[i_AP].set_bounding();
+      } else {
+        _active_edges.insert(i_AP);
+        _mesh_edges[i_AP].set_active();
+      }
+      break;
+
+    default:
+      assertm(false, "Not all cases handled!");
+      break;
+  }
+
+  /*
   if (type == "fill") {
     // the edges are inside and we need to bound them with opposite edges
     _bound_opposite_outgoing(P, i_A, i_AP);  // try to bound AP with PA
@@ -621,6 +677,7 @@ void Mesh::add_triangle(
     }
     if (is_new) _point_tree.insert(P);
   }
+  */
   _mesh_triangles.push_back(F);
   return;
 }
@@ -638,8 +695,6 @@ vector<MeshPoint> Mesh::_linear_breakers_getter(
     if (dist1 < 1.1 * dist && vertex.get_point() != triangle.A() &&
         vertex.get_point() != triangle.B() &&
         vertex.get_point() != triangle.C()) {
-      bool found = false;
-
       if (is_boundary_point(vertex)) breakers.push_back(vertex);
     }
   }
@@ -888,8 +943,9 @@ void Mesh::edges_check(const std::string &message,
 
   return;
 }
-std::string Mesh::_find_type(const HalfEdgeIndex index_AB, const MeshPoint &P,
-                             MeshPointIndex index_P) const {
+
+NewTriangleType Mesh::_find_type(const HalfEdgeIndex index_AB,
+                                 const MeshPoint &P) const {
   const MeshPoint &A = _mesh_points[_mesh_edges[index_AB].get_A()];
   const MeshPoint &B = _mesh_points[_mesh_edges[index_AB].get_B()];
 
@@ -912,10 +968,10 @@ std::string Mesh::_find_type(const HalfEdgeIndex index_AB, const MeshPoint &P,
       break;
     }
   }
-  if (is_previous && is_next) return "fill";
-  if (is_previous) return "previous";
-  if (is_next) return "next";
-  return "overlap";
+  if (is_previous && is_next) return NewTriangleType::kFill;
+  if (is_previous) return NewTriangleType::kPrevious;
+  if (is_next) return NewTriangleType::kNext;
+  return NewTriangleType::kOverlap;
 }
 
 // angle BAP in range (-Pi, Pi) with respect to neighbour triangle

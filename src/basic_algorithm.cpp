@@ -408,6 +408,7 @@ bool BasicAlgorithm::is_border_point(const Point &P) const {
         Vector(point.get_point(), P).get_length() < kEps)
       return true;
   }
+  return false;
 }
 
 // throws error if it is found more than once
