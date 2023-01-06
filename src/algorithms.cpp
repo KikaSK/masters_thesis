@@ -229,5 +229,10 @@ Vector find_direction(const HalfEdge &working_edge, const Face &F) {
     }
   }
   assertm(!repeat, "No Points in triangle!");
+
+  const Vector to_gravity_center(working_edge.get_midpoint(),
+                                 F.get_gravity_center());
+  assertm(direction * to_gravity_center < 0 - kEps, "Wrong direction!");
+
   return direction;
 }

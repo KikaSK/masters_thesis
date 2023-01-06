@@ -9,9 +9,11 @@ void Mesh::cout_triangles() const {
   for (auto T : _mesh_triangles) {
     std::cout << T.get_triangle() << endl;
   }
+  return;
 }
 void Mesh::cout_triangles_number() const {
   std::cout << "Number of faces: " << _mesh_triangles.size() << endl;
+  return;
 }
 void Mesh::cout_mesh() const {
   std::cout << "Triangles: " << endl;
@@ -44,6 +46,7 @@ void Mesh::cout_mesh() const {
     }
   }
   std::cout << endl;
+  return;
 }
 
 bool Mesh::is_active(HalfEdgeIndex index) const {
@@ -260,12 +263,14 @@ void Mesh::remove_active_edge(const HalfEdgeIndex &index) {
           "Removing non-existent active edge!");
   _active_edges.erase(index);
   _mesh_edges[index].set_inside();
+  return;
 }
 void Mesh::add_edge_to_active(const HalfEdgeIndex &index) {
   assertm(_active_edges.find(index) == _active_edges.end(),
           "Inserting active edge twice!");
   _active_edges.insert(index);
   _mesh_edges[index].set_active();
+  return;
 }
 void Mesh::remove_checked_edge(const HalfEdgeIndex &index) {
   assertm(_checked_edges.find(index) != _checked_edges.end(),
@@ -406,6 +411,7 @@ void Mesh::add_first_triangle(const Triangle &T,
   _mesh_edges.push_back(CA);
 
   edges_check("in add first triangle: ");
+  return;
 }
 
 void Mesh::add_triangle_to_meshpoint(MeshPointIndex i_A, Point point_B,
@@ -501,24 +507,27 @@ void Mesh::add_triangle_to_meshpoint(MeshPointIndex i_A, Point point_B,
   _mesh_edges.push_back(AB);
   _mesh_edges.push_back(BC);
   _mesh_edges.push_back(CA);
+  return;
 }
 
-// Adding triangle ABP where P is new_point
-void Mesh::add_triangle(HalfEdgeIndex i_AB, Point new_point,
-                        std::string type /*new, next, previous, overlap, fill*/,
-                        const BoundingBox &bounding_box, MeshPointIndex i_P) {
+// Adding triangle BAP where P is new_point
+void Mesh::add_triangle(
+    HalfEdgeIndex i_AB, Point new_point,
+    const bool is_new /*new, next, previous, overlap, fill*/,
+    const BoundingBox &bounding_box, MeshPointIndex i_P) {
   // edges_check("add triangle beg", i_AB);
-  assertm(type == "new" || type == "next" || type == "previous" ||
+  /*assertm(type == "new" || type == "next" || type == "previous" ||
               type == "overlap" || type == "fill",
           "Invalid type!");
-
-  if (type != "new") assertm(i_P >= 0, "Invalid index of given meshpoint.");
+*/
+  // if (type != "new") assertm(i_P >= 0, "Invalid index of given meshpoint.");
+  if (!is_new) assertm(i_P >= 0, "Invalid index of given meshpoint.");
 
   HalfEdgeIndex i_edge = _mesh_edges.size();
   MeshPointIndex i_point = _mesh_points.size();
   FaceIndex i_face = _mesh_triangles.size();
 
-  if (type == "new") {
+  if (is_new) {
     MeshPoint new_meshpoint(new_point);
     new_meshpoint.set_index(i_point);
     _mesh_points.push_back(new_meshpoint);
@@ -527,7 +536,7 @@ void Mesh::add_triangle(HalfEdgeIndex i_AB, Point new_point,
   assertm(i_P != kInvalidPointIndex, "Invalid point index!");
   assertm(i_AB < _mesh_edges.size(),
           "Invalid halfedge index in add_triangle function!");
-  HalfEdge &AB = _mesh_edges[i_AB];
+  HalfEdge &AB = _mesh_edges[i_AB];  // working edge
   MeshPointIndex i_A = AB.get_A();
   MeshPointIndex i_B = AB.get_B();
   MeshPoint &A = _mesh_points[i_A];
@@ -560,14 +569,16 @@ void Mesh::add_triangle(HalfEdgeIndex i_AB, Point new_point,
   A.add_outgoing(i_AP);
   P.add_outgoing(i_PB);
   B.add_outgoing(i_BA);
-  Triangle ABP(A.get_point(), B.get_point(), P.get_point());
-  Face F(ABP, i_AP);
+  Triangle BAP(B.get_point(), A.get_point(),
+               P.get_point());  // new triangle BAP
+  Face F(BAP, i_AP);
   _bound_face(i_face, &BA, &AP, &PB);
   _mesh_edges.push_back(BA);
   _mesh_edges.push_back(AP);
   _mesh_edges.push_back(PB);
 
-  if (type != "new") {
+  string type = "new";
+  if (!is_new) {
     type = _find_type(i_AB, P, i_P);
   }
   if (type == "fill") {
@@ -576,7 +587,7 @@ void Mesh::add_triangle(HalfEdgeIndex i_AB, Point new_point,
     _bound_opposite_outgoing(B, i_P, i_PB);  // try to bound PB with BP
   } else if (type == "previous") {           // only edge PB is border edge
     _bound_opposite_outgoing(P, i_A, i_AP);  // try to bound AP with PA
-    if (bounding_box.is_new_bounding_edge(AB.get_edge())) {
+    if (bounding_box.is_new_bounding_edge(_mesh_edges[i_PB].get_edge())) {
       _bounding_edges.insert(i_PB);
       _mesh_edges[i_PB].set_bounding();
     } else {
@@ -585,7 +596,7 @@ void Mesh::add_triangle(HalfEdgeIndex i_AB, Point new_point,
     }
   } else if (type == "next") {               // only edge AP is border edge
     _bound_opposite_outgoing(B, i_P, i_PB);  // try to bound PB with BP
-    if (bounding_box.is_new_bounding_edge(AB.get_edge())) {
+    if (bounding_box.is_new_bounding_edge(_mesh_edges[i_AP].get_edge())) {
       _bounding_edges.insert(i_AP);
       _mesh_edges[i_AP].set_bounding();
     } else {
@@ -594,21 +605,21 @@ void Mesh::add_triangle(HalfEdgeIndex i_AB, Point new_point,
     }
   } else if (type == "new" ||
              type == "overlap") {  // both AP and PB are new active edges
-    if (bounding_box.is_new_bounding_edge(AB.get_edge())) {
+    if (bounding_box.is_new_bounding_edge(_mesh_edges[i_PB].get_edge())) {
       _bounding_edges.insert(i_PB);
       _mesh_edges[i_PB].set_bounding();
     } else {
       _active_edges.insert(i_PB);
       _mesh_edges[i_PB].set_active();
     }
-    if (bounding_box.is_new_bounding_edge(AB.get_edge())) {
+    if (bounding_box.is_new_bounding_edge(_mesh_edges[i_AP].get_edge())) {
       _bounding_edges.insert(i_AP);
       _mesh_edges[i_AP].set_bounding();
     } else {
       _active_edges.insert(i_AP);
       _mesh_edges[i_AP].set_active();
     }
-    if (type == "new") _point_tree.insert(P);
+    if (is_new) _point_tree.insert(P);
   }
   _mesh_triangles.push_back(F);
   return;
@@ -696,8 +707,10 @@ bool Mesh::check_Delaunay(const HalfEdge &working_edge,
   for (Face face : get_mesh_faces()) {
     Point gravity_center = face.get_gravity_center();
     numeric gc_dist = Vector(circumcenter, gravity_center).get_length();
+    // numeric gc_dist = Vector(new_point, gravity_center).get_length();
 
     if (gc_dist < dist - 10 * kEps) {
+      // if (gc_dist < working_edge.get_length() / 4) {
       if (!(T.AB() % face.AB() || T.AB() % face.BC() || T.AB() % face.CA() ||
             T.BC() % face.AB() || T.BC() % face.BC() || T.BC() % face.CA() ||
             T.CA() % face.AB() || T.CA() % face.BC() || T.CA() % face.CA() ||
@@ -763,6 +776,7 @@ void Mesh::obj_format(const std::string &name) const {
     out << "f " << halfedge.get_A() + 1 << " " << halfedge.get_B() + 1 << " "
         << next_halfedge.get_B() + 1 << endl;
   }
+  return;
 }
 
 // private member functions
@@ -771,6 +785,7 @@ void Mesh::_bound_consecutive(HalfEdge *previous,
                               const HalfEdgeIndex i_next) const {
   previous->set_next(i_next);
   next->set_previous(i_previous);
+  return;
 }
 
 void Mesh::_bound_opposite(HalfEdge *edge1, const HalfEdgeIndex i_edge1,
@@ -783,6 +798,7 @@ void Mesh::_bound_opposite(HalfEdge *edge1, const HalfEdgeIndex i_edge1,
   _active_edges.erase(i_edge2);
   _checked_edges.erase(i_edge1);
   _checked_edges.erase(i_edge2);
+  return;
 }
 
 void Mesh::_bound_face(const FaceIndex i_face, HalfEdge *edge1, HalfEdge *edge2,
@@ -790,6 +806,7 @@ void Mesh::_bound_face(const FaceIndex i_face, HalfEdge *edge1, HalfEdge *edge2,
   edge1->set_incident(i_face);
   edge2->set_incident(i_face);
   edge3->set_incident(i_face);
+  return;
 }
 
 // having edge BA, we are trying to bound it with edge AB if it exists,
@@ -812,6 +829,7 @@ void Mesh::_bound_opposite_outgoing(const MeshPoint &A,
                       i_BA);
     }
   }
+  return;
 }
 
 void Mesh::edges_check(const std::string &message,

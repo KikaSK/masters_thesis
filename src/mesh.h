@@ -49,7 +49,7 @@ class Mesh {
   void add_triangle_to_meshpoint(MeshPointIndex i_A, Point point_B,
                                  Point point_C,
                                  const BoundingBox &bounding_box);
-  void add_triangle(HalfEdgeIndex index_AB, Point P, std::string type,
+  void add_triangle(HalfEdgeIndex index_AB, Point P, const bool is_new,
                     const BoundingBox &bounding_box,
                     MeshPointIndex index_P = kInvalidPointIndex);
 

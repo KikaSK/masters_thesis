@@ -1,0 +1,172 @@
+Triangulation of sphere with edge size 0.9
+seed triangle created
+Edges check in add first triangle: 
+in basic algorithm constructor
+Basic algorithm created, calling for calculate()!
+projected: [0.761633,0.401212,-0.508867]
+projected: [0.311433,0.162078,-0.936344]
+projected: [0.123702,-0.474466,-0.871539]
+projected: [0.424681,-0.820766,-0.382086]
+projected: [-0.340731,0.00477464,-0.940149]
+projected: [-0.50046,-0.577357,-0.645135]
+projected: [0.0127976,-0.923141,-0.384248]
+projected: [0.61921,-0.642822,-0.450954]
+projected: [-0.548977,-0.835395,-0.0272136]
+projected: [0.0321409,-0.957708,0.285943]
+projected: [-0.463972,-0.642232,0.610139]
+projected: [-0.916467,-0.332254,0.222928]
+projected: [-0.656135,-0.0153298,0.754488]
+projected: [-0.0613825,-0.241795,0.968384]
+projected: [0.197503,-0.75642,0.623556]
+projected: [0.670621,-0.464057,0.578721]
+projected: [0.498018,0.139777,0.855827]
+projected: [0.923326,0.0929376,0.372601]
+projected: [0.594418,0.660167,0.459182]
+projected: [-0.0897317,0.400538,0.911876]
+projected: [0.377003,0.726182,0.574917]
+projected: [-0.123888,0.929972,0.346127]
+projected: [-0.641196,0.540609,0.544619]
+projected: [-0.628018,0.04065,0.777137]
+projected: [-0.599515,0.629429,0.49437]
+projected: [-0.969433,0.109026,0.219801]
+projected: [-0.750702,0.651839,-0.107487]
+projected: [-0.229,0.952466,0.200917]
+projected: [-0.114926,0.909724,-0.398991]
+projected: [-0.888191,0.0857299,-0.451407]
+Number of faces: 31
+Number of active edges: 21
+Number of checked edges: 0
+
+
+
+
+Triangulation of sphere with edge size 0.9
+seed triangle created
+Edges check in add first triangle: 
+in basic algorithm constructor
+Basic algorithm created, calling for calculate()!
+projected: [0.761633,0.401212,-0.508867]
+Fix prev!
+Number of active after starting: 0
+Number of checked after starting: 0
+Number of active after ending: 0
+Number of checked after ending: 0
+Triangulation of sphere with edge size 0.7
+seed triangle created
+Edges check in add first triangle: 
+in basic algorithm constructor
+Basic algorithm created, calling for calculate()!
+projected: [0.82786,0.327005,-0.455758]
+
+
+
+
+
+
+
+Triangulation of sphere with edge size 0.9
+seed triangle created
+Edges check in add first triangle: 
+in basic algorithm constructor
+Basic algorithm created, calling for calculate()!
+In step, working edge index: 2
+Working edge: A: [0.716696,-0.275022,-0.640866]
+B: [1,0,0]
+
+Before basic_triangle
+After basic_triangle
+projected: [0.761633,0.401212,-0.508867]
+After fix_close_points
+After fix_breakers
+FIX_PROJ
+In step, working edge index: 4
+Working edge: A: [0.716696,-0.275022,-0.640866]
+B: [0.761633,0.401212,-0.508867]
+
+Before basic_triangle
+After basic_triangle
+projected: [0.311433,0.162078,-0.936344]
+After fix_close_points
+After fix_breakers
+FIX_PROJ
+In step, working edge index: 7
+Working edge: A: [0.716696,-0.275022,-0.640866]
+B: [0.311433,0.162078,-0.936344]
+
+Before basic_triangle
+After basic_triangle
+projected: [0.123702,-0.474466,-0.871539]
+After fix_close_points
+After fix_breakers
+FIX_PROJ
+In step, working edge index: 10
+Working edge: A: [0.716696,-0.275022,-0.640866]
+B: [0.123702,-0.474466,-0.871539]
+
+Before basic_triangle
+After basic_triangle
+projected: [0.424681,-0.820766,-0.382086]
+After fix_close_points
+After fix_breakers
+FIX_PROJ
+In step, working edge index: 11
+Working edge: A: [0.123702,-0.474466,-0.871539]
+B: [0.311433,0.162078,-0.936344]
+
+Before basic_triangle
+After basic_triangle
+projected: [-0.340731,0.00477464,-0.940149]
+After fix_close_points
+After fix_breakers
+FIX_PROJ
+In step, working edge index: 16
+Working edge: A: [0.123702,-0.474466,-0.871539]
+B: [-0.340731,0.00477464,-0.940149]
+
+Before basic_triangle
+After basic_triangle
+projected: [-0.50046,-0.577357,-0.645135]
+After fix_close_points
+After fix_breakers
+FIX_PROJ
+In step, working edge index: 19
+Working edge: A: [0.123702,-0.474466,-0.871539]
+B: [-0.50046,-0.577357,-0.645135]
+
+Before basic_triangle
+After basic_triangle
+projected: [0.0127976,-0.923141,-0.384248]
+After fix_close_points
+After fix_breakers
+FIX_PROJ
+In step, working edge index: 22
+Working edge: A: [0.123702,-0.474466,-0.871539]
+B: [0.0127976,-0.923141,-0.384248]
+
+Before basic_triangle
+After basic_triangle
+projected: [0.61921,-0.642822,-0.450954]
+FIX_CLOSE_POINTS
+In step, working edge index: 23
+Working edge: A: [0.0127976,-0.923141,-0.384248]
+B: [-0.50046,-0.577357,-0.645135]
+
+Before basic_triangle
+After basic_triangle
+projected: [-0.548977,-0.835395,-0.0272136]
+After fix_close_points
+After fix_breakers
+FIX_PROJ
+In step, working edge index: 28
+Working edge: A: [0.0127976,-0.923141,-0.384248]
+B: [-0.548977,-0.835395,-0.0272136]
+
+Before basic_triangle
+After basic_triangle
+projected: [0.0321409,-0.957708,0.285943]
+After fix_close_points
+After fix_breakers
+FIX_PROJ
+In step, working edge index: 32
+Working edge: A: [0.0321409,-0.957708,0.285943]
+B: [-0.548977,-0.835395,-0.0272136]

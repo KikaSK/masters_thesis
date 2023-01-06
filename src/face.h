@@ -9,6 +9,7 @@ class Face {
  private:
   Triangle _triangle;
   HalfEdgeIndex _halfedge;
+  int _normal_multiplier;
 
  public:
   explicit Face(Triangle triangle, HalfEdgeIndex halfedge = kInvalidEdgeIndex);
