@@ -20,14 +20,13 @@ class BasicAlgorithm {
                  BoundingBox bounding_box)
       : name(name),
         F(f),
-        // my_mesh(seed_triangle),
         e_size(e_size),
         x(x),
         y(y),
         z(z),
         bounding_box(bounding_box) {
     // singular
-    /*
+
     const Point singular_point(0, 0, 0);
     Vector singular_direction(0, 0, -1);
 
@@ -35,29 +34,13 @@ class BasicAlgorithm {
                            kInvalidPointIndex);
     singular_direction = -1 * singular_direction;
     triangulate_A1_starter(singular_point, singular_direction, &my_mesh, 0);
-    */
-    // regular
 
+    // regular
+    /*
     Triangle seed_triangle = find_seed_triangle(seed_point);
     std::cout << "seed triangle created" << endl;
     my_mesh = Mesh(seed_triangle, bounding_box);
     std::cout << "in basic algorithm constructor" << endl;
-
-    /*
-    if (bounding_box.new_bounding_edge(seed_triangle.AB()))
-      bounding_edges.push_back(seed_triangle.AB());
-    else
-      active_edges.push_back(seed_triangle.AB());
-
-    if (bounding_box.new_bounding_edge(seed_triangle.BC()))
-      bounding_edges.push_back(seed_triangle.BC());
-    else
-      active_edges.push_back(seed_triangle.BC());
-
-    if (bounding_box.new_bounding_edge(seed_triangle.CA()))
-      bounding_edges.push_back(seed_triangle.CA());
-    else
-      active_edges.push_back(seed_triangle.CA());
     */
   }
 
