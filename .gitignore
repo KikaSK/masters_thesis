@@ -2,3 +2,5 @@
 build/
 # ignore .vscode configuration
 .vscode/
+# ignore outputs folder
+outputs/
