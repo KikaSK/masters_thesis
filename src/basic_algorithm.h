@@ -35,8 +35,9 @@ class BasicAlgorithm {
                            kInvalidPointIndex);
     singular_direction = -1 * singular_direction;
     triangulate_A1_starter(singular_point, singular_direction, &my_mesh, 0);
-*/
+    */
     // regular
+
     Triangle seed_triangle = find_seed_triangle(seed_point);
     std::cout << "seed triangle created" << endl;
     my_mesh = Mesh(seed_triangle, bounding_box);
@@ -94,6 +95,8 @@ class BasicAlgorithm {
   bool check_conditions(const HalfEdge &working_edge, const Point &P,
                         const bool Delaunay) const;
   bool Delaunay_conditions(const HalfEdge &working_edge, const Point &P) const;
+  bool Delaunay_conditions_debug(const HalfEdge &working_edge,
+                                 const Point &P) const;
   bool non_Delaunay_conditions(const HalfEdge &working_edge,
                                const Point &P) const;
 

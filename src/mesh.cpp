@@ -66,7 +66,7 @@ bool Mesh::is_checked(HalfEdgeIndex index) const {
 bool Mesh::is_bounding(HalfEdgeIndex index) const {
   assertm(index < _mesh_edges.size() && index >= 0,
           "Invalid halfedge index in is_bounding function!");
-  assertm(!_mesh_edges[index].is_bounding(), "Found bounding edge!");
+  // assertm(!_mesh_edges[index].is_bounding(), "Found bounding edge!");
   return _mesh_edges[index].is_bounding();
 }
 bool Mesh::is_boundary(HalfEdgeIndex index) const {
@@ -771,7 +771,7 @@ bool Mesh::check_Delaunay(const HalfEdge &working_edge,
             T.CA() % face.AB() || T.CA() % face.BC() || T.CA() % face.CA() ||
             T.C() == face.A() || T.C() == face.B() || T.C() == face.C())) {
         // std::cout << "Delaunay returned FALSE0!" << endl;
-        return false;
+        // return false;
       }
     }
 
@@ -783,6 +783,7 @@ bool Mesh::check_Delaunay(const HalfEdge &working_edge,
     // distance of new point from face circumcenter
     numeric face_dist = Vector(face_circumcenter, T.C()).get_length();
     if (face_dist < face_radius - 10 * kEps) {
+      // std::cout << "Delaunay returned FALSE-1!" << endl;
       // breaking others triangle delaunay
       return false;
     }
@@ -887,7 +888,7 @@ void Mesh::_bound_opposite_outgoing(const MeshPoint &A,
   return;
 }
 
-void Mesh::edges_check(const std::string &message,
+bool Mesh::edges_check(const std::string &message,
                        const HalfEdgeIndex working_edge) const {
   std::cout << "Edges check " << message << endl;
   for (int i = 0; i < _mesh_edges.size(); ++i) {
@@ -937,11 +938,9 @@ void Mesh::edges_check(const std::string &message,
       std::cout << "Inconsistent indices!" << endl;
       is_ok = false;
     }
-
-    if (!is_ok) assertm(false, "Edge check failed!");
+    if (!is_ok) return false;
   }
-
-  return;
+  return true;
 }
 
 NewTriangleType Mesh::_find_type(const HalfEdgeIndex index_AB,

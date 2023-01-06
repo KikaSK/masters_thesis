@@ -131,7 +131,7 @@ class Mesh {
 
   void obj_format(const std::string &name) const;
 
-  void edges_check(const std::string &message,
+  bool edges_check(const std::string &message,
                    const HalfEdgeIndex working_edge = kInvalidEdgeIndex) const;
   NewTriangleType _find_type(const HalfEdgeIndex index_AB,
                              const MeshPoint &P) const;

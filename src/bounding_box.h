@@ -49,11 +49,9 @@ class BoundingBox {
   std::optional<Point> project_on_max_z(const Point &midpoint,
                                         const Point &P) const;
 
-  std::optional<Point> project_on_box(const Point &midpoint,
-                                      const Point &P) const;
-  std::optional<Point> crop_to_box(const Point &midpoint, const Point &P,
-                                   const numeric &e_size,
-                                   const Function &F) const;
+  Point project_on_box(const Point &midpoint, const Point &P) const;
+  Point crop_to_box(const Point &midpoint, const Point &P,
+                    const numeric &e_size, const Function &F) const;
 
  private:
   numeric _min_x;

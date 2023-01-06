@@ -209,8 +209,7 @@ std::optional<Point> BoundingBox::project_on_max_z(const Point &midpoint,
   return projected;
 }
 
-std::optional<Point> BoundingBox::project_on_box(const Point &midpoint,
-                                                 const Point &P) const {
+Point BoundingBox::project_on_box(const Point &midpoint, const Point &P) const {
   // projecting point on all of the walls
   vector<std::optional<Point>> points = {std::nullopt, std::nullopt,
                                          std::nullopt, std::nullopt,
@@ -236,19 +235,17 @@ std::optional<Point> BoundingBox::project_on_box(const Point &midpoint,
       }
     }
   }
-  // assertm(min_dist_index.has_value(), "Index without value!");
-  if (!min_dist_index.has_value()) return std::nullopt;
+  if (!min_dist_index.has_value()) return P;
+  assertm(min_dist_index.has_value(), "Index without value!");
   assertm(points[min_dist_index.value()].has_value(),
           "Projected point without value!");
   return points[min_dist_index.value()].value();
 }
 
-std::optional<Point> BoundingBox::crop_to_box(const Point &midpoint,
-                                              const Point &P,
-                                              const numeric &e_size,
-                                              const Function &F) const {
-  numeric precision = e_size / 4;
-  std::optional<Point> projected = P;
+Point BoundingBox::crop_to_box(const Point &midpoint, const Point &P,
+                               const numeric &e_size, const Function &F) const {
+  numeric precision = e_size / 3;
+  Point projected = P;
 
   if (!is_inside(P)) {
     projected = project_on_box(midpoint, P);
@@ -273,8 +270,7 @@ std::optional<Point> BoundingBox::crop_to_box(const Point &midpoint,
   } else {
     projected = P;
   }
-  if (!projected.has_value()) return std::nullopt;
-  int faces_index = faces(projected.value());
+  int faces_index = faces(projected);
   Vector v(1, 1, 1);
   Point line_p(0, 0, 0);
   bool close_wall = false;
@@ -283,22 +279,22 @@ std::optional<Point> BoundingBox::crop_to_box(const Point &midpoint,
   if (faces_index & 1) {
     v = v - Vector(1, 0, 0);
     line_p = Point(_min_x, line_p.y(), line_p.z());
-    if (abs(projected.value().y() - _min_y) < precision) {
+    if (abs(projected.y() - _min_y) < precision) {
       v = v - Vector(0, 1, 0);
       line_p = Point(line_p.x(), _min_y, line_p.z());
       close_wall = true;
     }
-    if (abs(projected.value().y() - _max_y) < precision) {
+    if (abs(projected.y() - _max_y) < precision) {
       v = v - Vector(0, 1, 0);
       line_p = Point(line_p.x(), _max_y, line_p.z());
       close_wall = true;
     }
-    if (abs(projected.value().z() - _min_z) < precision) {
+    if (abs(projected.z() - _min_z) < precision) {
       v = v - Vector(0, 0, 1);
       line_p = Point(line_p.x(), line_p.y(), _min_z);
       close_wall = true;
     }
-    if (abs(projected.value().z() - _max_z) < precision) {
+    if (abs(projected.z() - _max_z) < precision) {
       v = v - Vector(0, 0, 1);
       line_p = Point(line_p.x(), line_p.y(), _max_z);
       close_wall = true;
@@ -308,22 +304,22 @@ std::optional<Point> BoundingBox::crop_to_box(const Point &midpoint,
   if (faces_index & 1 << 1) {
     v = v - Vector(1, 0, 0);
     line_p = Point(_max_x, line_p.y(), line_p.z());
-    if (abs(projected.value().y() - _min_y) < precision) {
+    if (abs(projected.y() - _min_y) < precision) {
       v = v - Vector(0, 1, 0);
       line_p = Point(line_p.x(), _min_y, line_p.z());
       close_wall = true;
     }
-    if (abs(projected.value().y() - _max_y) < precision) {
+    if (abs(projected.y() - _max_y) < precision) {
       v = v - Vector(0, 1, 0);
       line_p = Point(line_p.x(), _max_y, line_p.z());
       close_wall = true;
     }
-    if (abs(projected.value().z() - _min_z) < precision) {
+    if (abs(projected.z() - _min_z) < precision) {
       v = v - Vector(0, 0, 1);
       line_p = Point(line_p.x(), line_p.y(), _min_z);
       close_wall = true;
     }
-    if (abs(projected.value().z() - _max_z) < precision) {
+    if (abs(projected.z() - _max_z) < precision) {
       v = v - Vector(0, 0, 1);
       line_p = Point(line_p.x(), line_p.y(), _max_z);
       close_wall = true;
@@ -333,22 +329,22 @@ std::optional<Point> BoundingBox::crop_to_box(const Point &midpoint,
   if (faces_index & 1 << 2) {
     v = v - Vector(0, 1, 0);
     line_p = Point(line_p.x(), _min_y, line_p.z());
-    if (abs(projected.value().x() - _min_x) < precision) {
+    if (abs(projected.x() - _min_x) < precision) {
       v = v - Vector(1, 0, 0);
       line_p = Point(_min_x, line_p.y(), line_p.z());
       close_wall = true;
     }
-    if (abs(projected.value().x() - _max_x) < precision) {
+    if (abs(projected.x() - _max_x) < precision) {
       v = v - Vector(1, 0, 0);
       line_p = Point(_max_x, line_p.y(), line_p.z());
       close_wall = true;
     }
-    if (abs(projected.value().z() - _min_z) < precision) {
+    if (abs(projected.z() - _min_z) < precision) {
       v = v - Vector(0, 0, 1);
       line_p = Point(line_p.x(), line_p.y(), _min_z);
       close_wall = true;
     }
-    if (abs(projected.value().z() - _max_z) < precision) {
+    if (abs(projected.z() - _max_z) < precision) {
       v = v - Vector(0, 0, 1);
       line_p = Point(line_p.x(), line_p.y(), _max_z);
       close_wall = true;
@@ -358,22 +354,22 @@ std::optional<Point> BoundingBox::crop_to_box(const Point &midpoint,
   if (faces_index & 1 << 3) {
     v = v - Vector(0, 1, 0);
     line_p = Point(line_p.x(), _max_y, line_p.z());
-    if (abs(projected.value().x() - _min_x) < precision) {
+    if (abs(projected.x() - _min_x) < precision) {
       v = v - Vector(1, 0, 0);
       line_p = Point(_min_x, line_p.y(), line_p.z());
       close_wall = true;
     }
-    if (abs(projected.value().x() - _max_x) < precision) {
+    if (abs(projected.x() - _max_x) < precision) {
       v = v - Vector(1, 0, 0);
       line_p = Point(_max_x, line_p.y(), line_p.z());
       close_wall = true;
     }
-    if (abs(projected.value().z() - _min_z) < precision) {
+    if (abs(projected.z() - _min_z) < precision) {
       v = v - Vector(0, 0, 1);
       line_p = Point(line_p.x(), line_p.y(), _min_z);
       close_wall = true;
     }
-    if (abs(projected.value().z() - _max_z) < precision) {
+    if (abs(projected.z() - _max_z) < precision) {
       v = v - Vector(0, 0, 1);
       line_p = Point(line_p.x(), line_p.y(), _max_z);
       close_wall = true;
@@ -383,22 +379,22 @@ std::optional<Point> BoundingBox::crop_to_box(const Point &midpoint,
   if (faces_index & 1 << 4) {
     v = v - Vector(0, 0, 1);
     line_p = Point(line_p.x(), line_p.y(), _min_z);
-    if (abs(projected.value().x() - _min_x) < precision) {
+    if (abs(projected.x() - _min_x) < precision) {
       v = v - Vector(1, 0, 0);
       line_p = Point(_min_x, line_p.y(), line_p.z());
       close_wall = true;
     }
-    if (abs(projected.value().x() - _max_x) < precision) {
+    if (abs(projected.x() - _max_x) < precision) {
       v = v - Vector(1, 0, 0);
       line_p = Point(_max_x, line_p.y(), line_p.z());
       close_wall = true;
     }
-    if (abs(projected.value().y() - _min_y) < precision) {
+    if (abs(projected.y() - _min_y) < precision) {
       v = v - Vector(0, 1, 0);
       line_p = Point(line_p.x(), _min_y, line_p.z());
       close_wall = true;
     }
-    if (abs(projected.value().y() - _max_y) < precision) {
+    if (abs(projected.y() - _max_y) < precision) {
       v = v - Vector(0, 1, 0);
       line_p = Point(line_p.x(), _max_y, line_p.z());
       close_wall = true;
@@ -408,47 +404,43 @@ std::optional<Point> BoundingBox::crop_to_box(const Point &midpoint,
   if (faces_index & 1 << 5) {
     v = v - Vector(0, 0, 1);
     line_p = Point(line_p.x(), line_p.y(), _max_z);
-    if (abs(projected.value().x() - _min_x) < precision) {
+    if (abs(projected.x() - _min_x) < precision) {
       v = v - Vector(1, 0, 0);
       line_p = Point(_min_x, line_p.y(), line_p.z());
       close_wall = true;
     }
-    if (abs(projected.value().x() - _max_x) < precision) {
+    if (abs(projected.x() - _max_x) < precision) {
       v = v - Vector(1, 0, 0);
       line_p = Point(_max_x, line_p.y(), line_p.z());
       close_wall = true;
     }
-    if (abs(projected.value().y() - _min_y) < precision) {
+    if (abs(projected.y() - _min_y) < precision) {
       v = v - Vector(0, 1, 0);
       line_p = Point(line_p.x(), _min_y, line_p.z());
       close_wall = true;
     }
-    if (abs(projected.value().y() - _max_y) < precision) {
+    if (abs(projected.y() - _max_y) < precision) {
       v = v - Vector(0, 1, 0);
       line_p = Point(line_p.x(), _max_y, line_p.z());
       close_wall = true;
     }
   }
   if (close_wall) {
-    if (line_p.x() == 0)
-      line_p = Point(projected.value().x(), line_p.y(), line_p.z());
-    if (line_p.y() == 0)
-      line_p = Point(line_p.x(), projected.value().y(), line_p.z());
-    if (line_p.z() == 0)
-      line_p = Point(line_p.x(), line_p.y(), projected.value().z());
+    if (line_p.x() == 0) line_p = Point(projected.x(), line_p.y(), line_p.z());
+    if (line_p.y() == 0) line_p = Point(line_p.x(), projected.y(), line_p.z());
+    if (line_p.z() == 0) line_p = Point(line_p.x(), line_p.y(), projected.z());
 
     std::optional<Point> clipped_point = std::nullopt;
 
     if (v.is_zero()) {
-      clipped_point = projected.value();
+      clipped_point = projected;
     } else {
       clipped_point = project(line_p, v, F, e_size);
     }
     assertm(clipped_point.has_value(), "Point without value!");
-    if (Vector(clipped_point.value(), projected.value()).get_length() <
-        e_size) {
+    if (Vector(clipped_point.value(), projected).get_length() < e_size) {
       return clipped_point.value();
     }
   }
-  return projected.value();
+  return projected;
 }
