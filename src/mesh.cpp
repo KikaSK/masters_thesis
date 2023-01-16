@@ -326,11 +326,13 @@ bool Mesh::checked_edges_empty() const {
 }
 bool Mesh::is_boundary_point(const MeshPoint &P) const {
   for (auto halfedge : P.get_outgoing()) {
-    if (_mesh_edges[halfedge].is_boundary()) return true;
+    if (_mesh_edges[halfedge].is_active() || _mesh_edges[halfedge].is_checked())
+      return true;
   }
   for (auto halfedge : P.get_outgoing()) {
     HalfEdgeIndex incoming = get_previous_index(halfedge);
-    if (_mesh_edges[incoming].is_boundary()) return true;
+    if (_mesh_edges[incoming].is_active() || _mesh_edges[incoming].is_checked())
+      return true;
   }
   return false;
 }
@@ -755,7 +757,7 @@ bool Mesh::check_Delaunay(const HalfEdge &working_edge,
   numeric distC = Vector(circumcenter, new_triangle.C()).get_length();
   assertm(abs(distA - distB) + abs(distB - distC) + abs(distC - distA) < kEps,
           "Wrong circumcenter in Delaunay!");
-  numeric dist = std::min(std::min(distA, distB), distC);
+  const numeric dist = 0.8 * std::min(std::min(distA, distB), distC);
   const Triangle &T = new_triangle;
 
   // gravity center condition
@@ -777,6 +779,7 @@ bool Mesh::check_Delaunay(const HalfEdge &working_edge,
 
     Point face_circumcenter = face.get_circumcenter();
     numeric face_radius =
+        0.8 *
         std::min(std::min(Vector(face_circumcenter, face.A()).get_length(),
                           Vector(face_circumcenter, face.B()).get_length()),
                  Vector(face_circumcenter, face.C()).get_length());
@@ -906,18 +909,19 @@ bool Mesh::edges_check(const std::string &message,
       std::cout << "Inconsistent checked edges!" << endl;
       is_ok = false;
     }
-    if (edge_index == 545) std::cout << "ok?" << is_ok << endl;
-    // std::cout << "b" << endl;
+    // if (edge_index == 545) std::cout << "ok?" << is_ok << endl;
+    //  std::cout << "b" << endl;
     if (edge.is_active() != is_active(edge_index)) {
       std::cout << "Inconsistent active edges!" << endl;
       is_ok = false;
     }
     if (edge.is_bounding()) {
-      std::cout << "Found bounding edge!" << endl;
+      // std::cout << "Found bounding edge!" << endl;
       is_ok = false;
     }
     if (edge.is_inside() !=
-        (!is_active(edge_index) && !is_checked(edge_index))) {
+        (!is_active(edge_index) && !is_checked(edge_index) &&
+         !is_bounding(edge_index))) {
       std::cout << "Inconsistent inside edges!" << endl;
       is_ok = false;
     }
@@ -938,6 +942,19 @@ bool Mesh::edges_check(const std::string &message,
       std::cout << "Inconsistent indices!" << endl;
       is_ok = false;
     }
+    for (auto outgoing : _mesh_points[edge.get_A()].get_outgoing()) {
+      if (_mesh_edges[outgoing].get_A() != edge.get_A()) {
+        std::cout << "Inconsistent outgoing!" << endl;
+        is_ok = false;
+      }
+    }
+    for (auto outgoing : _mesh_points[edge.get_B()].get_outgoing()) {
+      if (_mesh_edges[outgoing].get_A() != edge.get_B()) {
+        std::cout << "Inconsistent outgoing!" << endl;
+        is_ok = false;
+      }
+    }
+
     if (!is_ok) return false;
   }
   return true;

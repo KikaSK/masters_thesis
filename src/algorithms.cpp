@@ -93,6 +93,110 @@ numeric Bisection(const realsymbol my_x, const ex &f, numeric starting_point,
   return projected.value();
 }
 
+Point rotate(const Point &rot_center, const Point &to_rotate, const Vector &u,
+             const numeric angle) {
+  // rotating matrix around ROT_direction
+  // cos(pi/3)+ux^2*(1-cos(pi/3))          ux*uy*(1-cos(pi/3)-uz*sin(pi/3)
+  // ux*uz(1-cos(pi/3))+uy*sin(pi/3) ux*uy*(1-cos(pi/3)+uz*sin(pi/3)
+  // cos(pi/3)+uy^2*(1-cos(pi/3))         uy*uz(1-cos(pi/3))-ux*sin(pi/3)
+  // ux*uz(1-cos(pi/3))-uy*sin(pi/3)       uy*uz(1-cos(pi/3))+ux*sin(pi/3)
+  // cos(pi/3)+uz^2*(1-cos(pi/3))
+
+  const numeric COS = GiNaC::ex_to<numeric>(GiNaC::cos(angle).evalf());
+  const numeric SIN = GiNaC::ex_to<numeric>(GiNaC::sin(angle).evalf());
+  const Vector rot_vector_x = Vector(COS + u.x() * u.x() * (1 - COS),
+                                     u.x() * u.y() * (1 - COS) - u.z() * SIN,
+                                     u.x() * u.z() * (1 - COS) + u.y() * SIN);
+  const Vector rot_vector_y = Vector(u.x() * u.y() * (1 - COS) + u.z() * SIN,
+                                     COS + u.y() * u.y() * (1 - COS),
+                                     u.y() * u.z() * (1 - COS) - u.x() * SIN);
+  const Vector rot_vector_z = Vector(u.x() * u.z() * (1 - COS) - u.y() * SIN,
+                                     u.y() * u.z() * (1 - COS) + u.x() * SIN,
+                                     COS + u.z() * u.z() * (1 - COS));
+  const Vector start_vector(rot_center, to_rotate);
+  const Vector end_vector(start_vector * rot_vector_x,
+                          start_vector * rot_vector_y,
+                          start_vector * rot_vector_z);
+  return Point(rot_center, end_vector);
+}
+
+Point circular_bisection(const Function &F, const Point &singular_point,
+                         const Point &start_point, numeric end_angle,
+                         const Vector &u /*rotation direction*/,
+                         numeric e_size) {
+  const Point end_point = rotate(singular_point, start_point, u, end_angle);
+
+  assertm(F.get_function()
+                      .subs(GiNaC::lst{F.get_x() == start_point.x(),
+                                       F.get_y() == start_point.y(),
+                                       F.get_z() == start_point.z()})
+                      .evalf() *
+                  F.get_function()
+                      .subs(GiNaC::lst{F.get_x() == end_point.x(),
+                                       F.get_y() == end_point.y(),
+                                       F.get_z() == end_point.z()})
+                      .evalf() <=
+              0,
+          "Wrong call for circular bisect function!");
+
+  std::pair<Point, Point> bisection_param = {start_point, end_point};
+  numeric my_angle = end_angle;
+  for (int i = 0; i < 100; i++) {
+    bisection_param =
+        _circular_bisect(F, bisection_param.first, bisection_param.second,
+                         singular_point, u, my_angle);
+    if (bisection_param.first == bisection_param.second)
+      return bisection_param.first;
+    my_angle = my_angle / 2;
+  }
+  assertm(false, "Too much iterations in bisection method!");
+  return start_point;
+}
+
+std::pair<Point, Point> _circular_bisect(const Function &F,
+                                         const Point &start_point,
+                                         const Point &end_point,
+                                         const Point &singular_point,
+                                         const Vector &u, const numeric angle) {
+  const numeric subs_start =
+      GiNaC::ex_to<numeric>(F.get_function()
+                                .subs(GiNaC::lst{F.get_x() == start_point.x(),
+                                                 F.get_y() == start_point.y(),
+                                                 F.get_z() == start_point.z()})
+                                .evalf());
+  const numeric subs_end =
+      GiNaC::ex_to<numeric>(F.get_function()
+                                .subs(GiNaC::lst{F.get_x() == end_point.x(),
+                                                 F.get_y() == end_point.y(),
+                                                 F.get_z() == end_point.z()})
+                                .evalf());
+  if (subs_start < 10e-6) {
+    return {start_point, start_point};
+  }
+  if (subs_end < 10e-6) {
+    return {end_point, end_point};
+  }
+  const Point &mid_point = rotate(singular_point, start_point, u, angle / 2);
+
+  const numeric subs_mid =
+      GiNaC::ex_to<numeric>(F.get_function()
+                                .subs(GiNaC::lst{F.get_x() == mid_point.x(),
+                                                 F.get_y() == mid_point.y(),
+                                                 F.get_z() == mid_point.z()})
+                                .evalf());
+  if (subs_mid < 10e-6) {
+    return {mid_point, mid_point};
+  }
+  if (subs_start * subs_mid < 0) {
+    return {start_point, mid_point};
+  }
+  if (subs_mid * subs_end < 0) {
+    return {mid_point, end_point};
+  }
+  assertm(false, "Wrong place!");
+  return {start_point, end_point};
+}
+
 // returns projected point in the direction of normal
 Point project(const Point &point_to_project, const Vector &normal,
               const Function &F, const std::optional<numeric> e_size) {

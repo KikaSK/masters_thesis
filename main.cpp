@@ -118,15 +118,15 @@ int main() {
   // run_all(3, 4, "/finite_surfaces/sphere", "my_run_input");
   run_input(0, "/sing_surfaces/cone", "my_run_input");
   // run_all(0, 3, "/finite_surfaces/sphere", "my_run_input");
-  // run_all(0, 1, "/finite_surfaces/blobby", "my_run_input");
-  // run_all(0, 1, "/finite_surfaces/torus", "my_run_input");
-  // run_all(3, 3, "/finite_surfaces/cubed_sphere", "my_run_input");
-  // run_input(0, "/cut_surfaces", "crop_to_box");
+  //   run_all(0, 1, "/finite_surfaces/blobby", "my_run_input");
+  //   run_all(0, 1, "/finite_surfaces/torus", "my_run_input");
   //   run_all(3, 3, "/finite_surfaces/cubed_sphere", "my_run_input");
-  //   run_all(0, 0, "/finite_surfaces/ellipsoid", "my_run_input");
-  //   run_all(1, 3, "/finite_surfaces/tetrahedron", "my_run_input");
-  //   run_all(0, 3, "/finite_surfaces/joined_spheres", "my_run_input");
-  //   run_all(0, 3, "/finite_surfaces/genus", "my_run_input");
+  //   run_input(0, "/cut_surfaces", "crop_to_box");
+  //     run_all(3, 3, "/finite_surfaces/cubed_sphere", "my_run_input");
+  //     run_all(0, 0, "/finite_surfaces/ellipsoid", "my_run_input");
+  //     run_all(1, 3, "/finite_surfaces/tetrahedron", "my_run_input");
+  //     run_all(0, 3, "/finite_surfaces/joined_spheres", "my_run_input");
+  //     run_all(0, 3, "/finite_surfaces/genus", "my_run_input");
 
   // spusti vstupy "input0", "input1", "input2" v priecinku
   // "inputs/infinite_surfaces/hyperboloid", vystupny subor vlozi do priecinka

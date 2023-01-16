@@ -29,19 +29,18 @@ class BasicAlgorithm {
 
     const Point singular_point(0, 0, 0);
     Vector singular_direction(0, 0, -1);
-
-    triangulate_A1_starter(singular_point, singular_direction, &my_mesh,
-                           kInvalidPointIndex);
+    triangulate_singularity_circular(singular_point, singular_direction,
+                                     &my_mesh, kInvalidPointIndex);
     singular_direction = -1 * singular_direction;
-    triangulate_A1_starter(singular_point, singular_direction, &my_mesh, 0);
-
+    triangulate_singularity_circular(singular_point, singular_direction,
+                                     &my_mesh, 0);
     // regular
     /*
-    Triangle seed_triangle = find_seed_triangle(seed_point);
-    std::cout << "seed triangle created" << endl;
-    my_mesh = Mesh(seed_triangle, bounding_box);
-    std::cout << "in basic algorithm constructor" << endl;
-    */
+        Triangle seed_triangle = find_seed_triangle(seed_point);
+        std::cout << "seed triangle created" << endl;
+        my_mesh = Mesh(seed_triangle, bounding_box);
+        std::cout << "in basic algorithm constructor" << endl;
+        */
   }
 
   void calculate();
@@ -51,7 +50,8 @@ class BasicAlgorithm {
   bool fix_proj(const HalfEdge &working_edge, const Point &projected,
                 const bool Delaunay);
   bool fix_prev_next(const HalfEdge &working_edge, const bool Delaunay);
-  bool fix_close_points(const HalfEdge &working_edge, const Point &projected);
+  bool fix_close_points(const HalfEdge &working_edge, const Point &projected,
+                        const bool Delaunay);
   bool fix_overlap(const HalfEdge &working_edge, const MeshPoint &overlap_point,
                    const bool Delaunay);
   int fix_holes(const HalfEdge &working_edge);
@@ -76,12 +76,13 @@ class BasicAlgorithm {
       const Point &P, const HalfEdge &working_edge) const;
   int update_border(const Edge &new_edge1, const Edge &new_edge2);
   bool check_conditions(const HalfEdge &working_edge, const Point &P,
-                        const bool Delaunay) const;
+                        const bool Delaunay,
+                        const MeshPointIndex i_P = kInvalidPointIndex) const;
   bool Delaunay_conditions(const HalfEdge &working_edge, const Point &P) const;
   bool Delaunay_conditions_debug(const HalfEdge &working_edge,
                                  const Point &P) const;
-  bool non_Delaunay_conditions(const HalfEdge &working_edge,
-                               const Point &P) const;
+  bool non_Delaunay_conditions(const HalfEdge &working_edge, const Point &P,
+                               const MeshPointIndex i_P) const;
 
   void create_triangle(const HalfEdge &working_edge, const Point &P,
                        const bool is_new, const MeshPointIndex index_P = -1);
@@ -93,7 +94,7 @@ class BasicAlgorithm {
   bool is_checked(const HalfEdgeIndex &halfedge_index) const;
   bool is_bounding(const HalfEdgeIndex &halfedge_index) const;
   bool is_border(const HalfEdgeIndex &halfedge_index) const;
-  bool is_border_point(const MeshPoint &P) const;
+  // bool is_border_point(const MeshPoint &P) const;
   bool is_border_point(const Point &P) const;
   void delete_from_active(const HalfEdgeIndex &halfedge_index);
   void delete_from_checked(const HalfEdgeIndex &halfedge_index);
@@ -117,6 +118,10 @@ class BasicAlgorithm {
   void triangulate_A1_starter(const Point &singular,
                               const Vector &singular_direction, Mesh *mesh,
                               const MeshPointIndex singular_index);
+  void triangulate_singularity_circular(const Point &singular,
+                                        const Vector &singular_direction,
+                                        Mesh *mesh,
+                                        const MeshPointIndex singular_index);
 
  private:
   string name;

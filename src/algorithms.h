@@ -32,6 +32,20 @@ numeric Bisect(const realsymbol my_x, const ex &f, const numeric point1,
 numeric Bisection(const realsymbol my_x, const ex &f, numeric starting_point,
                   numeric e_size);
 
+Point circular_bisection(const Function &F, const Point &singular_point,
+                         const Point &start_point, numeric end_angle,
+                         const Vector &u /*rotation direction*/,
+                         numeric e_size);
+
+std::pair<Point, Point> _circular_bisect(const Function &F,
+                                         const Point &start_point,
+                                         const Point &end_point,
+                                         const Point &singular_point,
+                                         const Vector &u, const numeric angle);
+
+Point rotate(const Point &rot_center, const Point &to_rotate, const Vector &u,
+             const numeric angle);
+
 // returns projected point in the direction of normal
 Point project(const Point &point_to_project, const Vector &normal,
               const Function &F, const std::optional<numeric> e_size);

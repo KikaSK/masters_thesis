@@ -6,6 +6,93 @@ using std::cout;
 
 #pragma region "Region singularities"
 
+void BasicAlgorithm::triangulate_singularity_circular(
+    const Point &singular, const Vector &singular_direction, Mesh *mesh,
+    const MeshPointIndex singular_index) {
+  Vector unit_singular_direction = singular_direction.unit();
+  Vector plane_vector = unit_singular_direction.get_any_perpendicular().unit();
+  const Vector &u = unit_singular_direction;
+
+  // rotating matrix around singular direction
+  // cos(pi/3)+ux^2*(1-cos(pi/3))          ux*uy*(1-cos(pi/3)-uz*sin(pi/3)
+  // ux*uz(1-cos(pi/3))+uy*sin(pi/3) ux*uy*(1-cos(pi/3)+uz*sin(pi/3)
+  // cos(pi/3)+uy^2*(1-cos(pi/3))         uy*uz(1-cos(pi/3))-ux*sin(pi/3)
+  // ux*uz(1-cos(pi/3))-uy*sin(pi/3)       uy*uz(1-cos(pi/3))+ux*sin(pi/3)
+  // cos(pi/3)+uz^2*(1-cos(pi/3))
+
+  const int num_triangles = 5;
+
+  const numeric COS = GiNaC::ex_to<numeric>(
+      GiNaC::cos(2 * GiNaC::Pi.evalf() / num_triangles).evalf());
+  const numeric SIN = GiNaC::ex_to<numeric>(
+      GiNaC::sin(2 * GiNaC::Pi.evalf() / num_triangles).evalf());
+  const Vector rot_vector_x = Vector(COS + u.x() * u.x() * (1 - COS),
+                                     u.x() * u.y() * (1 - COS) - u.z() * SIN,
+                                     u.x() * u.z() * (1 - COS) + u.y() * SIN);
+  const Vector rot_vector_y = Vector(u.x() * u.y() * (1 - COS) + u.z() * SIN,
+                                     COS + u.y() * u.y() * (1 - COS),
+                                     u.y() * u.z() * (1 - COS) - u.x() * SIN);
+  const Vector rot_vector_z = Vector(u.x() * u.z() * (1 - COS) - u.y() * SIN,
+                                     u.y() * u.z() * (1 - COS) + u.x() * SIN,
+                                     COS + u.z() * u.z() * (1 - COS));
+
+  vector<Point> points;
+  for (int i = 0; i < num_triangles; ++i) {
+    /*
+    Point point_to_project =
+        Point(singular, (sqrt(15) / 4) * plane_vector +
+                            (e_size / 4) * unit_singular_direction);
+    */
+    Point start_point_to_bisect(singular, e_size * plane_vector);
+    Point end_point_to_bisect(singular, e_size * unit_singular_direction);
+    Vector rot_vector = (plane_vector ^ unit_singular_direction).unit();
+
+    Point projected_point = circular_bisection(
+        F, singular, start_point_to_bisect,
+        GiNaC::ex_to<numeric>((GiNaC::Pi / 2).evalf() / 2), rot_vector, e_size);
+    points.push_back(projected_point);
+
+    // checks if the point is in the correct halfspace
+    Vector projected_vector = Vector(singular, projected_point);
+    assertm(unit_singular_direction * projected_vector > 0,
+            "New point in opposite halfspace!");
+
+    plane_vector =
+        Vector(rot_vector_x * plane_vector, rot_vector_y * plane_vector,
+               rot_vector_z * plane_vector);
+  }
+
+  // Mesh local_mesh;
+  for (int i = 0; i < num_triangles; ++i) {
+    int j = (i + 1) % num_triangles;
+    Triangle triangle = Triangle(singular, points[i], points[j]);
+    assertm(triangle.is_triangle(), "Invalid triangle!");
+    if (i == 0) {
+      if (mesh->get_faces_count() == 0) {
+        mesh->add_first_triangle(triangle, bounding_box);
+      } else {
+        assertm(singular_index != kInvalidPointIndex,
+                "invalid singular meshpoint index");
+        mesh->add_triangle_to_meshpoint(singular_index, points[i], points[j],
+                                        bounding_box);
+      }
+    } else if (i < num_triangles - 1) {
+      mesh->add_triangle(mesh->get_edges_count() - 1, points[j], true,
+                         bounding_box);
+      mesh->edges_check("in A1 round: " + std::to_string(i));
+      //,bounding_box);
+    } else {
+      mesh->add_triangle(mesh->get_edges_count() - 1, points[j], false,
+                         bounding_box,
+                         mesh->get_points_count() - num_triangles);
+      mesh->edges_check("in A1 round: " + std::to_string(i));
+    }
+  }
+
+  mesh->obj_format(name + "_local");
+  return;
+}
+
 // TODO(kuska) project via spinning, not perpendicular
 void BasicAlgorithm::triangulate_A1_starter(
     const Point &singular, const Vector &singular_direction, Mesh *mesh,
@@ -272,10 +359,10 @@ std::optional<vector<MeshPoint>> BasicAlgorithm::find_close_points(
 #pragma region "Check conditions"
 
 bool BasicAlgorithm::check_conditions(const HalfEdge &working_edge,
-                                      const Point &P,
-                                      const bool Delaunay) const {
+                                      const Point &P, const bool Delaunay,
+                                      const MeshPointIndex i_P) const {
   if (Delaunay) return Delaunay_conditions(working_edge, P);
-  return non_Delaunay_conditions(working_edge, P);
+  return non_Delaunay_conditions(working_edge, P, i_P);
 }
 
 bool BasicAlgorithm::Delaunay_conditions_debug(const HalfEdge &working_edge,
@@ -376,7 +463,8 @@ bool BasicAlgorithm::Delaunay_conditions(const HalfEdge &working_edge,
 
 // checks if essential conditions are fulfilled
 bool BasicAlgorithm::non_Delaunay_conditions(const HalfEdge &working_edge,
-                                             const Point &P) const {
+                                             const Point &P,
+                                             const MeshPointIndex i_P) const {
   if (working_edge.get_point_A() == P || working_edge.get_point_B() == P) {
     return false;
   }
@@ -385,10 +473,12 @@ bool BasicAlgorithm::non_Delaunay_conditions(const HalfEdge &working_edge,
 
   if (!new_triangle.is_triangle()) return false;
   bool has_good_edges = good_edges(working_edge, P);
+  assertm(i_P != kInvalidPointIndex, "Invalid meshpoint index!");
+  bool is_border = my_mesh.is_boundary_point(my_mesh.get_meshpoint(i_P));
   // bool orientability = orientability_check(working_edge, P);
   //  if (!has_good_edges) cout << "Good Edges condition failed!" << endl;
 
-  return (has_good_edges  //&& orientability
+  return (has_good_edges && is_border  //&& orientability
   );
 }
 
@@ -581,7 +671,8 @@ bool BasicAlgorithm::basic_triangle(const HalfEdge &working_edge,
   // std::cout << "checking conditions for: " << working_edge <<
   // point.get_point()
   //           << endl;
-  if (!check_conditions(working_edge, point.get_point(), false)) {
+  if (!check_conditions(working_edge, point.get_point(), false,
+                        point.get_index())) {
     return false;
   }
   /*std::cout << "neighbour triangle: "
@@ -610,16 +701,17 @@ bool BasicAlgorithm::is_border(const HalfEdgeIndex &halfedge_index) const {
   return (is_active(halfedge_index) || is_checked(halfedge_index) ||
           is_bounding(halfedge_index));
 }
-
+/*
 // true if point is on border of mesh
 bool BasicAlgorithm::is_border_point(const MeshPoint &P) const {
   return my_mesh.is_boundary_point(P);
 }
-
+*/
 // true if point is on border of mesh
+
 bool BasicAlgorithm::is_border_point(const Point &P) const {
-  for (auto point : my_mesh.get_mesh_points()) {
-    if (is_border_point(point) &&
+  for (MeshPoint point : my_mesh.get_mesh_points()) {
+    if (my_mesh.is_boundary_point(point) &&
         Vector(point.get_point(), P).get_length() < kEps)
       return true;
   }
@@ -664,7 +756,8 @@ std::optional<MeshPoint> BasicAlgorithm::get_closest_point(
     if (dist < min_dist &&
         meshpoint.get_point() != working_edge.get_point_A() &&
         meshpoint.get_point() != working_edge.get_point_B() &&
-        check_conditions(working_edge, meshpoint.get_point(), false))
+        check_conditions(working_edge, meshpoint.get_point(), false,
+                         meshpoint.get_index()))
       min_dist = dist;
     closest_point = meshpoint;
   }
@@ -737,7 +830,8 @@ bool BasicAlgorithm::fix_overlap(const HalfEdge &working_edge,
                                  const bool Delaunay) {
   // if Delaunay constraint is satisfied add the triangle to
   // triangulation and end
-  if (!check_conditions(working_edge, overlap_point.get_point(), Delaunay)) {
+  if (!check_conditions(working_edge, overlap_point.get_point(), Delaunay,
+                        overlap_point.get_index())) {
     return false;
   }
   /*assertm(!my_mesh.has_incoming_prev(working_edge, overlap_point) &&
@@ -750,14 +844,16 @@ bool BasicAlgorithm::fix_overlap(const HalfEdge &working_edge,
 }
 
 bool BasicAlgorithm::fix_close_points(const HalfEdge &working_edge,
-                                      const Point &projected) {
+                                      const Point &projected,
+                                      const bool Delaunay) {
   if (auto surrounding_points = find_close_points(projected, working_edge);
       surrounding_points.has_value()) {
     // points closer to projected point than 0.4*e_size sorted from closest
     vector<MeshPoint> close_points = surrounding_points.value();
     for (auto close_point : close_points) {
       // todo rewrite to reflect delaunay state
-      if (check_conditions(working_edge, close_point.get_point(), true)) {
+      if (check_conditions(working_edge, close_point.get_point(), Delaunay,
+                           close_point.get_index())) {
         // fill it it's basic triangle
         MeshPointIndex opposite_point =
             my_mesh.get_halfedge(working_edge.get_next()).get_B();
@@ -919,7 +1015,8 @@ bool BasicAlgorithm::_fix_prev_next(const HalfEdge &working_edge,
   Triangle new_triangle(working_edge.get_point_B(), working_edge.get_point_A(),
                         point);
 
-  if (!check_conditions(working_edge, point.get_point(), Delaunay)) {
+  if (!check_conditions(working_edge, point.get_point(), Delaunay,
+                        point.get_index())) {
     return false;
   }
   // TODO(kuska) change the type to bool - new/not new
@@ -968,7 +1065,8 @@ bool BasicAlgorithm::fix_breakers(const HalfEdge &working_edge,
   // std::cout << "3" << endl;
   //  try create triangle with breakers
   for (auto point : breakers) {
-    if (is_border_point(point) && fix_overlap(working_edge, point, Delaunay)) {
+    if (my_mesh.is_boundary_point(point) &&
+        fix_overlap(working_edge, point, Delaunay)) {
       // cout << "here" << endl;
       return true;
     }
@@ -1005,7 +1103,7 @@ bool BasicAlgorithm::step(const HalfEdgeIndex &working_edge_index) {
       working_edge.get_midpoint(), projected, e_size, F);
   assertm(clipped.has_value(), "Unable to crop to box!");
 
-  if (fix_close_points(working_edge, clipped.value())) {
+  if (fix_close_points(working_edge, clipped.value(), true)) {
     // cout << "FIX_CLOSE_POINTS" << endl;
     return true;
   }
@@ -1325,7 +1423,7 @@ bool BasicAlgorithm::fix_holes2(const HalfEdge &working_edge) {
     return true;
   }
   */
-  if (fix_close_points(working_edge, clipped.value())) {
+  if (fix_close_points(working_edge, clipped.value(), false)) {
     // cout << "fix close points" << endl;
     return true;
   }
