@@ -28,12 +28,18 @@ class BasicAlgorithm {
     // singular
 
     const Point singular_point(0, 0, 0);
-    Vector singular_direction(0, 0, -1);
+    Vector singular_direction(0, 0, 1);
+
+    // const Point singular_point(0, 0, 0);
+    // Vector singular_direction(1, 0, 0);
+
     triangulate_singularity_circular(singular_point, singular_direction,
                                      &my_mesh, kInvalidPointIndex);
+    /*
     singular_direction = -1 * singular_direction;
     triangulate_singularity_circular(singular_point, singular_direction,
                                      &my_mesh, 0);
+*/
     // regular
     /*
         Triangle seed_triangle = find_seed_triangle(seed_point);

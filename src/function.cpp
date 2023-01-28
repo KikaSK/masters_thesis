@@ -1,13 +1,14 @@
 #include "function.h"
 
-Function::Function(const ex &x, const ex &y, const ex &z, ex F, vector<ex> dF)
+Function::Function(const GiNaC::realsymbol &x, const GiNaC::realsymbol &y,
+                   const GiNaC::realsymbol &z, ex F, vector<ex> dF)
     : _x(x), _y(y), _z(z), _F(F), _dF(dF){};
 
 ex Function::get_function() const { return _F; }
 vector<ex> Function::get_gradient() const { return _dF; }
-ex Function::get_x() const { return _x; }
-ex Function::get_y() const { return _y; }
-ex Function::get_z() const { return _z; }
+realsymbol Function::get_x() const { return _x; }
+realsymbol Function::get_y() const { return _y; }
+realsymbol Function::get_z() const { return _z; }
 
 ex Function::grad_x() const { return _dF[0]; }
 ex Function::grad_y() const { return _dF[1]; }

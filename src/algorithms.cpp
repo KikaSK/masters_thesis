@@ -125,19 +125,41 @@ Point circular_bisection(const Function &F, const Point &singular_point,
                          const Vector &u /*rotation direction*/,
                          numeric e_size) {
   const Point end_point = rotate(singular_point, start_point, u, end_angle);
-
-  assertm(F.get_function()
-                      .subs(GiNaC::lst{F.get_x() == start_point.x(),
-                                       F.get_y() == start_point.y(),
-                                       F.get_z() == start_point.z()})
-                      .evalf() *
+  /*
+    std::cout << start_point << endl
+              << singular_point << endl
+              << end_angle << endl
+              << u << endl
+              << end_point << endl;
+    std::cout << GiNaC::ex_to<numeric>(
+                     F.get_function()
+                         .subs(GiNaC::lst{F.get_x() == start_point.x(),
+                                          F.get_y() == start_point.y(),
+                                          F.get_z() == start_point.z()})
+                         .evalf())
+              << endl
+              << GiNaC::ex_to<numeric>(
+                     F.get_function()
+                         .subs(GiNaC::lst{F.get_x() == end_point.x(),
+                                          F.get_y() == end_point.y(),
+                                          F.get_z() == end_point.z()})
+                         .evalf())
+              << endl;
+  */
+  assertm(
+      GiNaC::ex_to<numeric>(F.get_function()
+                                .subs(GiNaC::lst{F.get_x() == start_point.x(),
+                                                 F.get_y() == start_point.y(),
+                                                 F.get_z() == start_point.z()})
+                                .evalf()) *
+              GiNaC::ex_to<numeric>(
                   F.get_function()
                       .subs(GiNaC::lst{F.get_x() == end_point.x(),
                                        F.get_y() == end_point.y(),
                                        F.get_z() == end_point.z()})
-                      .evalf() <=
-              0,
-          "Wrong call for circular bisect function!");
+                      .evalf()) <=
+          0,
+      "Wrong call for circular bisect function!");
 
   std::pair<Point, Point> bisection_param = {start_point, end_point};
   numeric my_angle = end_angle;
@@ -145,8 +167,9 @@ Point circular_bisection(const Function &F, const Point &singular_point,
     bisection_param =
         _circular_bisect(F, bisection_param.first, bisection_param.second,
                          singular_point, u, my_angle);
-    if (bisection_param.first == bisection_param.second)
+    if (bisection_param.first == bisection_param.second) {
       return bisection_param.first;
+    }
     my_angle = my_angle / 2;
   }
   assertm(false, "Too much iterations in bisection method!");
@@ -170,10 +193,10 @@ std::pair<Point, Point> _circular_bisect(const Function &F,
                                                  F.get_y() == end_point.y(),
                                                  F.get_z() == end_point.z()})
                                 .evalf());
-  if (subs_start < 10e-6) {
+  if (abs(subs_start) < kEps) {
     return {start_point, start_point};
   }
-  if (subs_end < 10e-6) {
+  if (abs(subs_end) < kEps) {
     return {end_point, end_point};
   }
   const Point &mid_point = rotate(singular_point, start_point, u, angle / 2);
@@ -184,7 +207,7 @@ std::pair<Point, Point> _circular_bisect(const Function &F,
                                                  F.get_y() == mid_point.y(),
                                                  F.get_z() == mid_point.z()})
                                 .evalf());
-  if (subs_mid < 10e-6) {
+  if (abs(subs_mid) < kEps) {
     return {mid_point, mid_point};
   }
   if (subs_start * subs_mid < 0) {
@@ -339,4 +362,80 @@ Vector find_direction(const HalfEdge &working_edge, const Face &F) {
   assertm(direction * to_gravity_center < 0 - kEps, "Wrong direction!");
 
   return direction;
+}
+
+numeric get_gaussian_curvature_multiplicator(const Function &F,
+                                             const Point &point) {
+  vector<ex> gradient = F.get_gradient();
+  Vector gradient_eval = F.get_gradient_at_point(point);
+  assertm(gradient_eval != Vector(0, 0, 0), "zero gradient!");
+  // ex x = F.get_x();
+  ex _Fxx = diff(gradient[0], F.get_x());
+  ex _Fxy = diff(gradient[0], F.get_y());
+  ex _Fxz = diff(gradient[0], F.get_z());
+  ex _Fyx = diff(gradient[1], F.get_x());
+  ex _Fyy = diff(gradient[1], F.get_y());
+  ex _Fyz = diff(gradient[1], F.get_z());
+  ex _Fzx = diff(gradient[2], F.get_x());
+  ex _Fzy = diff(gradient[2], F.get_y());
+  ex _Fzz = diff(gradient[2], F.get_z());
+
+  assertm(_Fxy == _Fyx && _Fyz == _Fzy && _Fxz == _Fzx, "Not smooth!");
+
+  numeric Fxx = GiNaC::ex_to<numeric>(
+      _Fxx.subs(GiNaC::lst{F.get_x() == point.x(), F.get_y() == point.y(),
+                           F.get_z() == point.z()})
+          .evalf());
+  numeric Fxy = GiNaC::ex_to<numeric>(
+      _Fxy.subs(GiNaC::lst{F.get_x() == point.x(), F.get_y() == point.y(),
+                           F.get_z() == point.z()})
+          .evalf());
+  numeric Fxz = GiNaC::ex_to<numeric>(
+      _Fxz.subs(GiNaC::lst{F.get_x() == point.x(), F.get_y() == point.y(),
+                           F.get_z() == point.z()})
+          .evalf());
+
+  numeric Fyx = GiNaC::ex_to<numeric>(
+      _Fyx.subs(GiNaC::lst{F.get_x() == point.x(), F.get_y() == point.y(),
+                           F.get_z() == point.z()})
+          .evalf());
+  numeric Fyy = GiNaC::ex_to<numeric>(
+      _Fyy.subs(GiNaC::lst{F.get_x() == point.x(), F.get_y() == point.y(),
+                           F.get_z() == point.z()})
+          .evalf());
+  numeric Fyz = GiNaC::ex_to<numeric>(
+      _Fyz.subs(GiNaC::lst{F.get_x() == point.x(), F.get_y() == point.y(),
+                           F.get_z() == point.z()})
+          .evalf());
+
+  numeric Fzx = GiNaC::ex_to<numeric>(
+      _Fzx.subs(GiNaC::lst{F.get_x() == point.x(), F.get_y() == point.y(),
+                           F.get_z() == point.z()})
+          .evalf());
+  numeric Fzy = GiNaC::ex_to<numeric>(
+      _Fzy.subs(GiNaC::lst{F.get_x() == point.x(), F.get_y() == point.y(),
+                           F.get_z() == point.z()})
+          .evalf());
+  numeric Fzz = GiNaC::ex_to<numeric>(
+      _Fzz.subs(GiNaC::lst{F.get_x() == point.x(), F.get_y() == point.y(),
+                           F.get_z() == point.z()})
+          .evalf());
+
+  Vector Hx(Fyy * Fzz - Fyz * Fzy, Fyz * Fzx - Fyx * Fzz,
+            Fyx * Fzy - Fyy * Fzx);
+  Vector Hy(Fyz * Fzx - Fyx * Fzz, Fxx * Fzz - Fzx * Fxz,
+            Fyx * Fzx - Fxx * Fzy);
+  Vector Hz(Fyx * Fzy - Fyy * Fzx, Fyx * Fzx - Fxx * Fzy,
+            Fxx * Fyy - Fxy * Fyx);
+
+  numeric sq_gaussian_curvature = sqrt(
+      sqrt(abs(gradient_eval * (Vector(gradient_eval * Hx, gradient_eval * Hy,
+                                       gradient_eval * Hz))) /
+           (gradient_eval.get_length_squared() *
+            gradient_eval.get_length_squared())));
+  numeric mult = 3;
+  // std::cout << "GC:" << sq_gaussian_curvature * mult << endl;
+  if (sq_gaussian_curvature * mult < 1) return 1;
+  // std::cout << "1/GC:" << 1 / (sq_gaussian_curvature * mult) << endl;
+  return 1 / (sq_gaussian_curvature * mult);
 }

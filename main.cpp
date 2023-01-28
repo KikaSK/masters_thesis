@@ -116,7 +116,11 @@ int main() {
   // "my_run_input"
   // run_input(0, "/finite_surfaces/sphere", "my_run_input");
   // run_all(3, 4, "/finite_surfaces/sphere", "my_run_input");
-  run_input(0, "/sing_surfaces/cone", "my_run_input");
+  run_input(0, "/sing_surfaces/A1", "my_run_input");
+  run_input(0, "/sing_surfaces/A2", "my_run_input");
+  run_input(0, "/sing_surfaces/A3", "my_run_input");
+  run_input(0, "/sing_surfaces/A4", "my_run_input");
+  run_input(0, "/sing_surfaces/A5", "my_run_input");
   // run_all(0, 3, "/finite_surfaces/sphere", "my_run_input");
   //   run_all(0, 1, "/finite_surfaces/blobby", "my_run_input");
   //   run_all(0, 1, "/finite_surfaces/torus", "my_run_input");

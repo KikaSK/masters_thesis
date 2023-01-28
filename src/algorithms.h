@@ -62,4 +62,7 @@ vector<HalfEdgeIndex> connect_edges(const vector<HalfEdgeIndex> &v1,
 // the midpoint of edge e, perpendicular to e
 Vector find_direction(const HalfEdge &working_edge, const Face &F);
 
+numeric get_gaussian_curvature_multiplicator(const Function &F,
+                                             const Point &point);
+
 #endif

@@ -12,26 +12,28 @@
 
 using GiNaC::ex;
 using GiNaC::numeric;
+using GiNaC::realsymbol;
 using std::endl;
 using std::vector;
 
 class Function {
  private:
-  const ex _x;
-  const ex _y;
-  const ex _z;
+  const realsymbol _x;
+  const realsymbol _y;
+  const realsymbol _z;
   const ex _F;
   const vector<ex> _dF;
 
  public:
-  Function(const ex &x, const ex &y, const ex &z, ex F, vector<ex> dF);
+  Function(const realsymbol &x, const realsymbol &y, const realsymbol &z, ex F,
+           vector<ex> dF);
   Function() = default;
 
   ex get_function() const;
   vector<ex> get_gradient() const;
-  ex get_x() const;
-  ex get_y() const;
-  ex get_z() const;
+  realsymbol get_x() const;
+  realsymbol get_y() const;
+  realsymbol get_z() const;
 
   ex grad_x() const;
   ex grad_y() const;
