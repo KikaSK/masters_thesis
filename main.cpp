@@ -76,7 +76,31 @@ void run_input(const int i, const string folder, const string index) {
   numeric seed_point_y = ex_to<numeric>(stod(parsed_input[11]));
   numeric seed_point_z = ex_to<numeric>(stod(parsed_input[12]));
   Point seed_point(seed_point_x, seed_point_y, seed_point_z);
-
+  numeric num_of_singular = ex_to<numeric>(stod(parsed_input[13]));
+  vector<Point> singular_points;
+  vector<vector<Vector>> singular_directions;
+  for (int i = 0; i < num_of_singular - 0.5; ++i) {
+    numeric p_x = ex_to<numeric>(stod(parsed_input[14 + 3 * i]));
+    numeric p_y = ex_to<numeric>(stod(parsed_input[15 + 3 * i]));
+    numeric p_z = ex_to<numeric>(stod(parsed_input[16 + 3 * i]));
+    singular_points.push_back(Point(p_x, p_y, p_z));
+    singular_directions.push_back(vector<Vector>());
+    numeric num_of_branches = ex_to<numeric>(stod(parsed_input[17 + 3 * i]));
+    for (int j = 0; j < num_of_branches - 0.5; ++j) {
+      numeric d_x = ex_to<numeric>(stod(parsed_input[18 + 3 * i + 3 * j]));
+      numeric d_y = ex_to<numeric>(stod(parsed_input[19 + 3 * i + 3 * j]));
+      numeric d_z = ex_to<numeric>(stod(parsed_input[20 + 3 * i + 3 * j]));
+      singular_directions[singular_directions.size() - 1].push_back(
+          Vector(d_x, d_y, d_z));
+    }
+  }
+  /*
+  for (auto p : singular_points) std::cout << "point: " << p << endl;
+  for (auto b : singular_directions) {
+    for (auto d : b) std::cout << "direction: " << d << endl;
+    std::cout << endl;
+  }
+  */
   set_epsylon(e_size);
   vector<ex> input_dF;
   input_dF.push_back(diff(input_F, x));
@@ -86,7 +110,7 @@ void run_input(const int i, const string folder, const string index) {
   Function F(x, y, z, input_F, input_dF);
 
   BasicAlgorithm alg("./outputs/" + name, F, seed_point, e_size, x, y, z,
-                     my_bounding_box);
+                     my_bounding_box, singular_points, singular_directions);
   cout << "Basic algorithm created, calling for calculate()!" << endl;
   // alg.my_mesh.obj_format("./outputs/" + name);
 
@@ -116,21 +140,21 @@ int main() {
   // "my_run_input"
   // run_input(0, "/finite_surfaces/sphere", "my_run_input");
   // run_all(3, 4, "/finite_surfaces/sphere", "my_run_input");
-  run_input(0, "/sing_surfaces/A1", "my_run_input");
-  run_input(0, "/sing_surfaces/A2", "my_run_input");
-  run_input(0, "/sing_surfaces/A3", "my_run_input");
-  run_input(0, "/sing_surfaces/A4", "my_run_input");
-  run_input(0, "/sing_surfaces/A5", "my_run_input");
-  // run_all(0, 3, "/finite_surfaces/sphere", "my_run_input");
-  //   run_all(0, 1, "/finite_surfaces/blobby", "my_run_input");
-  //   run_all(0, 1, "/finite_surfaces/torus", "my_run_input");
-  //   run_all(3, 3, "/finite_surfaces/cubed_sphere", "my_run_input");
-  //   run_input(0, "/cut_surfaces", "crop_to_box");
-  //     run_all(3, 3, "/finite_surfaces/cubed_sphere", "my_run_input");
-  //     run_all(0, 0, "/finite_surfaces/ellipsoid", "my_run_input");
-  //     run_all(1, 3, "/finite_surfaces/tetrahedron", "my_run_input");
-  //     run_all(0, 3, "/finite_surfaces/joined_spheres", "my_run_input");
-  //     run_all(0, 3, "/finite_surfaces/genus", "my_run_input");
+  // run_input(0, "/sing_surfaces/A1", "my_run_input");
+  // run_input(0, "/sing_surfaces/A2", "my_run_input");
+  // run_input(0, "/sing_surfaces/A3", "my_run_input");
+  // run_input(0, "/sing_surfaces/A4", "my_run_input");
+  // run_input(0, "/sing_surfaces/A1", "my_run_input");
+  run_all(3, 3, "/sing_surfaces/A2", "my_run_input");
+  //    run_all(0, 1, "/finite_surfaces/blobby", "my_run_input");
+  //    run_all(0, 1, "/finite_surfaces/torus", "my_run_input");
+  //    run_all(3, 3, "/finite_surfaces/cubed_sphere", "my_run_input");
+  //    run_input(0, "/cut_surfaces", "crop_to_box");
+  //      run_all(3, 3, "/finite_surfaces/cubed_sphere", "my_run_input");
+  //      run_all(0, 0, "/finite_surfaces/ellipsoid", "my_run_input");
+  //      run_all(1, 3, "/finite_surfaces/tetrahedron", "my_run_input");
+  //      run_all(0, 3, "/finite_surfaces/joined_spheres", "my_run_input");
+  //      run_all(0, 3, "/finite_surfaces/genus", "my_run_input");
 
   // spusti vstupy "input0", "input1", "input2" v priecinku
   // "inputs/infinite_surfaces/hyperboloid", vystupny subor vlozi do priecinka

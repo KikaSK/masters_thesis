@@ -76,7 +76,7 @@ std::optional<Point> BoundingBox::project_on_min_x(const Point &midpoint,
 
   std::optional<Point> projected = std::nullopt;
   if (v.x() != 0) {
-    projected = project(P, v, F, std::nullopt);
+    projected = project(P, v, F);
     if (!is_on(projected.value()) ||
         Vector(P, projected.value()).get_length() > dist)
       projected = std::nullopt;
@@ -101,7 +101,7 @@ std::optional<Point> BoundingBox::project_on_max_x(const Point &midpoint,
 
   std::optional<Point> projected = std::nullopt;
   if (v.x() != 0) {
-    projected = project(P, v, F, std::nullopt);
+    projected = project(P, v, F);
     if (!is_on(projected.value()) ||
         Vector(P, projected.value()).get_length() > dist)
       projected = std::nullopt;
@@ -126,7 +126,7 @@ std::optional<Point> BoundingBox::project_on_min_y(const Point &midpoint,
 
   std::optional<Point> projected = std::nullopt;
   if (v.y() != 0) {
-    projected = project(P, v, F, std::nullopt);
+    projected = project(P, v, F);
     if (!is_on(projected.value()) ||
         Vector(P, projected.value()).get_length() > dist)
       projected = std::nullopt;
@@ -151,7 +151,7 @@ std::optional<Point> BoundingBox::project_on_max_y(const Point &midpoint,
 
   std::optional<Point> projected = std::nullopt;
   if (v.y() != 0) {
-    projected = project(P, v, F, std::nullopt);
+    projected = project(P, v, F);
     if (!is_on(projected.value()) ||
         Vector(P, projected.value()).get_length() > dist)
       projected = std::nullopt;
@@ -176,7 +176,7 @@ std::optional<Point> BoundingBox::project_on_min_z(const Point &midpoint,
 
   std::optional<Point> projected = std::nullopt;
   if (v.z() != 0) {
-    projected = project(P, v, F, std::nullopt);
+    projected = project(P, v, F);
     if (!is_on(projected.value()) ||
         Vector(P, projected.value()).get_length() > dist)
       projected = std::nullopt;
@@ -201,7 +201,7 @@ std::optional<Point> BoundingBox::project_on_max_z(const Point &midpoint,
 
   std::optional<Point> projected = std::nullopt;
   if (v.z() != 0) {
-    projected = project(P, v, F, std::nullopt);
+    projected = project(P, v, F);
     if (!is_on(projected.value()) ||
         Vector(P, projected.value()).get_length() > dist)
       projected = std::nullopt;

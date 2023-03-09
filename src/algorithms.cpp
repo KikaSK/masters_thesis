@@ -16,9 +16,9 @@ numeric Newton_Raphson(const realsymbol my_x, const ex &f, const ex &df,
 
   numeric iter = starting_point;
   int iterations = 0;
-  while (abs(f.subs(my_x == iter).evalf()) > precision && iterations < 1'000) {
+  while (abs(f.subs(my_x == iter).evalf()) > precision && iterations < 10) {
     iterations++;
-    assertm(abs(df.subs(my_x == iter).evalf()) > 10e-6,
+    assertm(abs(df.subs(my_x == iter).evalf()) > kEps,
             "Division by 0 in N-R method!");
     iter -= GiNaC::ex_to<numeric>(f.subs(my_x == iter).evalf() /
                                   df.subs(my_x == iter).evalf());
@@ -222,7 +222,7 @@ std::pair<Point, Point> _circular_bisect(const Function &F,
 
 // returns projected point in the direction of normal
 Point project(const Point &point_to_project, const Vector &normal,
-              const Function &F, const std::optional<numeric> e_size) {
+              const Function &F, const numeric e_size /* = -1 */) {
   realsymbol my_x("my_x");
 
   numeric starting_point;
@@ -234,18 +234,17 @@ Point project(const Point &point_to_project, const Vector &normal,
 
   // parametric equations of line given by P and n
   // expressing parameter and substituing to other equations
-
-  if (n.x() != 0) {
+  if (abs(n.x()) > kEps) {
     starting_point = P.x();
     param_x = my_x;
     param_y = P.y() - n.y() * P.x() / n.x() + (n.y() / n.x()) * my_x;
     param_z = P.z() - n.z() * P.x() / n.x() + (n.z() / n.x()) * my_x;
-  } else if (n.y() != 0) {
+  } else if (abs(n.y()) > kEps) {
     starting_point = P.y();
     param_x = P.x();
     param_y = my_x;
     param_z = P.z() - n.z() * P.y() / n.y() + (n.z() / n.y()) * my_x;
-  } else if (n.z() != 0) {
+  } else if (abs(n.z()) > kEps) {
     starting_point = P.z();
     param_x = P.x();
     param_y = P.y();
@@ -272,10 +271,9 @@ Point project(const Point &point_to_project, const Vector &normal,
       GiNaC::ex_to<numeric>(param_z.subs(my_x == root).evalf());
 
   projected = Point(projected_x, projected_y, projected_z);
-  if (e_size.has_value() &&
-      Vector(point_to_project, projected.value()).get_length() >
-          4 * e_size.value()) {
-    root = Bisection(my_x, f, starting_point, e_size.value());
+  if (e_size != -1 &&
+      Vector(point_to_project, projected.value()).get_length() > 4 * e_size) {
+    root = Bisection(my_x, f, starting_point, e_size);
 
     numeric projected_x =
         GiNaC::ex_to<numeric>(param_x.subs(my_x == root).evalf());
@@ -287,6 +285,7 @@ Point project(const Point &point_to_project, const Vector &normal,
                                     F.get_y() == projected_y,
                                     F.get_z() == projected_z}) < 10e-6,
             "Wrong Bisection calculation!");
+    projected = Point(projected_x, projected_y, projected_z);
   }
   assertm(projected.has_value(), "Not found projected point!");
   /*
@@ -317,6 +316,19 @@ vector<Point> connect_points(const vector<Point> &v1, const vector<Point> &v2) {
   return connected;
 }
 */
+
+Vector find_direction_plane(const HalfEdge &working_edge, const Vector &normal,
+                            const Face &F /*neighbour_face*/) {
+  Vector edge_vector(working_edge.get_point_A(), working_edge.get_point_B());
+  assertm(!(normal ^ edge_vector).is_zero(), "Zero vector!");
+  Vector direction = (normal ^ edge_vector).unit();
+
+  const Vector to_gravity_center(working_edge.get_midpoint(),
+                                 F.get_gravity_center());
+  if (direction * to_gravity_center > 0) direction = -1 * direction;
+
+  return direction;
+}
 
 // Returns unit vector in the plane of triangle T, pointing outside from T from
 // the midpoint of edge e, perpendicular to e

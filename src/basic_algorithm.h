@@ -17,7 +17,8 @@ class BasicAlgorithm {
  public:
   BasicAlgorithm(string name, Function f, Point seed_point, numeric e_size,
                  realsymbol x, realsymbol y, realsymbol z,
-                 BoundingBox bounding_box)
+                 BoundingBox bounding_box, const vector<Point> &singular_points,
+                 const vector<vector<Vector>> &singular_directions)
       : name(name),
         F(f),
         e_size(e_size),
@@ -27,19 +28,48 @@ class BasicAlgorithm {
         bounding_box(bounding_box) {
     // singular
 
-    const Point singular_point(0, 0, 0);
-    Vector singular_direction(0, 0, 1);
-
+    const Point singular_point = singular_points[0];
+    std::cout << "Sing point: " << singular_point << endl;
+    // Vector singular_direction(0, 0, 1);
+    // Vector singular_direction(-1, 0.5, 0);
     // const Point singular_point(0, 0, 0);
-    // Vector singular_direction(1, 0, 0);
+    for (int i = 0; i < singular_directions[0].size(); ++i) {
+      Vector singular_direction = singular_directions[0][i];
+      std::cout << "Sing dir: " << singular_direction << endl;
+      if (name == "./outputs/my_run_input_A2+-_0.9" ||
+          name == "./outputs/my_run_input_A2-example-1_0.2") {
+        triangulate_singularity_case2(singular_point, singular_direction,
+                                      &my_mesh,
+                                      (i == 0) ? kInvalidPointIndex : 0);
+      } else
+        triangulate_singularity_circular(singular_point, singular_direction,
+                                         &my_mesh,
+                                         (i == 0) ? kInvalidPointIndex : 0);
+    }
 
-    triangulate_singularity_circular(singular_point, singular_direction,
-                                     &my_mesh, kInvalidPointIndex);
     /*
-    singular_direction = -1 * singular_direction;
-    triangulate_singularity_circular(singular_point, singular_direction,
-                                     &my_mesh, 0);
+singular_direction = -1 * singular_direction;
+triangulate_singularity_circular(singular_point, singular_direction,
+    &my_mesh, 0);
 */
+    /*
+        triangulate_cone_iterative(singular_point, singular_direction, &my_mesh,
+                                   kInvalidPointIndex);
+        singular_direction = Vector(1, 0.5, 0);
+
+        triangulate_cone_iterative(singular_point, singular_direction, &my_mesh,
+       0);
+        */
+    /*
+    singular_direction = Vector(-1, 0.5, 0).unit();
+
+    triangulate_cone_iterative(singular_point, singular_direction, &my_mesh, 0);
+
+    singular_direction = Vector(1, 0.5, 0).unit();
+
+    triangulate_cone_iterative(singular_point, singular_direction, &my_mesh, 0);
+    */
+
     // regular
     /*
         Triangle seed_triangle = find_seed_triangle(seed_point);
@@ -128,6 +158,13 @@ class BasicAlgorithm {
                                         const Vector &singular_direction,
                                         Mesh *mesh,
                                         const MeshPointIndex singular_index);
+  void triangulate_singularity_case2(const Point &singular,
+                                     const Vector &singular_direction,
+                                     Mesh *mesh,
+                                     const MeshPointIndex singular_index);
+  void triangulate_cone_iterative(const Point &singular,
+                                  const Vector &singular_direction, Mesh *mesh,
+                                  const MeshPointIndex singular_index);
 
  private:
   string name;

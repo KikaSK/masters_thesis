@@ -48,7 +48,7 @@ Point rotate(const Point &rot_center, const Point &to_rotate, const Vector &u,
 
 // returns projected point in the direction of normal
 Point project(const Point &point_to_project, const Vector &normal,
-              const Function &F, const std::optional<numeric> e_size);
+              const Function &F, const numeric e_size = -1);
 
 // connects two vectors of edges
 vector<HalfEdgeIndex> connect_edges(const vector<HalfEdgeIndex> &v1,
@@ -58,6 +58,8 @@ vector<HalfEdgeIndex> connect_edges(const vector<HalfEdgeIndex> &v1,
 // vector<Point> connect_points(const vector<Point> &v1, const vector<Point>
 // &v2);
 
+Vector find_direction_plane(const HalfEdge &working_edge, const Vector &normal,
+                            const Face &F);
 // Returns unit vector in the plane of triangle T, pointing outside from T from
 // the midpoint of edge e, perpendicular to e
 Vector find_direction(const HalfEdge &working_edge, const Face &F);
