@@ -346,9 +346,12 @@ void Mesh::add_first_triangle(const Triangle &T,
   Face F(T);
   F.set_halfedge(0);
   _mesh_triangles.push_back(F);
-  MeshPoint A(F.get_triangle().A(), 0);  // the outgoing halfedge will be AB
-  MeshPoint B(F.get_triangle().B(), 1);  // the outgoing halfedge will be BC
-  MeshPoint C(F.get_triangle().C(), 2);  // the outgoing halfedge will be CA
+  MeshPoint A = MeshPoint::create_from_point(
+      F.get_triangle().A(), 0);  // the outgoing halfedge will be AB
+  MeshPoint B = MeshPoint::create_from_point(
+      F.get_triangle().B(), 1);  // the outgoing halfedge will be BC
+  MeshPoint C = MeshPoint::create_from_point(
+      F.get_triangle().C(), 2);  // the outgoing halfedge will be CA
   A.set_index(0);
   B.set_index(1);
   C.set_index(2);
@@ -440,8 +443,10 @@ void Mesh::add_triangle_to_meshpoint(MeshPointIndex i_A, Point point_B,
 
   MeshPoint &A = _mesh_points[i_A];
   A.add_outgoing(i_AB);
-  MeshPoint B(F.get_triangle().B(), i_BC);  // the outgoing halfedge will be BC
-  MeshPoint C(F.get_triangle().C(), i_CA);  // the outgoing halfedge will be CA
+  MeshPoint B = MeshPoint::create_from_point(
+      F.get_triangle().B(), i_BC);  // the outgoing halfedge will be BC
+  MeshPoint C = MeshPoint::create_from_point(
+      F.get_triangle().C(), i_CA);  // the outgoing halfedge will be CA
   B.set_index(i_B);
   C.set_index(i_C);
 
@@ -534,7 +539,7 @@ void Mesh::add_triangle(
   FaceIndex i_face = _mesh_triangles.size();
 
   if (is_new) {
-    MeshPoint new_meshpoint(new_point);
+    MeshPoint new_meshpoint = MeshPoint::create_from_point(new_point);
     new_meshpoint.set_index(i_point);
     _mesh_points.push_back(new_meshpoint);
     i_P = i_point;

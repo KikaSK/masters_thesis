@@ -13,11 +13,11 @@ class MeshPoint : public Point {
   // Outgoing halfedge of boundary vertice must be boundary edge
   std::vector<HalfEdgeIndex> _outgoing;
   MeshPointIndex _self;
+  MeshPoint(const Point &A, HalfEdgeIndex outgoing = kInvalidEdgeIndex);
 
  public:
   MeshPoint(const numeric x, const numeric y, const numeric z,
             HalfEdgeIndex outgoing = kInvalidEdgeIndex);
-  MeshPoint(const Point &A, HalfEdgeIndex outgoing = kInvalidEdgeIndex);
   MeshPoint(const Point &A, const Vector &u,
             HalfEdgeIndex outgoing = kInvalidEdgeIndex);
   MeshPoint(const MeshPoint &A, const Vector &u,
@@ -42,6 +42,11 @@ class MeshPoint : public Point {
   void add_outgoing(HalfEdgeIndex outgoing);
   bool has_outgoing(HalfEdgeIndex outgoing) const;
   void set_index(MeshPointIndex index);
+  static MeshPoint create_from_point(
+      const Point A, const HalfEdgeIndex outgoing = kInvalidEdgeIndex) {
+    MeshPoint P(A.x(), A.y(), A.z(), outgoing);
+    return P;
+  }
 
   friend std::ostream &operator<<(std::ostream &os, const MeshPoint &A) {
     os << '[' << A._point.x() << ',' << A._point.y() << ',' << A._point.z()

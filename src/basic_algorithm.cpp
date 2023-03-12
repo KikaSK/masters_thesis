@@ -610,9 +610,9 @@ bool BasicAlgorithm::Delaunay_conditions(const HalfEdge &working_edge,
   numeric min_edge_length = std::min(
       std::min(new_triangle.AB().get_length(), new_triangle.BC().get_length()),
       new_triangle.CA().get_length());
-  if (new_triangle.AB().get_length() > 2 * min_edge_length ||
-      new_triangle.CA().get_length() > 2 * min_edge_length ||
-      new_triangle.BC().get_length() > 2 * min_edge_length) {
+  if (new_triangle.AB().get_length() > 3 * min_edge_length ||
+      new_triangle.CA().get_length() > 3 * min_edge_length ||
+      new_triangle.BC().get_length() > 3 * min_edge_length) {
     return false;
   }
 
@@ -644,12 +644,13 @@ bool BasicAlgorithm::Delaunay_conditions(const HalfEdge &working_edge,
          << endl;
   } else {
   */
-  if (!delaunay) cout << "NO PASS DELAUNAY!" << endl;
+ /*
+  if (is_edge_in_mesh) cout << "NO PASS IS EDGE IN MESH!" << endl;
   if (!neighbor_triangles_normal_check) cout << "NO PASS NORMAL CHECK!" << endl;
   if (!delaunay) cout << "NO PASS DELAUNAY!" << endl;
   // if (!orientability) cout << "NO PASS ORIENTABILITY!" << endl;
   if (!has_good_edges) cout << "NO PASS GOOD EDGES!" << endl;
-
+*/
   return (delaunay && has_good_edges && neighbor_triangles_normal_check &&
           !is_edge_in_mesh
           // && orientability
