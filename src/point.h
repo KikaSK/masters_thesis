@@ -49,4 +49,7 @@ class Point {
     return diff < kEps * kEps;
   }
   friend bool operator!=(const Point &A, const Point &B) { return !(A == B); }
+  friend Point operator*(const numeric k, const Point &A) {
+    return Point(A._x * k, A._y * k, A._z * k);
+  }
 };

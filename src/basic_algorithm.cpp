@@ -49,8 +49,6 @@ void BasicAlgorithm::triangulate_singularity_circular(
                            GiNaC::ex_to<numeric>((GiNaC::Pi / 2).evalf()),
                            rot_vector, e_size * mult);
     points.push_back(projected_point);
-    // std::cout << "projected: " << projected_point << endl;
-
     // checks if the point is in the correct halfspace
     Vector projected_vector = Vector(singular, projected_point);
     assertm(unit_singular_direction * projected_vector > 0,
@@ -61,10 +59,25 @@ void BasicAlgorithm::triangulate_singularity_circular(
                rot_vector_z * plane_vector);
   }
 
+  const Triangle first_triangle(singular, points[0], points[1]);
+
+  /*
+  std::cout << "outside normal: " << F.outside_normal(first_triangle, e_size)
+            << endl;
+  std::cout << "first triangle: " << first_triangle << endl;
+  */
+
+  // make sure normals point outside
+  if (first_triangle.get_normal() * F.outside_normal(first_triangle, e_size) <
+      0)
+    reverse(points.begin(), points.end());
+
   // Mesh local_mesh;
   for (int i = 0; i < num_triangles; ++i) {
     int j = (i + 1) % num_triangles;
     Triangle triangle = Triangle(singular, points[i], points[j]);
+    // std::cout << points[i] << endl;
+    // std::cout << triangle.get_normal() << endl;
     assertm(triangle.is_triangle(), "Invalid triangle!");
     if (i == 0) {
       if (mesh->get_faces_count() == 0) {
@@ -139,6 +152,13 @@ void BasicAlgorithm::triangulate_singularity_case2(
         Vector(rot_vector_x * plane_vector, rot_vector_y * plane_vector,
                rot_vector_z * plane_vector);
   }
+
+  const Triangle first_triangle(singular, points[0], points[1]);
+  // make sure normals point outside
+  if (first_triangle.get_normal() * F.outside_normal(first_triangle, e_size) <
+      0)
+    reverse(points.begin(), points.end());
+
   // Mesh local_mesh;
   for (int i = 0; i < num_triangles; ++i) {
     int j = (i + 1) % num_triangles;
@@ -206,6 +226,13 @@ void BasicAlgorithm::triangulate_cone_iterative(
                u,
                GiNaC::ex_to<numeric>(2 * GiNaC::Pi.evalf() / num_triangles)));
   }
+
+  const Triangle first_triangle(singular, points[0], points[1]);
+  // make sure normals point outside
+  if (first_triangle.get_normal() * F.outside_normal(first_triangle, e_size) <
+      0)
+    reverse(points.begin(), points.end());
+
   // Mesh local_mesh;
   for (int i = 0; i < num_triangles; ++i) {
     int j = (i + 1) % num_triangles;
@@ -288,6 +315,12 @@ void BasicAlgorithm::triangulate_A1_starter(
         Vector(rot_vector_x * plane_vector, rot_vector_y * plane_vector,
                rot_vector_z * plane_vector);
   }
+
+  const Triangle first_triangle(singular, points[0], points[1]);
+  // make sure normals point outside
+  if (first_triangle.get_normal() * F.outside_normal(first_triangle, e_size) <
+      0)
+    reverse(points.begin(), points.end());
 
   // Mesh local_mesh;
   for (int i = 0; i < num_triangles; ++i) {
@@ -610,11 +643,12 @@ bool BasicAlgorithm::Delaunay_conditions(const HalfEdge &working_edge,
     cout << my_mesh.get_face(working_edge.get_incident()).get_triangle()
          << endl;
   } else {
-    */
-  // if (!neighbor_triangles_normal_check) cout << "NO PASS NORMAL CHECK!" <<
-  // endl; if (!delaunay) cout << "NO PASS DELAUNAY!" << endl; if
-  // (!orientability) cout << "NO PASS ORIENTABILITY!" << endl; if
-  // (!has_good_edges) cout << "NO PASS GOOD EDGES!" << endl;
+  */
+  if (!delaunay) cout << "NO PASS DELAUNAY!" << endl;
+  if (!neighbor_triangles_normal_check) cout << "NO PASS NORMAL CHECK!" << endl;
+  if (!delaunay) cout << "NO PASS DELAUNAY!" << endl;
+  // if (!orientability) cout << "NO PASS ORIENTABILITY!" << endl;
+  if (!has_good_edges) cout << "NO PASS GOOD EDGES!" << endl;
 
   return (delaunay && has_good_edges && neighbor_triangles_normal_check &&
           !is_edge_in_mesh
@@ -788,7 +822,7 @@ MeshPointIndex BasicAlgorithm::find_triangle_hole(
 
 // finds incident faces of a potential triangle
 std::pair<FaceIndex, FaceIndex> BasicAlgorithm::find_neighbor_faces(
-    const HalfEdge &working_edge, const MeshPoint &P) const {
+    const HalfEdge &working_edge, const Point &P) const {
   const MeshPoint &A = my_mesh.get_meshpoint(working_edge.get_A());
   const MeshPoint &B = my_mesh.get_meshpoint(working_edge.get_B());
 
@@ -799,7 +833,7 @@ std::pair<FaceIndex, FaceIndex> BasicAlgorithm::find_neighbor_faces(
     const HalfEdge &outgoing_edge = my_mesh.get_halfedge(outgoing);
     const MeshPoint &outgoing_point =
         my_mesh.get_meshpoint(outgoing_edge.get_B());
-    if (P == outgoing_point) {
+    if (P == outgoing_point.get_point()) {
       next_face = outgoing_edge.get_incident();
       break;
     }
@@ -810,7 +844,7 @@ std::pair<FaceIndex, FaceIndex> BasicAlgorithm::find_neighbor_faces(
         my_mesh.get_halfedge(outgoing_edge.get_previous());
     const MeshPoint &incoming_point =
         my_mesh.get_meshpoint(incoming_edge.get_A());
-    if (P == incoming_point) {
+    if (P == incoming_point.get_point()) {
       previous_face = incoming_edge.get_incident();
       break;
     }
@@ -1201,7 +1235,7 @@ bool BasicAlgorithm::fix_proj(const HalfEdge &working_edge,
     cout << "OK" << endl;
     */
   if (!check_conditions(working_edge, projected, Delaunay)) {
-    // std::cout << "IN FIX PROJ CHECK CONDITION FAILED" << endl;
+    std::cout << "IN FIX PROJ CHECK CONDITION FAILED" << endl;
     return false;
   }
   assertm(!my_mesh.has_incoming_prev(working_edge, projected) &&
@@ -1216,14 +1250,16 @@ bool BasicAlgorithm::_check_normals(const HalfEdge &working_edge,
                                     const Point &point) const {
   const Triangle new_triangle(working_edge.get_point_B(),
                               working_edge.get_point_A(), point);
+  // std::cout << "New triangle: " << new_triangle << endl;
+  // std::cout << "New triangle normal: " << new_triangle.get_normal() << endl;
   auto [prev_face_index, next_face_index] =
       find_neighbor_faces(working_edge, point);
-
+  std::cout << prev_face_index << " " << next_face_index << endl;
   if (prev_face_index != kInvalidFaceIndex) {
     const Face &prev_face = my_mesh.get_face(prev_face_index);
     if (!neighbor_triangles_normal_check(new_triangle,
                                          prev_face.get_triangle())) {
-      // std::cout << "Neighbor triangles don't pass normal check!" << endl;
+      std::cout << "Prev triangles don't pass normal check!" << endl;
       return false;
     }
   }
@@ -1231,14 +1267,21 @@ bool BasicAlgorithm::_check_normals(const HalfEdge &working_edge,
     const Face &next_face = my_mesh.get_face(next_face_index);
     if (!neighbor_triangles_normal_check(new_triangle,
                                          next_face.get_triangle())) {
-      // std::cout << "Neighbor triangles don't pass normal check!" << endl;
+      std::cout << "Next triangles don't pass normal check!" << endl;
       return false;
     }
   }
   if (!neighbor_triangles_normal_check(
           my_mesh.get_face(working_edge.get_incident()).get_triangle(),
           new_triangle)) {
-    // std::cout << "Neighbor triangles don't pass normal check!" << endl;
+    /*
+    std::cout << my_mesh.get_face(working_edge.get_incident())
+                     .get_triangle()
+                     .get_normal()
+              << endl
+              << new_triangle.get_normal() << endl;
+    */
+    std::cout << "Neighbor triangles don't pass normal check!" << endl;
     return false;
   }
   return true;
@@ -1335,10 +1378,10 @@ bool BasicAlgorithm::step(const HalfEdgeIndex &working_edge_index) {
   // std::cout << "After basic_triangle" << endl;
 
   const Point projected = get_projected(working_edge);
+  std::cout << projected << endl;
   std::optional<Point> clipped = bounding_box.crop_to_box(
       working_edge.get_midpoint(), projected, e_size, F);
   assertm(clipped.has_value(), "Unable to crop to box!");
-
   if (fix_close_points(working_edge, clipped.value(), true)) {
     // cout << "FIX_CLOSE_POINTS" << endl;
     return true;
@@ -1349,6 +1392,7 @@ bool BasicAlgorithm::step(const HalfEdgeIndex &working_edge_index) {
     // cout << "FIX_BREAKERS" << endl;
     return true;
   }
+  std::cout << "FIX_PROJ: " << endl;
   // std::cout << "After fix_breakers" << endl;
 
   if (fix_proj(working_edge, clipped.value(), true)) {

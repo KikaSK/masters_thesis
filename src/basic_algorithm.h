@@ -37,7 +37,8 @@ class BasicAlgorithm {
       Vector singular_direction = singular_directions[0][i];
       std::cout << "Sing dir: " << singular_direction << endl;
       if (name == "./outputs/my_run_input_A2+-_0.9" ||
-          name == "./outputs/my_run_input_A2-example-1_0.2") {
+          name == "./outputs/my_run_input_A2-example-1_0.2" ||
+          name == "./outputs/my_run_input_A4+-_1") {
         triangulate_singularity_case2(singular_point, singular_direction,
                                       &my_mesh,
                                       (i == 0) ? kInvalidPointIndex : 0);
@@ -99,7 +100,7 @@ triangulate_singularity_circular(singular_point, singular_direction,
   pair<MeshPoint, MeshPoint> find_prev_next(const HalfEdge &working_edge) const;
   MeshPointIndex find_triangle_hole(const HalfEdge &working_edge);
   std::pair<FaceIndex, FaceIndex> find_neighbor_faces(
-      const HalfEdge &working_edge, const MeshPoint &P) const;
+      const HalfEdge &working_edge, const Point &P) const;
   bool neighbor_triangles_normal_check(const Triangle &T1,
                                        const Triangle &T2) const;
   bool orientability_check(const HalfEdge &working_edge,
