@@ -60,11 +60,11 @@ Vector Function::outside_normal(const Triangle &T, const numeric e_size) const {
   } else if (is_inside(Point(A, numeric(0.1) * e_size * normal)) &&
              is_inside(Point(A, -numeric(0.1) * e_size * normal))) {
     // std::cout << "case3" << endl;
-    return outside_normal(T, e_size * 2);
+    return outside_normal(T, e_size * 1.1);
   } else if (!is_inside(Point(A, numeric(0.1) * e_size * normal)) &&
              !is_inside(Point(A, -numeric(0.1) * e_size * normal))) {
     // std::cout << "case4" << endl;
-    return outside_normal(T, e_size / 2);
+    return outside_normal(T, e_size / 1.1);
   }
   assertm(false, "Should not get here!");
   return normal;

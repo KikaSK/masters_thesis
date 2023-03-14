@@ -21,7 +21,10 @@ prepare:
 reformat:
 	clang-format -i -style=Google main.cpp $(SRC_DIR)/*.cpp $(SRC_DIR)/*.h $(TEST_DIR)/*.cpp
 
-main: clean reformat prepare run_main # for debug mode add "gdb" on the beginning
+main: reformat prepare run_main # for debug mode add "gdb" on the beginning
+	$(BUILD_DIR)/main.out 
+
+remake: clean reformat prepare run_main # for debug mode add "gdb" on the beginning
 	$(BUILD_DIR)/main.out 
 
 test: clean reformat prepare run_test # for debug mode add "gdb" on the beginning

@@ -68,6 +68,7 @@ void BasicAlgorithm::triangulate_singularity_circular(
   */
 
   // make sure normals point outside
+
   if (first_triangle.get_normal() * F.outside_normal(first_triangle, e_size) <
       0)
     reverse(points.begin(), points.end());
@@ -76,8 +77,6 @@ void BasicAlgorithm::triangulate_singularity_circular(
   for (int i = 0; i < num_triangles; ++i) {
     int j = (i + 1) % num_triangles;
     Triangle triangle = Triangle(singular, points[i], points[j]);
-    // std::cout << points[i] << endl;
-    // std::cout << triangle.get_normal() << endl;
     assertm(triangle.is_triangle(), "Invalid triangle!");
     if (i == 0) {
       if (mesh->get_faces_count() == 0) {
@@ -141,7 +140,6 @@ void BasicAlgorithm::triangulate_singularity_case2(
         F, singular, start_point_to_bisect,
         GiNaC::ex_to<numeric>((GiNaC::Pi).evalf()), rot_vector, e_size * mult);
     points.push_back(projected_point);
-    // std::cout << "projected: " << projected_point << endl;
 
     // checks if the point is in the correct halfspace
     // Vector projected_vector = Vector(singular, projected_point);
@@ -644,13 +642,13 @@ bool BasicAlgorithm::Delaunay_conditions(const HalfEdge &working_edge,
          << endl;
   } else {
   */
- /*
-  if (is_edge_in_mesh) cout << "NO PASS IS EDGE IN MESH!" << endl;
-  if (!neighbor_triangles_normal_check) cout << "NO PASS NORMAL CHECK!" << endl;
-  if (!delaunay) cout << "NO PASS DELAUNAY!" << endl;
-  // if (!orientability) cout << "NO PASS ORIENTABILITY!" << endl;
-  if (!has_good_edges) cout << "NO PASS GOOD EDGES!" << endl;
-*/
+  /*
+   if (is_edge_in_mesh) cout << "NO PASS IS EDGE IN MESH!" << endl;
+   if (!neighbor_triangles_normal_check) cout << "NO PASS NORMAL CHECK!" <<
+   endl; if (!delaunay) cout << "NO PASS DELAUNAY!" << endl;
+   // if (!orientability) cout << "NO PASS ORIENTABILITY!" << endl;
+   if (!has_good_edges) cout << "NO PASS GOOD EDGES!" << endl;
+ */
   return (delaunay && has_good_edges && neighbor_triangles_normal_check &&
           !is_edge_in_mesh
           // && orientability
@@ -1236,7 +1234,6 @@ bool BasicAlgorithm::fix_proj(const HalfEdge &working_edge,
     cout << "OK" << endl;
     */
   if (!check_conditions(working_edge, projected, Delaunay)) {
-    std::cout << "IN FIX PROJ CHECK CONDITION FAILED" << endl;
     return false;
   }
   assertm(!my_mesh.has_incoming_prev(working_edge, projected) &&
@@ -1251,16 +1248,13 @@ bool BasicAlgorithm::_check_normals(const HalfEdge &working_edge,
                                     const Point &point) const {
   const Triangle new_triangle(working_edge.get_point_B(),
                               working_edge.get_point_A(), point);
-  // std::cout << "New triangle: " << new_triangle << endl;
-  // std::cout << "New triangle normal: " << new_triangle.get_normal() << endl;
   auto [prev_face_index, next_face_index] =
       find_neighbor_faces(working_edge, point);
-  std::cout << prev_face_index << " " << next_face_index << endl;
   if (prev_face_index != kInvalidFaceIndex) {
     const Face &prev_face = my_mesh.get_face(prev_face_index);
     if (!neighbor_triangles_normal_check(new_triangle,
                                          prev_face.get_triangle())) {
-      std::cout << "Prev triangles don't pass normal check!" << endl;
+      // std::cout << "Prev triangles don't pass normal check!" << endl;
       return false;
     }
   }
@@ -1268,21 +1262,14 @@ bool BasicAlgorithm::_check_normals(const HalfEdge &working_edge,
     const Face &next_face = my_mesh.get_face(next_face_index);
     if (!neighbor_triangles_normal_check(new_triangle,
                                          next_face.get_triangle())) {
-      std::cout << "Next triangles don't pass normal check!" << endl;
+      // std::cout << "Next triangles don't pass normal check!" << endl;
       return false;
     }
   }
   if (!neighbor_triangles_normal_check(
           my_mesh.get_face(working_edge.get_incident()).get_triangle(),
           new_triangle)) {
-    /*
-    std::cout << my_mesh.get_face(working_edge.get_incident())
-                     .get_triangle()
-                     .get_normal()
-              << endl
-              << new_triangle.get_normal() << endl;
-    */
-    std::cout << "Neighbor triangles don't pass normal check!" << endl;
+    // std::cout << "Neighbor triangles don't pass normal check!" << endl;
     return false;
   }
   return true;
@@ -1330,7 +1317,6 @@ bool BasicAlgorithm::fix_breakers(const HalfEdge &working_edge,
                                   const Point &projected, const bool Delaunay) {
   Triangle proj_T(working_edge.get_point_B(), working_edge.get_point_A(),
                   projected);
-  // std::cout << "2" << endl;
 
   // points that break Delaunay constraint
   vector<MeshPoint> breakers = my_mesh.get_breakers(proj_T);
@@ -1342,7 +1328,6 @@ bool BasicAlgorithm::fix_breakers(const HalfEdge &working_edge,
                      my_mesh.line_point_dist(working_edge, j);
             });
 
-  // std::cout << "3" << endl;
   //  try create triangle with breakers
   for (auto point : breakers) {
     if (my_mesh.is_boundary_point(point) &&
@@ -1351,7 +1336,6 @@ bool BasicAlgorithm::fix_breakers(const HalfEdge &working_edge,
       return true;
     }
   }
-  // std::cout << "4" << endl;
   return false;
 }
 
@@ -1379,7 +1363,6 @@ bool BasicAlgorithm::step(const HalfEdgeIndex &working_edge_index) {
   // std::cout << "After basic_triangle" << endl;
 
   const Point projected = get_projected(working_edge);
-  std::cout << projected << endl;
   std::optional<Point> clipped = bounding_box.crop_to_box(
       working_edge.get_midpoint(), projected, e_size, F);
   assertm(clipped.has_value(), "Unable to crop to box!");
@@ -1393,7 +1376,6 @@ bool BasicAlgorithm::step(const HalfEdgeIndex &working_edge_index) {
     // cout << "FIX_BREAKERS" << endl;
     return true;
   }
-  std::cout << "FIX_PROJ: " << endl;
   // std::cout << "After fix_breakers" << endl;
 
   if (fix_proj(working_edge, clipped.value(), true)) {
