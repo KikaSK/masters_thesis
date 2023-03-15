@@ -145,7 +145,7 @@ int main() {
   // run_input(0, "/sing_surfaces/A3", "my_run_input");
   // run_input(0, "/sing_surfaces/A4", "my_run_input");
   // run_input(0, "/sing_surfaces/A1", "my_run_input");
-  run_all(0, 1, "/sing_surfaces/A5", "my_run_input");
+  run_all(0, 0, "/sing_surfaces/D4", "my_run_input");
   //    run_all(0, 1, "/finite_surfaces/blobby", "my_run_input");
   //    run_all(0, 1, "/finite_surfaces/torus", "my_run_input");
   //    run_all(3, 3, "/finite_surfaces/cubed_sphere", "my_run_input");

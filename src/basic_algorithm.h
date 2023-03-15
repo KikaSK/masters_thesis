@@ -42,6 +42,9 @@ class BasicAlgorithm {
         triangulate_singularity_case2(singular_point, singular_direction,
                                       &my_mesh,
                                       (i == 0) ? kInvalidPointIndex : 0);
+      } else if (name == "./outputs/my_run_input_D4--_0.4") {
+        triangulate_cone_iterative(singular_point, singular_direction, &my_mesh,
+                                   (i == 0) ? kInvalidPointIndex : 0);
       } else
         triangulate_singularity_circular(singular_point, singular_direction,
                                          &my_mesh,
