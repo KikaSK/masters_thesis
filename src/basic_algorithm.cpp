@@ -6,6 +6,82 @@ using std::cout;
 
 #pragma region "Region singularities"
 
+void BasicAlgorithm::triangulate_An_analytical(
+    const Point &singular, const Vector &singular_direction, Mesh *mesh,
+    const MeshPointIndex singular_index, const int n) {
+  Vector unit_singular_direction = singular_direction.unit();
+  Vector plane_vector = unit_singular_direction.get_any_perpendicular().unit();
+  const Vector &u = unit_singular_direction;
+  const numeric e = e_size;
+  const numeric h = pow(e_size, (numeric)2 / (n + 1));
+  int num_triangles = 6;
+  const numeric COS = GiNaC::ex_to<numeric>(
+      GiNaC::cos(2 * GiNaC::Pi.evalf() / num_triangles).evalf());
+  const numeric SIN = GiNaC::ex_to<numeric>(
+      GiNaC::sin(2 * GiNaC::Pi.evalf() / num_triangles).evalf());
+  const Vector rot_vector_x = Vector(COS + u.x() * u.x() * (1 - COS),
+                                     u.x() * u.y() * (1 - COS) - u.z() * SIN,
+                                     u.x() * u.z() * (1 - COS) + u.y() * SIN);
+  const Vector rot_vector_y = Vector(u.x() * u.y() * (1 - COS) + u.z() * SIN,
+                                     COS + u.y() * u.y() * (1 - COS),
+                                     u.y() * u.z() * (1 - COS) - u.x() * SIN);
+  const Vector rot_vector_z = Vector(u.x() * u.z() * (1 - COS) - u.y() * SIN,
+                                     u.y() * u.z() * (1 - COS) + u.x() * SIN,
+                                     COS + u.z() * u.z() * (1 - COS));
+
+  vector<Point> points;
+  Vector rot_vector = (plane_vector ^ unit_singular_direction).unit();
+  Vector direction = plane_vector * e + u * h;
+  for (int i = 0; i < num_triangles; ++i) {
+    Point new_point =
+        Point(singular.x() + direction.x(), singular.y() + direction.y(),
+              singular.z() + direction.z());
+    points.push_back(new_point);
+    // checks if the point is in the correct halfspace
+    assertm(unit_singular_direction * direction >= 0,
+            "New point in opposite halfspace!");
+    direction = Vector(rot_vector_x * direction, rot_vector_y * direction,
+                       rot_vector_z * direction);
+  }
+  const Triangle first_triangle(singular, points[0], points[1]);
+
+  // make sure normals point outside
+  if (first_triangle.get_normal() * F.outside_normal(first_triangle, e_size) <
+      0)
+    reverse(points.begin(), points.end());
+
+  // Mesh local_mesh;
+  for (int i = 0; i < num_triangles; ++i) {
+    int j = (i + 1) % num_triangles;
+    Triangle triangle = Triangle(singular, points[i], points[j]);
+    assertm(triangle.is_triangle(), "Invalid triangle!");
+    if (i == 0) {
+      if (mesh->get_faces_count() == 0 ||
+          singular_index == kInvalidPointIndex) {
+        mesh->add_first_triangle(triangle, bounding_box);
+      } else {
+        assertm(singular_index != kInvalidPointIndex,
+                "invalid singular meshpoint index");
+        mesh->add_triangle_to_meshpoint(singular_index, points[i], points[j],
+                                        bounding_box);
+      }
+    } else if (i < num_triangles - 1) {
+      mesh->add_triangle(mesh->get_edges_count() - 1, points[j], true,
+                         bounding_box);
+      mesh->edges_check("in A1 round: " + std::to_string(i));
+      //,bounding_box);
+    } else {
+      mesh->add_triangle(mesh->get_edges_count() - 1, points[j], false,
+                         bounding_box,
+                         mesh->get_points_count() - num_triangles);
+      mesh->edges_check("in A1 round: " + std::to_string(i));
+    }
+  }
+
+  mesh->obj_format(name + "_local");
+  return;
+}
+
 // triangulates singularities lying in a single half-space
 void BasicAlgorithm::triangulate_singularity_circular(
     const Point &singular, const Vector &singular_direction, Mesh *mesh,
@@ -37,7 +113,7 @@ void BasicAlgorithm::triangulate_singularity_circular(
                                      u.y() * u.z() * (1 - COS) + u.x() * SIN,
                                      COS + u.z() * u.z() * (1 - COS));
 
-  const numeric mult = 0.5;
+  const numeric mult = 0.8;
   vector<Point> points;
   for (int i = 0; i < num_triangles; ++i) {
     Point start_point_to_bisect(singular, e_size * mult * plane_vector);
@@ -51,7 +127,7 @@ void BasicAlgorithm::triangulate_singularity_circular(
     points.push_back(projected_point);
     // checks if the point is in the correct halfspace
     Vector projected_vector = Vector(singular, projected_point);
-    assertm(unit_singular_direction * projected_vector > 0,
+    assertm(unit_singular_direction * projected_vector >= 0,
             "New point in opposite halfspace!");
 
     plane_vector =
@@ -79,7 +155,8 @@ void BasicAlgorithm::triangulate_singularity_circular(
     Triangle triangle = Triangle(singular, points[i], points[j]);
     assertm(triangle.is_triangle(), "Invalid triangle!");
     if (i == 0) {
-      if (mesh->get_faces_count() == 0) {
+      if (mesh->get_faces_count() == 0 ||
+          singular_index == kInvalidPointIndex) {
         mesh->add_first_triangle(triangle, bounding_box);
       } else {
         assertm(singular_index != kInvalidPointIndex,
@@ -977,13 +1054,13 @@ Point BasicAlgorithm::get_projected(const HalfEdge &working_edge) const {
 
   // height of equilateral triangle based on e_size
   numeric basic_height = e_size * sqrt(numeric(3)) / 2;
-  /*
+
   numeric gaussian_height =
-      basic_height *
-      get_gaussian_curvature_multiplicator(
+      basic_height /
+      get_curvature_multiplicator(
           F,
           project(center, F.get_gradient_at_point(center).unit(), F, e_size));
-          */
+
   /*
     numeric average_edge_length =
          (1 / numeric(3)) *
@@ -1004,11 +1081,14 @@ Point BasicAlgorithm::get_projected(const HalfEdge &working_edge) const {
 
   // height of equilateral triangle based on neighbour edges size with influence
   // of e_size
+  /*
   numeric height = 0.75 * (working_edge.get_length() * sqrt(numeric(3)) / 2) +
                    0.25 * basic_height;
   if (height < e_size / 3) height = 0.25 * (e_size / 3) + 0.75 * height;
   if (height > 2 * e_size) height = 2 * e_size;
-  // height = gaussian_height;
+  */
+  numeric height =  // basic_height;
+      gaussian_height * 0.5 + working_edge.get_length() * sqrt(numeric(3)) / 4;
   //  height = gaussian_height;
   //   non adaptive height
   //   numeric height = gaussian_height;

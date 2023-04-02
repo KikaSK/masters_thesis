@@ -48,7 +48,7 @@ bool Function::is_outside(const Point &P) const {
 Vector Function::outside_normal(const Triangle &T, const numeric e_size) const {
   // std::cout << "Triangle " << T << endl;
   Vector normal = T.get_normal();
-  Point A = numeric(1) / numeric(3) * (T.A() + T.B() + T.C());
+  Point A = T.B();  // numeric(1) / numeric(3) * (T.A() + T.B() + T.C());
   if (is_inside(Point(A, numeric(0.1) * e_size * normal)) &&
       !is_inside(Point(A, -numeric(0.1) * e_size * normal))) {
     // std::cout << "case1" << endl;

@@ -18,7 +18,8 @@ class BasicAlgorithm {
   BasicAlgorithm(string name, Function f, Point seed_point, numeric e_size,
                  realsymbol x, realsymbol y, realsymbol z,
                  BoundingBox bounding_box, const vector<Point> &singular_points,
-                 const vector<vector<Vector>> &singular_directions)
+                 const vector<vector<Vector>> &singular_directions,
+                 const vector<int> &types = {})
       : name(name),
         F(f),
         e_size(e_size),
@@ -26,29 +27,42 @@ class BasicAlgorithm {
         y(y),
         z(z),
         bounding_box(bounding_box) {
-    // singular
-
-    const Point singular_point = singular_points[0];
-    std::cout << "Sing point: " << singular_point << endl;
     // Vector singular_direction(0, 0, 1);
     // Vector singular_direction(-1, 0.5, 0);
     // const Point singular_point(0, 0, 0);
-    for (int i = 0; i < singular_directions[0].size(); ++i) {
-      Vector singular_direction = singular_directions[0][i];
-      std::cout << "Sing dir: " << singular_direction << endl;
-      if (name == "./outputs/my_run_input_A2+-_0.9" ||
-          name == "./outputs/my_run_input_A2-example-1_0.2" ||
-          name == "./outputs/my_run_input_A4+-_1") {
-        triangulate_singularity_case2(singular_point, singular_direction,
-                                      &my_mesh,
-                                      (i == 0) ? kInvalidPointIndex : 0);
-      } else if (name == "./outputs/my_run_input_D4--_0.4") {
-        triangulate_cone_iterative(singular_point, singular_direction, &my_mesh,
-                                   (i == 0) ? kInvalidPointIndex : 0);
-      } else
-        triangulate_singularity_circular(singular_point, singular_direction,
-                                         &my_mesh,
-                                         (i == 0) ? kInvalidPointIndex : 0);
+    std::cout << "Creating local mesh: " << endl;
+    std::cout << "Number of singular points: " << singular_directions.size()
+              << endl;
+    for (int j = 0; j < singular_directions.size(); ++j) {
+      const Point singular_point = singular_points[j];
+      for (int i = 0; i < singular_directions[j].size(); ++i) {
+        Vector singular_direction = singular_directions[j][i];
+        std::cout << "Sing dir: " << singular_direction << endl;
+        if (name == "./outputs/my_run_input_A2+-_0.9" ||
+            name == "./outputs/my_run_input_A2-example-1_0.2" ||
+            name == "./outputs/my_run_input_A4+-_1") {
+          triangulate_singularity_case2(singular_point, singular_direction,
+                                        &my_mesh,
+                                        (i == 0) ? kInvalidPointIndex : 0);
+        } else if (name == "./outputs/my_run_input_D4--_0.4" ||
+                   name == "./outputs/my_run_input_D4--_0.2" ||
+                   name == "./outputs/my_run_input_D4--_0.5" ||
+                   name == "./outputs/my_run_input_D4--_0.6" ||
+                   name == "./outputs/my_run_input_D4--_0.1" ||
+                   name == "./outputs/my_run_input_D4--_0.3") {
+          triangulate_cone_iterative(singular_point, singular_direction,
+                                     &my_mesh,
+                                     (i == 0) ? kInvalidPointIndex : 0);
+        } else if (!types.empty()) {
+          triangulate_An_analytical(singular_point, singular_direction,
+                                    &my_mesh, (i == 0) ? kInvalidPointIndex : 0,
+                                    types[j]);
+        } else {
+          triangulate_singularity_circular(singular_point, singular_direction,
+                                           &my_mesh,
+                                           (i == 0) ? kInvalidPointIndex : 0);
+        }
+      }
     }
 
     /*
@@ -162,6 +176,10 @@ triangulate_singularity_circular(singular_point, singular_direction,
                                         const Vector &singular_direction,
                                         Mesh *mesh,
                                         const MeshPointIndex singular_index);
+  void triangulate_An_analytical(const Point &singular,
+                                 const Vector &singular_direction, Mesh *mesh,
+                                 const MeshPointIndex singular_index,
+                                 const int n);
   void triangulate_singularity_case2(const Point &singular,
                                      const Vector &singular_direction,
                                      Mesh *mesh,
@@ -172,7 +190,7 @@ triangulate_singularity_circular(singular_point, singular_direction,
 
  private:
   string name;
-  Function F;
+  const Function F;
   // vector<Edge> active_edges;
   // vector<Edge> checked_edges;
   // vector<Edge> bounding_edges;

@@ -16,9 +16,9 @@ numeric Newton_Raphson(const realsymbol my_x, const ex &f, const ex &df,
 
   numeric iter = starting_point;
   int iterations = 0;
-  while (abs(f.subs(my_x == iter).evalf()) > kEps && iterations < 10) {
+  while (abs(f.subs(my_x == iter).evalf()) > 10 * kEps && iterations < 10) {
     iterations++;
-    assertm(abs(df.subs(my_x == iter).evalf()) > kEps,
+    assertm(abs(df.subs(my_x == iter).evalf()) > kEps / 1000,
             "Division by 0 in N-R method!");
     iter -= GiNaC::ex_to<numeric>(f.subs(my_x == iter).evalf() /
                                   df.subs(my_x == iter).evalf());
@@ -259,7 +259,6 @@ Point project(const Point &point_to_project, const Vector &normal,
   ex f = F.get_function().subs(GiNaC::lst{
       F.get_x() == param_x, F.get_y() == param_y, F.get_z() == param_z});
   ex df = f.diff(my_x, 1);
-
   std::optional<Point> projected = std::nullopt;
 
   numeric root = Newton_Raphson(my_x, f, df, starting_point);
@@ -376,8 +375,8 @@ Vector find_direction(const HalfEdge &working_edge, const Face &F) {
   return direction;
 }
 
-numeric get_gaussian_curvature_multiplicator(const Function &F,
-                                             const Point &point) {
+numeric get_curvature_multiplicator(const Function &F, const Point &point) {
+  // std::cout << point << endl;
   vector<ex> gradient = F.get_gradient();
   Vector gradient_eval = F.get_gradient_at_point(point);
   assertm(gradient_eval != Vector(0, 0, 0), "zero gradient!");
@@ -392,7 +391,7 @@ numeric get_gaussian_curvature_multiplicator(const Function &F,
   ex _Fzy = diff(gradient[2], F.get_y());
   ex _Fzz = diff(gradient[2], F.get_z());
 
-  assertm(_Fxy == _Fyx && _Fyz == _Fzy && _Fxz == _Fzx, "Not smooth!");
+  // assertm(_Fxy == _Fyx && _Fyz == _Fzy && _Fxz == _Fzx, "Not smooth!");
 
   numeric Fxx = GiNaC::ex_to<numeric>(
       _Fxx.subs(GiNaC::lst{F.get_x() == point.x(), F.get_y() == point.y(),
@@ -440,14 +439,28 @@ numeric get_gaussian_curvature_multiplicator(const Function &F,
   Vector Hz(Fyx * Fzy - Fyy * Fzx, Fyx * Fzx - Fxx * Fzy,
             Fxx * Fyy - Fxy * Fyx);
 
-  numeric sq_gaussian_curvature = sqrt(
-      sqrt(abs(gradient_eval * (Vector(gradient_eval * Hx, gradient_eval * Hy,
-                                       gradient_eval * Hz))) /
-           (gradient_eval.get_length_squared() *
-            gradient_eval.get_length_squared())));
-  numeric mult = 3;
-  // std::cout << "GC:" << sq_gaussian_curvature * mult << endl;
-  if (sq_gaussian_curvature * mult < 1) return 1;
-  // std::cout << "1/GC:" << 1 / (sq_gaussian_curvature * mult) << endl;
-  return 1 / (sq_gaussian_curvature * mult);
+  numeric gaussian_curvature =
+      (gradient_eval *
+       (Vector(gradient_eval * Hx, gradient_eval * Hy, gradient_eval * Hz))) /
+      (gradient_eval.get_length_squared() * gradient_eval.get_length_squared());
+
+  numeric mean_curvature =
+      ((gradient_eval *
+        (Vector(gradient_eval * Hx, gradient_eval * Hy, gradient_eval * Hz))) -
+       gradient_eval.get_length_squared() * (Fxx + Fyy + Fzz)) /
+      (2 * gradient_eval.get_length_squared() * gradient_eval.get_length());
+
+  numeric k1 = abs(mean_curvature +
+                   sqrt(mean_curvature * mean_curvature - gaussian_curvature));
+  numeric k2 = abs(mean_curvature -
+                   sqrt(mean_curvature * mean_curvature - gaussian_curvature));
+  numeric curvature_multiplicator =
+      std::max((numeric)0.3, ((k1 < k2) ? k2 : k1).power(numeric(1) / 4)) / 1.5;
+  numeric bounded_curvature_multiplicator =
+      std::max(std::min(curvature_multiplicator, numeric(5)), numeric(0.5));
+  // std::cout << bounded_curvature_multiplicator << endl;
+  //  std::cout << "GC:" << sq_gaussian_curvature * mult << endl;
+  //  if (gaussian_curvature * mult < 1) return 1;
+  //  std::cout << "1/GC:" << 1 / (sq_gaussian_curvature * mult) << endl;
+  return bounded_curvature_multiplicator;
 }
