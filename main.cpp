@@ -246,7 +246,155 @@ void run_all_plane(const int beg, const int end, const string folder,
                    const string index) {
   for (int i = beg; i <= end; ++i) run_input_plane(i, folder, index);
 }
+
 void test_find_seed_triangle();
+
+vector<Point> get_polyline(const Function &F, const Function &G,
+                           const Point &starting_point, const numeric &e_size,
+                           const BoundingBox &bounding_box) {
+  Point proj_starting_point = starting_point;
+  int iter = 0;
+  while ((!F.is_on(proj_starting_point) || !G.is_on(proj_starting_point)) &&
+         iter < 30) {
+    const Vector grad_F = F.get_gradient_at_point(proj_starting_point);
+    const Vector grad_G = G.get_gradient_at_point(proj_starting_point);
+    assertm(!grad_F.is_zero() && !grad_G.is_zero(), "Zero gradient!");
+    proj_starting_point =
+        project(proj_starting_point, grad_F.unit(), F, e_size);
+    proj_starting_point =
+        project(proj_starting_point, grad_G.unit(), G, e_size);
+    iter++;
+  }
+  assertm(iter != 30, "Too many iterations!");
+
+  // first branch of points
+
+  vector<Point> points_1;
+  Point last_point = proj_starting_point;
+  points_1.push_back(last_point);
+  Vector grad_F = F.get_gradient_at_point(last_point);
+  Vector grad_G = G.get_gradient_at_point(last_point);
+  Vector tangent_vector = (grad_F ^ grad_G).unit();
+
+  int iter_2 = 0;
+  while (bounding_box.is_inside(last_point) &&
+         !bounding_box.is_on(last_point) && iter_2 < 100) {
+    Point new_point = Point(last_point.x() + e_size * tangent_vector.x(),
+                            last_point.y() + e_size * tangent_vector.y(),
+                            last_point.z() + e_size * tangent_vector.z());
+    iter = 0;
+    while ((!F.is_on(new_point) || !G.is_on(new_point)) && iter < 30) {
+      const Vector grad_F = F.get_gradient_at_point(new_point);
+      const Vector grad_G = G.get_gradient_at_point(new_point);
+      assertm(!grad_F.is_zero() && !grad_G.is_zero(), "Zero gradient!");
+      new_point = project(new_point, grad_F.unit(), F, e_size);
+      new_point = project(new_point, grad_G.unit(), G, e_size);
+      iter++;
+    }
+    assertm(iter != 30, "Too many iterations!");
+
+    new_point = bounding_box.crop_to_box(last_point, new_point, e_size, F);
+    last_point = new_point;
+    grad_F = F.get_gradient_at_point(last_point);
+    grad_G = G.get_gradient_at_point(last_point);
+    tangent_vector = (grad_F ^ grad_G).unit();
+    points_1.push_back(last_point);
+    iter_2++;
+  }
+
+  // second branch of points
+
+  vector<Point> points_2;
+  last_point = proj_starting_point;
+  points_2.push_back(last_point);
+  grad_F = F.get_gradient_at_point(last_point);
+  grad_G = G.get_gradient_at_point(last_point);
+  tangent_vector = (grad_F ^ grad_G).unit();
+
+  iter_2 = 0;
+  while (bounding_box.is_inside(last_point) &&
+         !bounding_box.is_on(last_point) && iter_2 < 100) {
+    Point new_point = Point(last_point.x() - e_size * tangent_vector.x(),
+                            last_point.y() - e_size * tangent_vector.y(),
+                            last_point.z() - e_size * tangent_vector.z());
+    iter = 0;
+    while ((!F.is_on(new_point) || !G.is_on(new_point)) && iter < 30) {
+      const Vector grad_F = F.get_gradient_at_point(new_point);
+      const Vector grad_G = G.get_gradient_at_point(new_point);
+      assertm(!grad_F.is_zero() && !grad_G.is_zero(), "Zero gradient!");
+      new_point = project(new_point, grad_F.unit(), F, e_size);
+      new_point = project(new_point, grad_G.unit(), G, e_size);
+      iter++;
+    }
+    assertm(iter != 30, "Too many iterations!");
+
+    new_point = bounding_box.crop_to_box(last_point, new_point, e_size, F);
+    last_point = new_point;
+    grad_F = F.get_gradient_at_point(last_point);
+    grad_G = G.get_gradient_at_point(last_point);
+    tangent_vector = (grad_F ^ grad_G).unit();
+    points_2.push_back(last_point);
+    iter_2++;
+  }
+  if (points_1.empty()) return points_2;
+  if (points_2.empty()) return points_1;
+
+  reverse(points_1.begin(), points_1.end());
+  points_1.pop_back();
+  points_1.insert(points_1.end(), points_2.begin(), points_2.end());
+
+  return points_1;
+}
+
+void run_polyline(const numeric &e_size) {
+  realsymbol x("x"), y("y"), z("z");
+
+  symtab table;
+  table["x"] = x;
+  table["y"] = y;
+  table["z"] = z;
+  ex ex_F = pow(x, 2) + pow(y, 2) + pow(z, 2) - 4;
+  vector<ex> input_dF;
+  input_dF.push_back(diff(ex_F, x));
+  input_dF.push_back(diff(ex_F, y));
+  input_dF.push_back(diff(ex_F, z));
+
+  Function F(x, y, z, ex_F, input_dF);
+
+  ex ex_G = pow(x, 2) - pow(y, 2) + pow(z, 2) - 1;
+  vector<ex> input_dG;
+  input_dG.push_back(diff(ex_G, x));
+  input_dG.push_back(diff(ex_G, y));
+  input_dG.push_back(diff(ex_G, z));
+
+  Function G(x, y, z, ex_G, input_dG);
+
+  numeric min_x = 0;
+  numeric max_x = 3;
+  numeric min_y = 0;
+  numeric max_y = 3;
+  numeric min_z = -3;
+  numeric max_z = 3;
+  BoundingBox my_bounding_box(min_x, max_x, min_y, max_y, min_z, max_z);
+
+  const Point starting_point(sqrt(5.0 / 2.0), sqrt(3.0 / 2.0), 0);
+  vector<Point> polyline_1 =
+      get_polyline(F, G, starting_point, e_size, my_bounding_box);
+
+  ex intersection = F.get_function() + G.get_function() +
+                    sqrt(pow(F.get_function(), 2) + pow(G.get_function(), 2));
+  vector<ex> d_intersection;
+  d_intersection.push_back(diff(intersection, x));
+  d_intersection.push_back(diff(intersection, y));
+  d_intersection.push_back(diff(intersection, z));
+
+  Function inter_FG(x, y, z, intersection, d_intersection);
+
+  BasicAlgorithm alg("test_name", inter_FG, F, G, polyline_1, e_size, x, y, z,
+                     my_bounding_box);
+  alg.calculate();
+  return;
+}
 
 int main() {
   Digits = 15;
@@ -263,7 +411,8 @@ int main() {
   // run_input(0, "/sing_surfaces/A3", "my_run_input");
   // run_input(0, "/sing_surfaces/A4", "my_run_input");
   // run_input(0, "/sing_surfaces/A1", "my_run_input");
-  run_all_plane(2, 2, "/1_singularity/A2", "test");
+  // run_all_plane(2, 2, "/1_singularity/A2", "test");
+  run_polyline(0.35);
   // run_all(2, 2, "/sing_surfaces/A2-plane",
   //"test-plane-basic-height-case3-adaptive");
   //    run_all(0, 1, "/finite_surfaces/blobby", "my_run_input");

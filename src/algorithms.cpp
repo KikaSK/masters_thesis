@@ -16,7 +16,7 @@ numeric Newton_Raphson(const realsymbol my_x, const ex &f, const ex &df,
 
   numeric iter = starting_point;
   int iterations = 0;
-  while (abs(f.subs(my_x == iter).evalf()) > 10 * kEps && iterations < 10) {
+  while (abs(f.subs(my_x == iter).evalf()) > kEps && iterations < 10) {
     iterations++;
     assertm(abs(df.subs(my_x == iter).evalf()) > kEps / 1000,
             "Division by 0 in N-R method!");

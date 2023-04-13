@@ -6,6 +6,78 @@ using std::cout;
 
 #pragma region "Region singularities"
 
+void BasicAlgorithm::get_local_mesh(Mesh *local_mesh, const Function &_F,
+                                    const Function &_G,
+                                    const Function &inter_FG,
+                                    const vector<Point> &polyline,
+                                    const BoundingBox &bounding_box,
+                                    const numeric e_size) {
+  assertm(polyline.size() > 1, "Wrong length of polyline!");
+
+  const Function *F = &_F;
+  const Function *G = &_G;
+
+  int offset_index_points = 0;
+  int offset_index_edges = 0;
+
+  for (int i = 1; i < polyline.size(); ++i) {
+    const Point &A = polyline[i - 1];
+    const Point &B = polyline[i];
+    const Point mid = (1.0 / 2.0) * (A + B);
+    const Point proj_F =
+        project(mid, F->get_gradient_at_point(mid).unit(), *F, e_size);
+    const Point proj_G =
+        project(mid, G->get_gradient_at_point(mid).unit(), *G, e_size);
+    const Vector grad_F = F->get_gradient_at_point(proj_F).unit();
+    const Vector grad_G = G->get_gradient_at_point(proj_G).unit();
+    const Vector AB(B.x() - A.x(), B.y() - A.y(), B.z() - A.z());
+    Vector tangent_F = e_size * (grad_F ^ AB).unit();
+    Vector tangent_G = e_size * (grad_G ^ AB).unit();
+    const Point tan_F_point(mid.x() + 0.2 * tangent_F.x(),
+                            mid.y() + 0.2 * tangent_F.y(),
+                            mid.z() + 0.2 * tangent_F.z());
+    const Point tan_G_point(mid.x() + 0.2 * tangent_G.x(),
+                            mid.y() + 0.2 * tangent_G.y(),
+                            mid.z() + 0.2 * tangent_G.z());
+    if (F->is_outside(tan_G_point)) tangent_G = -1 * tangent_G;
+    if (G->is_outside(tan_F_point)) tangent_F = -1 * tangent_F;
+    const Point F_to_project(mid.x() + tangent_F.x(), mid.y() + tangent_F.y(),
+                             mid.z() + tangent_F.z());
+    const Point G_to_project(mid.x() + tangent_G.x(), mid.y() + tangent_G.y(),
+                             mid.z() + tangent_G.z());
+    Point projected_F =
+        project(F_to_project, F->get_gradient_at_point(F_to_project).unit(),
+                inter_FG, e_size);
+    projected_F =
+        bounding_box.crop_to_box(proj_F, projected_F, e_size, inter_FG);
+    Point projected_G =
+        project(G_to_project, G->get_gradient_at_point(G_to_project).unit(),
+                inter_FG, e_size);
+    projected_G =
+        bounding_box.crop_to_box(proj_G, projected_G, e_size, inter_FG);
+    const Triangle test_T(A, B, projected_F);
+
+    if (test_T.get_normal() * inter_FG.outside_normal(test_T, e_size) < 0) {
+      std::swap(projected_F, projected_G);
+      std::swap(F, G);
+    }
+
+    const Triangle T_F(A, B, projected_F);
+    const Triangle T_G(B, A, projected_G);
+    if (i == 1) {
+      local_mesh->add_first_triangle(T_F, bounding_box);
+    } else {
+      local_mesh->add_triangle_to_meshpoint(
+          offset_index_points + 1 + (i - 2) * 3, B, projected_F, bounding_box);
+    }
+
+    local_mesh->add_triangle(offset_index_edges + (i - 1) * 6, projected_G,
+                             true, bounding_box);
+  }
+  local_mesh->obj_format("non-isolated-test");
+  return;
+}
+
 void BasicAlgorithm::triangulate_An_analytical(
     const Point &singular, const Vector &singular_direction, Mesh *mesh,
     const MeshPointIndex singular_index, const int n) {

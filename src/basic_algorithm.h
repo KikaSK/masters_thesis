@@ -15,11 +15,12 @@ using std::string;
 
 class BasicAlgorithm {
  public:
-  BasicAlgorithm(string name, Function f, Point seed_point, numeric e_size,
-                 realsymbol x, realsymbol y, realsymbol z,
-                 BoundingBox bounding_box, const vector<Point> &singular_points,
-                 const vector<vector<Vector>> &singular_directions,
-                 const vector<int> &types = {})
+  explicit BasicAlgorithm(string name, Function f, Point seed_point,
+                          numeric e_size, realsymbol x, realsymbol y,
+                          realsymbol z, BoundingBox bounding_box,
+                          const vector<Point> &singular_points,
+                          const vector<vector<Vector>> &singular_directions,
+                          const vector<int> &types = {})
       : name(name),
         F(f),
         e_size(e_size),
@@ -97,6 +98,19 @@ triangulate_singularity_circular(singular_point, singular_direction,
         */
   }
 
+  explicit BasicAlgorithm(string name, Function f, const Function &F,
+                          const Function &G, const vector<Point> &polyline,
+                          numeric e_size, realsymbol x, realsymbol y,
+                          realsymbol z, BoundingBox bounding_box)
+      : name(name),
+        F(f),
+        e_size(e_size),
+        x(x),
+        y(y),
+        z(z),
+        bounding_box(bounding_box) {
+    get_local_mesh(&my_mesh, F, G, f, polyline, bounding_box, e_size);
+  }
   void calculate();
   void starting();
   void ending();
@@ -187,6 +201,10 @@ triangulate_singularity_circular(singular_point, singular_direction,
   void triangulate_cone_iterative(const Point &singular,
                                   const Vector &singular_direction, Mesh *mesh,
                                   const MeshPointIndex singular_index);
+
+  void get_local_mesh(Mesh *local_mesh, const Function &_F, const Function &_G,
+                      const Function &inter_FG, const vector<Point> &polyline,
+                      const BoundingBox &bounding_box, const numeric e_size);
 
  private:
   string name;
