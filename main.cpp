@@ -4,8 +4,10 @@
 #include <cmath>
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <ostream>
 #include <queue>
+#include <regex>
 #include <vector>
 
 #include "algorithms.h"
@@ -37,6 +39,7 @@ void run_input(const int i, const string folder, const string index) {
 
   std::ifstream input_file("./inputs" + folder + "/input" + std::to_string(i),
                            std::ifstream::in);
+
   assertm(input_file.is_open(), "Failed opening the file!");
   vector<string> parsed_input;
   for (string str; getline(input_file, str);) {
@@ -59,6 +62,8 @@ void run_input(const int i, const string folder, const string index) {
   table["z"] = z;
 
   parser reader(table);
+  // regex for An-- singularities
+  std::regex An_regex("A[0-9]+--.*");
 
   string name = index_str + "_" + parsed_input[0] + "_" + parsed_input[1];
   cout << "Triangulation of " << parsed_input[0] << " with edge size "
@@ -79,8 +84,18 @@ void run_input(const int i, const string folder, const string index) {
   numeric num_of_singular = ex_to<numeric>(stod(parsed_input[13]));
   vector<Point> singular_points;
   vector<vector<Vector>> singular_directions;
-  vector<int> types;  // not used
+  vector<int> types;
   for (int i = 0; i < num_of_singular - 0.5; ++i) {
+    if (std::regex_match(parsed_input[0], An_regex)) {
+      string s;
+      for (int i = 1; i < 4; ++i) {
+        if (parsed_input[0][i] != '-')
+          s.push_back(parsed_input[0][i]);
+        else
+          break;
+      }
+      types.push_back(stoi(s));
+    }
     numeric p_x = ex_to<numeric>(stod(parsed_input[14 + 3 * i]));
     numeric p_y = ex_to<numeric>(stod(parsed_input[15 + 3 * i]));
     numeric p_z = ex_to<numeric>(stod(parsed_input[16 + 3 * i]));
@@ -112,7 +127,8 @@ void run_input(const int i, const string folder, const string index) {
   std::cout << F.get_function() << endl;
 
   BasicAlgorithm alg("./outputs/" + name, F, seed_point, e_size, x, y, z,
-                     my_bounding_box, singular_points, singular_directions);
+                     my_bounding_box, singular_points, singular_directions,
+                     types);
   cout << "Basic algorithm created, calling for calculate()!" << endl;
   // alg.my_mesh.obj_format("./outputs/" + name);
 
@@ -252,17 +268,19 @@ void test_find_seed_triangle();
 vector<Point> get_polyline(const Function &F, const Function &G,
                            const Point &starting_point, const numeric &e_size,
                            const BoundingBox &bounding_box) {
-  Point proj_starting_point = starting_point;
+  std::optional<Point> proj_starting_point = starting_point;
+  assertm(proj_starting_point.has_value(), "No value!");
   int iter = 0;
-  while ((!F.is_on(proj_starting_point) || !G.is_on(proj_starting_point)) &&
+  while ((!F.is_on(proj_starting_point.value()) ||
+          !G.is_on(proj_starting_point.value())) &&
          iter < 30) {
-    const Vector grad_F = F.get_gradient_at_point(proj_starting_point);
-    const Vector grad_G = G.get_gradient_at_point(proj_starting_point);
+    const Vector grad_F = F.get_gradient_at_point(proj_starting_point.value());
+    const Vector grad_G = G.get_gradient_at_point(proj_starting_point.value());
     assertm(!grad_F.is_zero() && !grad_G.is_zero(), "Zero gradient!");
     proj_starting_point =
-        project(proj_starting_point, grad_F.unit(), F, e_size);
+        project(proj_starting_point.value(), grad_F.unit(), F, e_size);
     proj_starting_point =
-        project(proj_starting_point, grad_G.unit(), G, e_size);
+        project(proj_starting_point.value(), grad_G.unit(), G, e_size);
     iter++;
   }
   assertm(iter != 30, "Too many iterations!");
@@ -270,7 +288,7 @@ vector<Point> get_polyline(const Function &F, const Function &G,
   // first branch of points
 
   vector<Point> points_1;
-  Point last_point = proj_starting_point;
+  Point last_point = proj_starting_point.value();
   points_1.push_back(last_point);
   Vector grad_F = F.get_gradient_at_point(last_point);
   Vector grad_G = G.get_gradient_at_point(last_point);
@@ -279,22 +297,37 @@ vector<Point> get_polyline(const Function &F, const Function &G,
   int iter_2 = 0;
   while (bounding_box.is_inside(last_point) &&
          !bounding_box.is_on(last_point) && iter_2 < 100) {
-    Point new_point = Point(last_point.x() + e_size * tangent_vector.x(),
-                            last_point.y() + e_size * tangent_vector.y(),
-                            last_point.z() + e_size * tangent_vector.z());
+    std::optional<Point> new_point =
+        Point(last_point.x() + e_size * tangent_vector.x(),
+              last_point.y() + e_size * tangent_vector.y(),
+              last_point.z() + e_size * tangent_vector.z());
+    assertm(new_point.has_value(), "No value!");
     iter = 0;
-    while ((!F.is_on(new_point) || !G.is_on(new_point)) && iter < 30) {
-      const Vector grad_F = F.get_gradient_at_point(new_point);
-      const Vector grad_G = G.get_gradient_at_point(new_point);
+    while ((!F.is_on(new_point.value()) || !G.is_on(new_point.value())) &&
+           iter < 30) {
+      const Vector grad_F = F.get_gradient_at_point(new_point.value());
+      const Vector grad_G = G.get_gradient_at_point(new_point.value());
       assertm(!grad_F.is_zero() && !grad_G.is_zero(), "Zero gradient!");
-      new_point = project(new_point, grad_F.unit(), F, e_size);
-      new_point = project(new_point, grad_G.unit(), G, e_size);
+      new_point = project(new_point.value(), grad_F.unit(), F, e_size);
+      new_point = project(new_point.value(), grad_G.unit(), G, e_size);
+      assertm(new_point.has_value(), "No value!");
       iter++;
     }
     assertm(iter != 30, "Too many iterations!");
 
-    new_point = bounding_box.crop_to_box(last_point, new_point, e_size, F);
-    last_point = new_point;
+    new_point =
+        bounding_box.crop_to_box(last_point, new_point.value(), e_size, F);
+
+    // special case - closed curve
+    if (iter_2 > 1 &&
+        Vector(new_point.value(), proj_starting_point.value()).get_length() <
+            3 * e_size / 4) {
+      new_point = proj_starting_point;
+      points_1.push_back(new_point.value());
+      return points_1;
+    }
+
+    last_point = new_point.value();
     grad_F = F.get_gradient_at_point(last_point);
     grad_G = G.get_gradient_at_point(last_point);
     tangent_vector = (grad_F ^ grad_G).unit();
@@ -305,7 +338,7 @@ vector<Point> get_polyline(const Function &F, const Function &G,
   // second branch of points
 
   vector<Point> points_2;
-  last_point = proj_starting_point;
+  last_point = proj_starting_point.value();
   points_2.push_back(last_point);
   grad_F = F.get_gradient_at_point(last_point);
   grad_G = G.get_gradient_at_point(last_point);
@@ -314,22 +347,28 @@ vector<Point> get_polyline(const Function &F, const Function &G,
   iter_2 = 0;
   while (bounding_box.is_inside(last_point) &&
          !bounding_box.is_on(last_point) && iter_2 < 100) {
-    Point new_point = Point(last_point.x() - e_size * tangent_vector.x(),
-                            last_point.y() - e_size * tangent_vector.y(),
-                            last_point.z() - e_size * tangent_vector.z());
+    std::optional<Point> new_point =
+        Point(last_point.x() - e_size * tangent_vector.x(),
+              last_point.y() - e_size * tangent_vector.y(),
+              last_point.z() - e_size * tangent_vector.z());
+
+    assertm(new_point.has_value(), "No value!");
     iter = 0;
-    while ((!F.is_on(new_point) || !G.is_on(new_point)) && iter < 30) {
-      const Vector grad_F = F.get_gradient_at_point(new_point);
-      const Vector grad_G = G.get_gradient_at_point(new_point);
+    while ((!F.is_on(new_point.value()) || !G.is_on(new_point.value())) &&
+           iter < 30) {
+      const Vector grad_F = F.get_gradient_at_point(new_point.value());
+      const Vector grad_G = G.get_gradient_at_point(new_point.value());
       assertm(!grad_F.is_zero() && !grad_G.is_zero(), "Zero gradient!");
-      new_point = project(new_point, grad_F.unit(), F, e_size);
-      new_point = project(new_point, grad_G.unit(), G, e_size);
+      new_point = project(new_point.value(), grad_F.unit(), F, e_size);
+      new_point = project(new_point.value(), grad_G.unit(), G, e_size);
+      assertm(new_point.has_value(), "No value!");
       iter++;
     }
     assertm(iter != 30, "Too many iterations!");
 
-    new_point = bounding_box.crop_to_box(last_point, new_point, e_size, F);
-    last_point = new_point;
+    new_point =
+        bounding_box.crop_to_box(last_point, new_point.value(), e_size, F);
+    last_point = new_point.value();
     grad_F = F.get_gradient_at_point(last_point);
     grad_G = G.get_gradient_at_point(last_point);
     tangent_vector = (grad_F ^ grad_G).unit();
@@ -369,7 +408,7 @@ void run_polyline(const numeric &e_size) {
 
   Function G(x, y, z, ex_G, input_dG);
 
-  numeric min_x = 0;
+  numeric min_x = -3;
   numeric max_x = 3;
   numeric min_y = 0;
   numeric max_y = 3;
@@ -410,9 +449,9 @@ int main() {
   // run_input(0, "/sing_surfaces/A2", "my_run_input");
   // run_input(0, "/sing_surfaces/A3", "my_run_input");
   // run_input(0, "/sing_surfaces/A4", "my_run_input");
-  // run_input(0, "/sing_surfaces/A1", "my_run_input");
+  run_all(0, 1, "/sing_surfaces/E7", "TEXT");
   // run_all_plane(2, 2, "/1_singularity/A2", "test");
-  run_polyline(0.35);
+  // run_polyline(0.35);
   // run_all(2, 2, "/sing_surfaces/A2-plane",
   //"test-plane-basic-height-case3-adaptive");
   //    run_all(0, 1, "/finite_surfaces/blobby", "my_run_input");

@@ -24,10 +24,14 @@ void BasicAlgorithm::get_local_mesh(Mesh *local_mesh, const Function &_F,
     const Point &A = polyline[i - 1];
     const Point &B = polyline[i];
     const Point mid = (1.0 / 2.0) * (A + B);
-    const Point proj_F =
+    const std::optional<Point> opt_proj_F =
         project(mid, F->get_gradient_at_point(mid).unit(), *F, e_size);
-    const Point proj_G =
+    assertm(opt_proj_F.has_value(), "No value!");
+    const Point proj_F = opt_proj_F.value();
+    const std::optional<Point> opt_proj_G =
         project(mid, G->get_gradient_at_point(mid).unit(), *G, e_size);
+    assertm(opt_proj_G.has_value(), "No value!");
+    const Point proj_G = opt_proj_G.value();
     const Vector grad_F = F->get_gradient_at_point(proj_F).unit();
     const Vector grad_G = G->get_gradient_at_point(proj_G).unit();
     const Vector AB(B.x() - A.x(), B.y() - A.y(), B.z() - A.z());
@@ -45,14 +49,18 @@ void BasicAlgorithm::get_local_mesh(Mesh *local_mesh, const Function &_F,
                              mid.z() + tangent_F.z());
     const Point G_to_project(mid.x() + tangent_G.x(), mid.y() + tangent_G.y(),
                              mid.z() + tangent_G.z());
-    Point projected_F =
+    std::optional<Point> opt_projected_F =
         project(F_to_project, F->get_gradient_at_point(F_to_project).unit(),
                 inter_FG, e_size);
+    assertm(opt_projected_F.has_value(), "No value!");
+    Point projected_F = opt_projected_F.value();
     projected_F =
         bounding_box.crop_to_box(proj_F, projected_F, e_size, inter_FG);
-    Point projected_G =
+    std::optional<Point> opt_projected_G =
         project(G_to_project, G->get_gradient_at_point(G_to_project).unit(),
                 inter_FG, e_size);
+    assertm(opt_projected_G.has_value(), "No value!");
+    Point projected_G = opt_projected_G.value();
     projected_G =
         bounding_box.crop_to_box(proj_G, projected_G, e_size, inter_FG);
     const Triangle test_T(A, B, projected_F);
@@ -66,6 +74,10 @@ void BasicAlgorithm::get_local_mesh(Mesh *local_mesh, const Function &_F,
     const Triangle T_G(B, A, projected_G);
     if (i == 1) {
       local_mesh->add_first_triangle(T_F, bounding_box);
+    } else if (i == polyline.size() - 1 && polyline[0] == polyline[i]) {
+      // special case - closed curve
+      local_mesh->add_triangle_to_two_meshpoints(
+          offset_index_points + 1 + (i - 2) * 3, 0, projected_F, bounding_box);
     } else {
       local_mesh->add_triangle_to_meshpoint(
           offset_index_points + 1 + (i - 2) * 3, B, projected_F, bounding_box);
@@ -206,17 +218,10 @@ void BasicAlgorithm::triangulate_singularity_circular(
         Vector(rot_vector_x * plane_vector, rot_vector_y * plane_vector,
                rot_vector_z * plane_vector);
   }
-
   const Triangle first_triangle(singular, points[0], points[1]);
+  assertm(first_triangle.is_triangle(), "Not a triangle!");
 
-  /*
-  std::cout << "outside normal: " << F.outside_normal(first_triangle, e_size)
-            << endl;
-  std::cout << "first triangle: " << first_triangle << endl;
-  */
-
-  // make sure normals point outside
-
+  // make sure normals point outside - outside normal problem in higher degrees
   if (first_triangle.get_normal() * F.outside_normal(first_triangle, e_size) <
       0)
     reverse(points.begin(), points.end());
@@ -339,12 +344,11 @@ void BasicAlgorithm::triangulate_singularity_case2(
 void BasicAlgorithm::triangulate_cone_iterative(
     const Point &singular, const Vector &singular_direction, Mesh *mesh,
     const MeshPointIndex singular_index) {
-  // D4 (0, -1, 0),
   Vector unit_singular_direction = singular_direction.unit();
   Vector plane_vector = unit_singular_direction.get_any_perpendicular().unit();
   const Vector &u = unit_singular_direction;
-  const int num_triangles = 5;
-  const numeric mult = 0.5;
+  const int num_triangles = 8;
+  const numeric mult = 1.2;
   vector<Point> points;
   const numeric delta_angle = GiNaC::ex_to<numeric>(GiNaC::Pi.evalf() / 36);
   for (int i = 0; i < num_triangles; ++i) {
@@ -450,11 +454,13 @@ void BasicAlgorithm::triangulate_A1_starter(
 
     // direction of projection
     Vector direction = F.get_gradient_at_point(point_to_project).unit();
-    Point projected_point = project(point_to_project, direction, F, e_size);
-    points.push_back(projected_point);
+    std::optional<Point> projected_point =
+        project(point_to_project, direction, F, e_size);
+    assertm(projected_point.has_value(), "No value!");
+    points.push_back(projected_point.value());
 
     // checks if the point is in the correct halfspace
-    Vector projected_vector = Vector(singular, projected_point);
+    Vector projected_vector = Vector(singular, projected_point.value());
     assertm(direction * projected_vector > 0,
             "New point in opposite halfspace!");
 
@@ -573,13 +579,14 @@ Edge BasicAlgorithm::get_seed_edge(Point seed_point) const {
   // direction of projection
   Vector direction = F.get_gradient_at_point(point_to_project).unit();
 
-  Point projected_point = project(point_to_project, direction, F, e_size);
+  std::optional<Point> projected_point =
+      project(point_to_project, direction, F, e_size);
   // projected_point = bounding_box.crop_to_box(seed_point, projected_point,
   // edge_size, F);
+  assertm(projected_point.has_value(), "No value!");
+  assertm(seed_point != projected_point.value(), "Error in get_seed_edge");
 
-  assertm(seed_point != projected_point, "Error in get_seed_edge");
-
-  return Edge(seed_point, projected_point);
+  return Edge(seed_point, projected_point.value());
 }
 
 // finds third point in first triangle from seed edge
@@ -605,10 +612,11 @@ Point BasicAlgorithm::get_seed_triangle(const Edge &e) const {
 
   Vector normal = F.get_gradient_at_point(point_to_project).unit();
 
-  Point projected = project(point_to_project, normal, F, e_size);
+  std::optional<Point> projected = project(point_to_project, normal, F, e_size);
+  assertm(projected.has_value(), "No value!");
   // projected = bounding_box.crop_to_box(e.get_midpoint(), projected,
   // edge_size, F);
-  return projected;
+  return projected.value();
 }
 
 // returns first triangle
@@ -616,7 +624,9 @@ Triangle BasicAlgorithm::find_seed_triangle(Point seed) const {
   Vector normal = F.get_gradient_at_point(seed).unit();
   // project point on surface just to be sure it is lying on the surface with
   // enough precision
-  seed = project(seed, normal, F, e_size);
+  std::optional<Point> opt_seed = project(seed, normal, F, e_size);
+  assertm(opt_seed.has_value(), "No value!");
+  seed = opt_seed.value();
   assertm(bounding_box.is_inside(seed), "Seed point outside of bounding box!");
   // gets seed edge
   Edge seed_edge = get_seed_edge(seed);
@@ -690,76 +700,32 @@ bool BasicAlgorithm::check_conditions(const HalfEdge &working_edge,
   return non_Delaunay_conditions(working_edge, P, i_P);
 }
 
-bool BasicAlgorithm::Delaunay_conditions_debug(const HalfEdge &working_edge,
-                                               const Point &P) const {
-  if (working_edge.get_point_A() == P || working_edge.get_point_B() == P) {
-    return false;
-  }
-  Triangle new_triangle =
-      Triangle(working_edge.get_point_B(), working_edge.get_point_A(), P);
-
-  if (!new_triangle.is_triangle()) return false;
-
-  if (new_triangle.AB().get_length() > 2 * working_edge.get_length() ||
-      new_triangle.CA().get_length() > 2 * working_edge.get_length() ||
-      new_triangle.BC().get_length() > 2 * working_edge.get_length()) {
-    return false;
-  }
-
-  const Point opposite_point =
-      my_mesh
-          .get_meshpoint(my_mesh.get_halfedge(working_edge.get_next()).get_B())
-          .get_point();
-
-  if (P == opposite_point) return false;
-
-  bool delaunay = my_mesh.check_Delaunay(working_edge, P);
-  bool has_good_edges = good_edges(working_edge, P);
-  bool neighbor_triangles_normal_check = _check_normals(working_edge, P);
-  bool is_edge_in_mesh = my_mesh.is_in_mesh(new_triangle.AB()) ||
-                         my_mesh.is_in_mesh(new_triangle.BC()) ||
-                         my_mesh.is_in_mesh(new_triangle.CA());
-  // TODO(kuska) Do not pass point to oreintability check!!!
-  // bool orientability = orientability_check(working_edge, P);
-  /*
-  if (neighbor_triangles_normal_check) {
-    cout << "Neighbor triangles normal check passed for triangles: " << endl;
-    cout << new_triangle << endl;
-    cout << "and" << endl;
-    cout << my_mesh.get_face(working_edge.get_incident()).get_triangle()
-         << endl;
-  } else {
-    */
-  if (!neighbor_triangles_normal_check) cout << "NO PASS NORMAL CHECK!" << endl;
-  if (!delaunay) cout << "NO PASS DELAUNAY!" << endl;
-  // if (!orientability) cout << "NO PASS ORIENTABILITY!" << endl;
-  if (!has_good_edges) cout << "NO PASS GOOD EDGES!" << endl;
-  if (is_edge_in_mesh) cout << "EDGE FOUND IN MESH!" << endl;
-
-  return (delaunay && has_good_edges && neighbor_triangles_normal_check &&
-          !is_edge_in_mesh
-          // && orientability
-  );
-}
-
 // checks if conditions required in the first part of the algorithm are
 // satisfied
 bool BasicAlgorithm::Delaunay_conditions(const HalfEdge &working_edge,
                                          const Point &P) const {
+  // std::cout << "Check Delaunay conditions" << endl;
   if (working_edge.get_point_A() == P || working_edge.get_point_B() == P) {
+    // std::cout << "Not triangle failed" << endl;
     return false;
   }
   Triangle new_triangle =
       Triangle(working_edge.get_point_B(), working_edge.get_point_A(), P);
 
-  if (!new_triangle.is_triangle()) return false;
+  if (!new_triangle.is_triangle()) {
+    // std::cout << "Is triangle failed" << endl;
+    return false;
+  }
 
   numeric min_edge_length = std::min(
       std::min(new_triangle.AB().get_length(), new_triangle.BC().get_length()),
       new_triangle.CA().get_length());
-  if (new_triangle.AB().get_length() > 3 * min_edge_length ||
-      new_triangle.CA().get_length() > 3 * min_edge_length ||
-      new_triangle.BC().get_length() > 3 * min_edge_length) {
+
+  if (my_mesh.get_faces_count() > 40 &&
+      (new_triangle.AB().get_length() > 3 * min_edge_length ||
+       new_triangle.CA().get_length() > 3 * min_edge_length ||
+       new_triangle.BC().get_length() > 3 * min_edge_length)) {
+    // std::cout << "Edge length failed" << endl;
     return false;
   }
 
@@ -792,12 +758,12 @@ bool BasicAlgorithm::Delaunay_conditions(const HalfEdge &working_edge,
   } else {
   */
   /*
-   if (is_edge_in_mesh) cout << "NO PASS IS EDGE IN MESH!" << endl;
-   if (!neighbor_triangles_normal_check) cout << "NO PASS NORMAL CHECK!" <<
-   endl; if (!delaunay) cout << "NO PASS DELAUNAY!" << endl;
-   // if (!orientability) cout << "NO PASS ORIENTABILITY!" << endl;
-   if (!has_good_edges) cout << "NO PASS GOOD EDGES!" << endl;
- */
+    if (is_edge_in_mesh) cout << "NO PASS IS EDGE IN MESH!" << endl;
+    if (!neighbor_triangles_normal_check) cout << "NO PASS NORMAL CHECK!" <<
+    endl; if (!delaunay) cout << "NO PASS DELAUNAY!" << endl;
+    // if (!orientability) cout << "NO PASS ORIENTABILITY!" << endl;
+    if (!has_good_edges) cout << "NO PASS GOOD EDGES!" << endl;
+  */
   return (delaunay && has_good_edges && neighbor_triangles_normal_check &&
           !is_edge_in_mesh
           // && orientability
@@ -836,6 +802,8 @@ bool BasicAlgorithm::good_new_point(const MeshPoint &point) const {
 // checks if edges of new triangle are active or are not im mesh
 bool BasicAlgorithm::good_edges(const HalfEdge &working_edge,
                                 const Point &P) const {
+  if (working_edge.get_point_A() == P || working_edge.get_point_B() == P)
+    return false;
   Edge new_edge1(P, working_edge.get_point_A());
   Edge new_edge2(working_edge.get_point_B(), P);
 
@@ -1009,6 +977,9 @@ bool BasicAlgorithm::basic_triangle(const HalfEdge &working_edge,
   assertm(my_mesh.has_incoming_prev(working_edge, point.get_point()) &&
               my_mesh.has_outgoing_next(working_edge, point.get_point()),
           "Wrong call of basic triangle!");
+  if (working_edge.get_point_A() == point.get_point() ||
+      working_edge.get_point_B() == point.get_point())
+    return false;
   const Triangle new_triangle =
       Triangle(working_edge.get_point_B(), working_edge.get_point_A(),
                point.get_point());
@@ -1047,22 +1018,6 @@ bool BasicAlgorithm::is_border(const HalfEdgeIndex &halfedge_index) const {
   return (is_active(halfedge_index) || is_checked(halfedge_index) ||
           is_bounding(halfedge_index));
 }
-/*
-// true if point is on border of mesh
-bool BasicAlgorithm::is_border_point(const MeshPoint &P) const {
-  return my_mesh.is_boundary_point(P);
-}
-*/
-// true if point is on border of mesh
-
-bool BasicAlgorithm::is_border_point(const Point &P) const {
-  for (MeshPoint point : my_mesh.get_mesh_points()) {
-    if (my_mesh.is_boundary_point(point) &&
-        Vector(point.get_point(), P).get_length() < kEps)
-      return true;
-  }
-  return false;
-}
 
 // throws error if it is found more than once
 void BasicAlgorithm::delete_from_active(const HalfEdgeIndex &halfedge_index) {
@@ -1091,6 +1046,7 @@ void BasicAlgorithm::push_edge_to_checked(const HalfEdgeIndex &halfedge_index) {
 }
 
 // finds closest border point to edge
+/*
 std::optional<MeshPoint> BasicAlgorithm::get_closest_point(
     const HalfEdge &working_edge) const {
   std::vector<MeshPoint> meshpoints = my_mesh.get_mesh_points();
@@ -1113,8 +1069,10 @@ std::optional<MeshPoint> BasicAlgorithm::get_closest_point(
   }
   return std::nullopt;
 }
+*/
 
-Point BasicAlgorithm::get_projected(const HalfEdge &working_edge) const {
+std::optional<Point> BasicAlgorithm::get_projected(
+    const HalfEdge &working_edge) const {
   Point center = working_edge.get_midpoint();
   assertm(Vector(working_edge.get_point_A(), center).get_length() -
                       working_edge.get_length() / 2 <
@@ -1127,11 +1085,11 @@ Point BasicAlgorithm::get_projected(const HalfEdge &working_edge) const {
   // height of equilateral triangle based on e_size
   numeric basic_height = e_size * sqrt(numeric(3)) / 2;
 
+  std::optional<Point> opt_proj_center =
+      project(center, F.get_gradient_at_point(center).unit(), F, e_size);
+  assertm(opt_proj_center.has_value(), "No value!");
   numeric gaussian_height =
-      basic_height /
-      get_curvature_multiplicator(
-          F,
-          project(center, F.get_gradient_at_point(center).unit(), F, e_size));
+      basic_height / get_curvature_multiplicator(F, opt_proj_center.value());
 
   /*
     numeric average_edge_length =
@@ -1159,8 +1117,9 @@ Point BasicAlgorithm::get_projected(const HalfEdge &working_edge) const {
   if (height < e_size / 3) height = 0.25 * (e_size / 3) + 0.75 * height;
   if (height > 2 * e_size) height = 2 * e_size;
   */
-  numeric height =  // basic_height;
-      gaussian_height * 0.5 + working_edge.get_length() * sqrt(numeric(3)) / 4;
+  numeric height = basic_height;
+  //    gaussian_height * 0.5 + working_edge.get_length() * sqrt(numeric(3)) /
+  //    4;
   //  height = gaussian_height;
   //   non adaptive height
   //   numeric height = gaussian_height;
@@ -1189,7 +1148,7 @@ Point BasicAlgorithm::get_projected(const HalfEdge &working_edge) const {
 
     assertm(!F.get_gradient_at_point(P).is_zero(), "Zero gradient!");
     Vector normal = F.get_gradient_at_point(P).unit();
-    Point projected = project(P, normal, F, e_size);
+    std::optional<Point> projected = project(P, normal, F, e_size);
     return projected;
   }
   // end section -- change the incident face plane to tangent plane
@@ -1207,7 +1166,7 @@ Point BasicAlgorithm::get_projected(const HalfEdge &working_edge) const {
 
   assertm(!F.get_gradient_at_point(P).is_zero(), "Zero gradient!");
   Vector normal = F.get_gradient_at_point(P).unit();
-  Point projected = project(P, normal, F, e_size);
+  std::optional<Point> projected = project(P, normal, F, e_size);
 
   return projected;
 }
@@ -1366,11 +1325,13 @@ bool BasicAlgorithm::fix_proj(const HalfEdge &working_edge,
   }
   */
   // std::cout << working_edge.get_index() << endl;
+  /*
   Edge BC(working_edge.get_point_B(), projected);
   Edge CA(projected, working_edge.get_point_A());
   Edge BA(working_edge.get_point_B(), working_edge.get_point_A());
   Edge AC(working_edge.get_point_A(), projected);
   Edge CB(projected, working_edge.get_point_B());
+  */
   /*
   if (my_mesh.is_in_mesh(BC))
     std::cout << "BC" << endl;
@@ -1398,6 +1359,9 @@ bool BasicAlgorithm::fix_proj(const HalfEdge &working_edge,
 // checks if neighbour triangles have less than pi/2 angle
 bool BasicAlgorithm::_check_normals(const HalfEdge &working_edge,
                                     const Point &point) const {
+  assertm(working_edge.get_point_A() != point &&
+              working_edge.get_point_B() != point,
+          "Invalid triangle!");
   const Triangle new_triangle(working_edge.get_point_B(),
                               working_edge.get_point_A(), point);
   auto [prev_face_index, next_face_index] =
@@ -1431,6 +1395,9 @@ bool BasicAlgorithm::_fix_prev_next(const HalfEdge &working_edge,
                                     const MeshPoint &point,
                                     const bool Delaunay) {
   // potentialy new triangle
+  assertm(working_edge.get_point_A() != point.get_point() &&
+              working_edge.get_point_B() != point.get_point(),
+          "Invalid triangle!");
   Triangle new_triangle(working_edge.get_point_B(), working_edge.get_point_A(),
                         point);
 
@@ -1467,6 +1434,9 @@ bool BasicAlgorithm::fix_prev_next(const HalfEdge &working_edge,
 
 bool BasicAlgorithm::fix_breakers(const HalfEdge &working_edge,
                                   const Point &projected, const bool Delaunay) {
+  assertm(working_edge.get_point_A() != projected &&
+              working_edge.get_point_B() != projected,
+          "Invalid triangle!");
   Triangle proj_T(working_edge.get_point_B(), working_edge.get_point_A(),
                   projected);
 
@@ -1514,37 +1484,38 @@ bool BasicAlgorithm::step(const HalfEdgeIndex &working_edge_index) {
   }
   // std::cout << "After basic_triangle" << endl;
 
-  const Point projected = get_projected(working_edge);
+  const std::optional<Point> projected = get_projected(working_edge);
+  // unable to project
+  if (!projected.has_value()) {
+    push_edge_to_checked(working_edge_index);
+    return false;
+  }
   std::optional<Point> clipped = bounding_box.crop_to_box(
-      working_edge.get_midpoint(), projected, e_size, F);
+      working_edge.get_midpoint(), projected.value(), e_size, F);
   assertm(clipped.has_value(), "Unable to crop to box!");
+  if (!bounding_box.is_inside(clipped.value()) &&
+      !bounding_box.is_on(clipped.value())) {
+    push_edge_to_checked(working_edge_index);
+    return false;
+  }
   if (fix_close_points(working_edge, clipped.value(), true)) {
-    // cout << "FIX_CLOSE_POINTS" << endl;
     return true;
   }
-  // std::cout << "After fix_close_points" << endl;
 
-  if (fix_breakers(working_edge, projected, true)) {
-    // cout << "FIX_BREAKERS" << endl;
+  if (fix_breakers(working_edge, projected.value(), true)) {
     return true;
   }
-  // std::cout << "After fix_breakers" << endl;
 
   if (fix_proj(working_edge, clipped.value(), true)) {
-    // cout << "FIX_PROJ" << endl;
     return true;
   }
-  // std::cout << "After fix_proj" << endl;
 
   if (fix_prev_next(working_edge, true)) {
-    // cout << "FIX_PREV_NEXT" << endl;
     return true;
   }
-  // std::cout << "After fix_prev_next" << endl;
 
   assertm(!is_border(working_edge_index),
           "Working edge found in border edges!");
-  // Delaunay_conditions_debug(working_edge, projected);
   push_edge_to_checked(working_edge_index);
   // std::cout << "Pushed edge to checked!" << endl;
   return false;
@@ -1554,8 +1525,7 @@ void BasicAlgorithm::starting() {
   int round = 0;
   int active_rounds = 0;
   while (!my_mesh.active_edges_empty()) {
-    // std::cout << "round: " << round << endl;
-    my_mesh.obj_format(name);
+    // my_mesh.obj_format(name);
     HalfEdgeIndex working_edge = kInvalidEdgeIndex;
     working_edge = round;  // my_mesh.get_active_edge();
     if (!my_mesh.is_active(working_edge)) {
@@ -1568,7 +1538,6 @@ void BasicAlgorithm::starting() {
     assertm(my_mesh.is_boundary(working_edge), "Working edge not boundary!");
     assertm(my_mesh.get_halfedge(working_edge).is_active(),
             "Working edge not active!");
-    // std::cout << "working edge index: " << working_edge << endl;
     assertm(!my_mesh.is_in_mesh(
                 Edge(my_mesh.get_halfedge(working_edge).get_point_B(),
                      my_mesh.get_halfedge(working_edge).get_point_A())),
@@ -1581,9 +1550,6 @@ void BasicAlgorithm::starting() {
       assertm(!my_mesh.is_boundary(working_edge),
               "Working edge found in border!");
 
-      my_mesh.obj_format(name);
-      assertm(my_mesh.edges_check("after the step "),
-              "Edges check did not pass!");
     } else {
       assertm(my_mesh.is_checked(working_edge), "Checked edge not checked");
     }
@@ -1592,6 +1558,7 @@ void BasicAlgorithm::starting() {
     // edges and updates output file
     if (active_rounds % 30 == 0) {
       my_mesh.cout_triangles_number();
+      my_mesh.obj_format(name);
       cout << "Number of active edges: " << my_mesh.get_active_edges_size()
            << endl;
       cout << "Number of checked edges: " << my_mesh.get_checked_edges_size()
@@ -1833,10 +1800,19 @@ bool BasicAlgorithm::fix_holes2(const HalfEdge &working_edge) {
   }
 
   //  find candidate point for working_edge
-  Point projected = get_projected(working_edge);
+  std::optional<Point> projected = get_projected(working_edge);
+  if (!projected.has_value()) {
+    push_edge_to_checked(working_edge.get_index());
+    return false;
+  }
   std::optional<Point> clipped = bounding_box.crop_to_box(
-      working_edge.get_midpoint(), projected, e_size, F);
+      working_edge.get_midpoint(), projected.value(), e_size, F);
   assertm(clipped.has_value(), "Unable to crop to box!");
+  if (!bounding_box.is_inside(clipped.value()) &&
+      !bounding_box.is_on(clipped.value())) {
+    push_edge_to_checked(working_edge.get_index());
+    return false;
+  }
   /*
   std::optional<MeshPoint> closest_point =
       get_closest_point(working_edge);
@@ -1851,7 +1827,7 @@ bool BasicAlgorithm::fix_holes2(const HalfEdge &working_edge) {
     return true;
   }
 
-  if (fix_breakers(working_edge, projected, false)) {
+  if (fix_breakers(working_edge, projected.value(), false)) {
     // cout << "fix breakers" << endl;
     return true;
   }

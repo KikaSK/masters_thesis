@@ -31,15 +31,12 @@ bool BoundingBox::is_inside(const Point P) const {
 }
 
 bool BoundingBox::is_on(const Point P) const {
-  bool x_wall =
-      ((abs(P.x() - _min_x) < 10e-10 || abs(P.x() - _max_x) < 10e-10) &&
-       in_interval_y(P.y()) && in_interval_z(P.z()));
-  bool y_wall =
-      ((abs(P.y() - _min_y) < 10e-10 || abs(P.y() - _max_y) < 10e-10) &&
-       in_interval_x(P.x()) && in_interval_z(P.z()));
-  bool z_wall =
-      ((abs(P.z() - _min_z) < 10e-10 || abs(P.z() - _max_z) < 10e-10) &&
-       in_interval_y(P.y()) && in_interval_x(P.x()));
+  bool x_wall = ((abs(P.x() - _min_x) < kEps || abs(P.x() - _max_x) < kEps) &&
+                 in_interval_y(P.y()) && in_interval_z(P.z()));
+  bool y_wall = ((abs(P.y() - _min_y) < kEps || abs(P.y() - _max_y) < kEps) &&
+                 in_interval_x(P.x()) && in_interval_z(P.z()));
+  bool z_wall = ((abs(P.z() - _min_z) < kEps || abs(P.z() - _max_z) < kEps) &&
+                 in_interval_y(P.y()) && in_interval_x(P.x()));
   return (x_wall || y_wall || z_wall);
 }
 
@@ -77,8 +74,9 @@ std::optional<Point> BoundingBox::project_on_min_x(const Point &midpoint,
   std::optional<Point> projected = std::nullopt;
   if (abs(v.x()) > kEps) {
     projected = project(P, v, F);
-    if (!is_on(projected.value()) ||
-        Vector(P, projected.value()).get_length() > dist)
+    if (projected.has_value() &&
+        (!is_on(projected.value()) ||
+         Vector(P, projected.value()).get_length() > dist))
       projected = std::nullopt;
   }
   return projected;
@@ -102,8 +100,9 @@ std::optional<Point> BoundingBox::project_on_max_x(const Point &midpoint,
   std::optional<Point> projected = std::nullopt;
   if (abs(v.x()) > kEps) {
     projected = project(P, v, F);
-    if (!is_on(projected.value()) ||
-        Vector(P, projected.value()).get_length() > dist)
+    if (projected.has_value() &&
+        (!is_on(projected.value()) ||
+         Vector(P, projected.value()).get_length() > dist))
       projected = std::nullopt;
   }
   return projected;
@@ -127,8 +126,9 @@ std::optional<Point> BoundingBox::project_on_min_y(const Point &midpoint,
   std::optional<Point> projected = std::nullopt;
   if (abs(v.y()) > kEps) {
     projected = project(P, v, F);
-    if (!is_on(projected.value()) ||
-        Vector(P, projected.value()).get_length() > dist)
+    if (projected.has_value() &&
+        (!is_on(projected.value()) ||
+         Vector(P, projected.value()).get_length() > dist))
       projected = std::nullopt;
   }
   return projected;
@@ -152,8 +152,9 @@ std::optional<Point> BoundingBox::project_on_max_y(const Point &midpoint,
   std::optional<Point> projected = std::nullopt;
   if (abs(v.y()) > kEps) {
     projected = project(P, v, F);
-    if (!is_on(projected.value()) ||
-        Vector(P, projected.value()).get_length() > dist)
+    if (projected.has_value() &&
+        (!is_on(projected.value()) ||
+         Vector(P, projected.value()).get_length() > dist))
       projected = std::nullopt;
   }
   return projected;
@@ -177,8 +178,9 @@ std::optional<Point> BoundingBox::project_on_min_z(const Point &midpoint,
   std::optional<Point> projected = std::nullopt;
   if (abs(v.z()) > kEps) {
     projected = project(P, v, F);
-    if (!is_on(projected.value()) ||
-        Vector(P, projected.value()).get_length() > dist)
+    if (projected.has_value() &&
+        (!is_on(projected.value()) ||
+         Vector(P, projected.value()).get_length() > dist))
       projected = std::nullopt;
   }
   return projected;
@@ -202,8 +204,9 @@ std::optional<Point> BoundingBox::project_on_max_z(const Point &midpoint,
   std::optional<Point> projected = std::nullopt;
   if (abs(v.z()) > kEps) {
     projected = project(P, v, F);
-    if (!is_on(projected.value()) ||
-        Vector(P, projected.value()).get_length() > dist)
+    if (projected.has_value() &&
+        (!is_on(projected.value()) ||
+         Vector(P, projected.value()).get_length() > dist))
       projected = std::nullopt;
   }
   return projected;
@@ -437,7 +440,10 @@ Point BoundingBox::crop_to_box(const Point &midpoint, const Point &P,
     } else {
       clipped_point = project(line_p, v, F, e_size);
     }
-    assertm(clipped_point.has_value(), "Point without value!");
+    if (!clipped_point.has_value()) {
+      if (is_on(projected)) return projected;
+      return P;
+    }
     if (Vector(clipped_point.value(), projected).get_length() < e_size) {
       return clipped_point.value();
     }

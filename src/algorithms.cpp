@@ -52,8 +52,8 @@ numeric Bisect(const realsymbol my_x, const ex &f, const numeric point1,
 // Bisection is called when N-R proejcts to distant point
 // finds 2 points on opposite sides of surface and returns result of bisection
 // on these two points
-numeric Bisection(const realsymbol my_x, const ex &f, numeric starting_point,
-                  numeric e_size) {
+std::optional<numeric> Bisection(const realsymbol my_x, const ex &f,
+                                 numeric starting_point, numeric e_size) {
   numeric dx = e_size / 10;
   numeric new_point1 = starting_point, last_point1 = starting_point;
   numeric new_point2 = starting_point, last_point2 = starting_point;
@@ -71,9 +71,8 @@ numeric Bisection(const realsymbol my_x, const ex &f, numeric starting_point,
     last_point2 = new_point2;
     new_point2 -= dx;
   }
-
-  assertm(iterations < 1000,
-          "Bisection method failed, try smaller triangle edge size");
+  // error while bisection
+  if (iterations >= 1000) return std::nullopt;
 
   std::optional<numeric> projected = std::nullopt;
 
@@ -125,27 +124,6 @@ Point circular_bisection(const Function &F, const Point &singular_point,
                          const Vector &u /*rotation direction*/,
                          numeric e_size) {
   const Point end_point = rotate(singular_point, start_point, u, end_angle);
-  /*
-    std::cout << start_point << endl
-              << singular_point << endl
-              << end_angle << endl
-              << u << endl
-              << end_point << endl;
-    std::cout << GiNaC::ex_to<numeric>(
-                     F.get_function()
-                         .subs(GiNaC::lst{F.get_x() == start_point.x(),
-                                          F.get_y() == start_point.y(),
-                                          F.get_z() == start_point.z()})
-                         .evalf())
-              << endl
-              << GiNaC::ex_to<numeric>(
-                     F.get_function()
-                         .subs(GiNaC::lst{F.get_x() == end_point.x(),
-                                          F.get_y() == end_point.y(),
-                                          F.get_z() == end_point.z()})
-                         .evalf())
-              << endl;
-  */
   assertm(
       GiNaC::ex_to<numeric>(F.get_function()
                                 .subs(GiNaC::lst{F.get_x() == start_point.x(),
@@ -221,8 +199,9 @@ std::pair<Point, Point> _circular_bisect(const Function &F,
 }
 
 // returns projected point in the direction of normal
-Point project(const Point &point_to_project, const Vector &normal,
-              const Function &F, const numeric e_size /* = -1 */) {
+std::optional<Point> project(const Point &point_to_project,
+                             const Vector &normal, const Function &F,
+                             const numeric e_size /* = -1 */) {
   realsymbol my_x("my_x");
 
   numeric starting_point;
@@ -261,25 +240,27 @@ Point project(const Point &point_to_project, const Vector &normal,
   ex df = f.diff(my_x, 1);
   std::optional<Point> projected = std::nullopt;
 
-  numeric root = Newton_Raphson(my_x, f, df, starting_point);
+  std::optional<numeric> root = Newton_Raphson(my_x, f, df, starting_point);
+  assertm(root.has_value(), "Newton Rhapson not working!");
   numeric projected_x =
-      GiNaC::ex_to<numeric>(param_x.subs(my_x == root).evalf());
+      GiNaC::ex_to<numeric>(param_x.subs(my_x == root.value()).evalf());
   numeric projected_y =
-      GiNaC::ex_to<numeric>(param_y.subs(my_x == root).evalf());
+      GiNaC::ex_to<numeric>(param_y.subs(my_x == root.value()).evalf());
   numeric projected_z =
-      GiNaC::ex_to<numeric>(param_z.subs(my_x == root).evalf());
+      GiNaC::ex_to<numeric>(param_z.subs(my_x == root.value()).evalf());
 
   projected = Point(projected_x, projected_y, projected_z);
   if (e_size != -1 &&
       Vector(point_to_project, projected.value()).get_length() > 4 * e_size) {
     root = Bisection(my_x, f, starting_point, e_size);
+    if (!root.has_value()) return std::nullopt;
 
     numeric projected_x =
-        GiNaC::ex_to<numeric>(param_x.subs(my_x == root).evalf());
+        GiNaC::ex_to<numeric>(param_x.subs(my_x == root.value()).evalf());
     numeric projected_y =
-        GiNaC::ex_to<numeric>(param_y.subs(my_x == root).evalf());
+        GiNaC::ex_to<numeric>(param_y.subs(my_x == root.value()).evalf());
     numeric projected_z =
-        GiNaC::ex_to<numeric>(param_z.subs(my_x == root).evalf());
+        GiNaC::ex_to<numeric>(param_z.subs(my_x == root.value()).evalf());
     assertm(F.substitute(GiNaC::lst{F.get_x() == projected_x,
                                     F.get_y() == projected_y,
                                     F.get_z() == projected_z}) < 10e-6,
@@ -297,6 +278,7 @@ Point project(const Point &point_to_project, const Vector &normal,
 }
 
 // connects two vectors of edges
+/*
 vector<HalfEdgeIndex> connect_edges(const vector<HalfEdgeIndex> &v1,
                                     const vector<HalfEdgeIndex> &v2) {
   vector<HalfEdgeIndex> connected = v1;
@@ -305,6 +287,7 @@ vector<HalfEdgeIndex> connect_edges(const vector<HalfEdgeIndex> &v1,
   }
   return connected;
 }
+*/
 /*
 // connects two vectors of points
 vector<Point> connect_points(const vector<Point> &v1, const vector<Point> &v2) {

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <regex>
 #include <vector>
 
 #include "algorithms.h"
@@ -31,71 +32,64 @@ class BasicAlgorithm {
     // Vector singular_direction(0, 0, 1);
     // Vector singular_direction(-1, 0.5, 0);
     // const Point singular_point(0, 0, 0);
+    std::cout << "Types: " << types.empty() << endl;
     std::cout << "Creating local mesh: " << endl;
     std::cout << "Number of singular points: " << singular_directions.size()
               << endl;
+
+    std::regex A1(".*A[0-9]*[02468][+][-].*");
+    std::regex D1(".*D[0-9]*[02468][+][-].*");
+    std::regex E1(".*((E6[+][+])|(E8[+][+])|(E6[+]-)).*");
+
+    std::regex A2(".*A[0-9]*[13579][+][-].*");
+    std::regex D2(".*D[0-9]*[13579][+][-].*");
+
+    std::regex A3(".*A[0-9]+[-][-].*");
+
     for (int j = 0; j < singular_directions.size(); ++j) {
       const Point singular_point = singular_points[j];
       for (int i = 0; i < singular_directions[j].size(); ++i) {
         Vector singular_direction = singular_directions[j][i];
         std::cout << "Sing dir: " << singular_direction << endl;
-        if (name == "./outputs/my_run_input_A2+-_0.9" ||
+        if (std::regex_match(name, A1) || 
+            std::regex_match(name, D1) ||
+            std::regex_match(name, E1)  /*||
+            name == "./outputs/my_run_input_A2+-_0.9" ||
+            name == "./outputs/TEXT_A2+-_0.5" ||
+            name == "./outputs/TEXT_A2-example-1_0.2" ||
             name == "./outputs/my_run_input_A2-example-1_0.2" ||
-            name == "./outputs/my_run_input_A4+-_1") {
+            name == "./outputs/my_run_input_A4+-_1"*/) {
+          std::cout << "group1" << endl;
+
           triangulate_singularity_case2(singular_point, singular_direction,
                                         &my_mesh,
                                         (i == 0) ? kInvalidPointIndex : 0);
-        } else if (name == "./outputs/my_run_input_D4--_0.4" ||
-                   name == "./outputs/my_run_input_D4--_0.2" ||
-                   name == "./outputs/my_run_input_D4--_0.5" ||
-                   name == "./outputs/my_run_input_D4--_0.6" ||
-                   name == "./outputs/my_run_input_D4--_0.1" ||
-                   name == "./outputs/my_run_input_D4--_0.3") {
-          triangulate_cone_iterative(singular_point, singular_direction,
-                                     &my_mesh,
-                                     (i == 0) ? kInvalidPointIndex : 0);
-        } else if (!types.empty()) {
+        } else if (std::regex_match(name, A2) /*||
+std::regex_match(name, D2)
+name == "./outputs/my_run_input_D4--_0.4" ||
+name == "./outputs/my_run_input_D4--_0.2" ||
+name == "./outputs/my_run_input_D4--_0.5" ||
+name == "./outputs/my_run_input_D4--_0.6" ||
+name == "./outputs/my_run_input_D4--_0.1" ||
+name == "./outputs/my_run_input_D4--_0.3"
+*/) {
+          std::cout << "group2" << endl;
+          triangulate_singularity_circular(singular_point, singular_direction,
+                                           &my_mesh,
+                                           (i == 0) ? kInvalidPointIndex : 0);
+        } else if (std::regex_match(name, A3)) {
+          std::cout << "group3" << endl;
           triangulate_An_analytical(singular_point, singular_direction,
                                     &my_mesh, (i == 0) ? kInvalidPointIndex : 0,
                                     types[j]);
         } else {
-          triangulate_singularity_circular(singular_point, singular_direction,
-                                           &my_mesh,
-                                           (i == 0) ? kInvalidPointIndex : 0);
+          std::cout << "group4" << endl;
+          triangulate_cone_iterative(singular_point, singular_direction,
+                                     &my_mesh,
+                                     (i == 0) ? kInvalidPointIndex : 0);
         }
       }
     }
-
-    /*
-singular_direction = -1 * singular_direction;
-triangulate_singularity_circular(singular_point, singular_direction,
-    &my_mesh, 0);
-*/
-    /*
-        triangulate_cone_iterative(singular_point, singular_direction, &my_mesh,
-                                   kInvalidPointIndex);
-        singular_direction = Vector(1, 0.5, 0);
-
-        triangulate_cone_iterative(singular_point, singular_direction, &my_mesh,
-       0);
-        */
-    /*
-    singular_direction = Vector(-1, 0.5, 0).unit();
-
-    triangulate_cone_iterative(singular_point, singular_direction, &my_mesh, 0);
-
-    singular_direction = Vector(1, 0.5, 0).unit();
-
-    triangulate_cone_iterative(singular_point, singular_direction, &my_mesh, 0);
-    */
-
-    // regular
-    /*
-        Triangle seed_triangle = find_seed_triangle(seed_point);
-        std::cout << "seed triangle created" << endl;
-        my_mesh = Mesh(seed_triangle, bounding_box);
-        std::cout << "in basic algorithm constructor" << endl;
-        */
   }
 
   explicit BasicAlgorithm(string name, Function f, const Function &F,
@@ -137,7 +131,7 @@ triangulate_singularity_circular(singular_point, singular_direction,
   bool orientability_check(const HalfEdge &working_edge,
                            const MeshPoint &point) const;
 
-  Point get_projected(const HalfEdge &working_edge) const;
+  std::optional<Point> get_projected(const HalfEdge &working_edge) const;
   bool overlap_normals_check(const MeshPoint &candidate,
                              const HalfEdge &working_edge) const;
   std::optional<vector<MeshPoint>> find_close_points(

@@ -29,8 +29,8 @@ numeric Bisect(const realsymbol my_x, const ex &f, const numeric point1,
 // Bisection is called when N-R proejcts to distant point
 // finds 2 points on opposite sides of surface and returns result of bisection
 // on these two points
-numeric Bisection(const realsymbol my_x, const ex &f, numeric starting_point,
-                  numeric e_size);
+std::optional<numeric> Bisection(const realsymbol my_x, const ex &f,
+                                 numeric starting_point, numeric e_size);
 
 Point circular_bisection(const Function &F, const Point &singular_point,
                          const Point &start_point, numeric end_angle,
@@ -47,8 +47,9 @@ Point rotate(const Point &rot_center, const Point &to_rotate, const Vector &u,
              const numeric angle);
 
 // returns projected point in the direction of normal
-Point project(const Point &point_to_project, const Vector &normal,
-              const Function &F, const numeric e_size = -1);
+std::optional<Point> project(const Point &point_to_project,
+                             const Vector &normal, const Function &F,
+                             const numeric e_size = -1);
 
 // connects two vectors of edges
 vector<HalfEdgeIndex> connect_edges(const vector<HalfEdgeIndex> &v1,

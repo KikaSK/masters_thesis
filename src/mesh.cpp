@@ -72,7 +72,7 @@ bool Mesh::is_bounding(HalfEdgeIndex index) const {
 bool Mesh::is_boundary(HalfEdgeIndex index) const {
   return is_active(index) || is_checked(index) || is_bounding(index);
 }
-bool Mesh::is_in_mesh(const Edge &edge) const {
+bool Mesh::_linear_is_in_mesh(const Edge &edge) const {
   for (HalfEdge mesh_edge : _mesh_edges) {
     // comparing only endpoints in respective order
     if (edge == mesh_edge.get_edge()) {
@@ -85,7 +85,56 @@ bool Mesh::is_in_mesh(const Edge &edge) const {
   // std::cout << "not found in mesh" << endl;
   return false;
 }
-HalfEdgeIndex Mesh::get_edge_index(const Edge &edge) const {
+bool Mesh::_tree_is_in_mesh(const Edge &edge) const {
+  vector<MeshPoint> _A = get_meshpoints_in_interval(
+      edge.A().x() - 100 * kEps, edge.A().x() + 100 * kEps,
+      edge.A().y() - 100 * kEps, edge.A().y() + 100 * kEps,
+      edge.A().z() - 100 * kEps, edge.A().z() + 100 * kEps);
+  vector<MeshPoint> _B = get_meshpoints_in_interval(
+      edge.B().x() - 100 * kEps, edge.B().x() + 100 * kEps,
+      edge.B().y() - 100 * kEps, edge.B().y() + 100 * kEps,
+      edge.B().z() - 100 * kEps, edge.B().z() + 100 * kEps);
+  for (MeshPoint A : _A) {
+    MeshPoint actualized_meshpoint = _mesh_points[A.get_index()];
+    for (HalfEdgeIndex index : actualized_meshpoint.get_outgoing()) {
+      if (_mesh_edges[index].get_edge() == edge) return true;
+    }
+  }
+  for (MeshPoint B : _B) {
+    MeshPoint actualized_meshpoint = _mesh_points[B.get_index()];
+    for (HalfEdgeIndex index : actualized_meshpoint.get_outgoing()) {
+      if (_mesh_edges[index].get_edge() == edge) return true;
+    }
+  }
+  return false;
+}
+bool Mesh::is_in_mesh(const Edge &edge) const { return _tree_is_in_mesh(edge); }
+
+HalfEdgeIndex Mesh::_tree_get_edge_index(const Edge &edge) const {
+  vector<MeshPoint> _A = get_meshpoints_in_interval(
+      edge.A().x() - 100 * kEps, edge.A().x() + 100 * kEps,
+      edge.A().y() - 100 * kEps, edge.A().y() + 100 * kEps,
+      edge.A().z() - 100 * kEps, edge.A().z() + 100 * kEps);
+  vector<MeshPoint> _B = get_meshpoints_in_interval(
+      edge.B().x() - 100 * kEps, edge.B().x() + 100 * kEps,
+      edge.B().y() - 100 * kEps, edge.B().y() + 100 * kEps,
+      edge.B().z() - 100 * kEps, edge.B().z() + 100 * kEps);
+  for (MeshPoint A : _A) {
+    MeshPoint actualized_meshpoint = _mesh_points[A.get_index()];
+    for (HalfEdgeIndex index : actualized_meshpoint.get_outgoing()) {
+      if (_mesh_edges[index].get_edge() == edge) return index;
+    }
+  }
+  for (MeshPoint B : _B) {
+    MeshPoint actualized_meshpoint = _mesh_points[B.get_index()];
+    for (HalfEdgeIndex index : actualized_meshpoint.get_outgoing()) {
+      if (_mesh_edges[index].get_edge() == edge) return index;
+    }
+  }
+  return kInvalidEdgeIndex;
+}
+
+HalfEdgeIndex Mesh::_linear_get_edge_index(const Edge &edge) const {
   for (HalfEdge mesh_edge : _mesh_edges) {
     // comparing only endpoints in respective order
     if (edge == mesh_edge.get_edge()) {
@@ -93,6 +142,10 @@ HalfEdgeIndex Mesh::get_edge_index(const Edge &edge) const {
     }
   }
   return kInvalidEdgeIndex;
+}
+
+HalfEdgeIndex Mesh::get_edge_index(const Edge &edge) const {
+  return _tree_get_edge_index(edge);
 }
 
 HalfEdge Mesh::get_halfedge(HalfEdgeIndex index) const {
@@ -527,6 +580,102 @@ void Mesh::add_triangle_to_meshpoint(MeshPointIndex i_A, Point point_B,
   return;
 }
 
+void Mesh::add_triangle_to_two_meshpoints(MeshPointIndex i_A,
+                                          MeshPointIndex i_B, Point point_C,
+                                          const BoundingBox &bounding_box) {
+  Triangle T(_mesh_points[i_A].get_point(), _mesh_points[i_B].get_point(),
+             point_C);
+  Face F(T);
+
+  HalfEdgeIndex i_AB = _mesh_edges.size();
+  HalfEdgeIndex i_BC = i_AB + 1;
+  HalfEdgeIndex i_CA = i_BC + 1;
+
+  FaceIndex i_F = _mesh_triangles.size();
+
+  F.set_halfedge(i_AB);
+  _mesh_triangles.push_back(F);
+
+  // MeshPointIndex i_B = _mesh_points.size();
+  MeshPointIndex i_C = _mesh_points.size();
+
+  MeshPoint &A = _mesh_points[i_A];
+  A.add_outgoing(i_AB);
+  MeshPoint &B = _mesh_points[i_B];
+  B.add_outgoing(i_BC);
+  MeshPoint C = MeshPoint::create_from_point(
+      F.get_triangle().C(), i_CA);  // the outgoing halfedge will be CA
+  C.set_index(i_C);
+
+  _mesh_points.push_back(C);
+
+  _point_tree.insert(C);
+
+  HalfEdge AB(F.get_triangle().AB(),
+              i_A,   // A index is 0
+              i_B,   // B index is 1
+              i_CA,  // previous is CA
+              i_BC,  // next is BC
+              -1,    // no opposite
+              i_F    // incident face is F
+  );
+  HalfEdge BC(F.get_triangle().BC(),
+              i_B,   // B index is 1
+              i_C,   // C index is 2
+              i_AB,  // previous is AB
+              i_CA,  // next is CA
+              -1,    // no opposite
+              i_F    // incident face is F
+  );
+  HalfEdge CA(F.get_triangle().CA(),
+              i_C,   // C index is 2
+              i_A,   // A index is 0
+              i_BC,  // previous is BC
+              i_AB,  // next is AB
+              -1,    // no opposite
+              i_F    // incident face is F
+  );
+
+  AB.set_index(i_AB);
+  BC.set_index(i_BC);
+  CA.set_index(i_CA);
+  /*
+    _active_edges.insert(i_AB);
+    AB.set_active();
+    _active_edges.insert(i_BC);
+    BC.set_active();
+    _active_edges.insert(i_CA);
+    CA.set_active();
+  */
+
+  if (bounding_box.is_new_bounding_edge(AB.get_edge())) {
+    _bounding_edges.insert(i_AB);
+    AB.set_bounding();
+  } else {
+    _active_edges.insert(i_AB);
+    AB.set_active();
+  }
+  if (bounding_box.is_new_bounding_edge(BC.get_edge())) {
+    _bounding_edges.insert(i_BC);
+    BC.set_bounding();
+  } else {
+    _active_edges.insert(i_BC);
+    BC.set_active();
+  }
+  if (bounding_box.is_new_bounding_edge(CA.get_edge())) {
+    _bounding_edges.insert(i_CA);
+    CA.set_bounding();
+  } else {
+    _active_edges.insert(i_CA);
+    CA.set_active();
+  }
+
+  _mesh_edges.push_back(AB);
+  _mesh_edges.push_back(BC);
+  _mesh_edges.push_back(CA);
+  return;
+}
+
 // Adding triangle BAP where P is new_point
 void Mesh::add_triangle(
     HalfEdgeIndex i_AB, Point new_point,
@@ -729,10 +878,11 @@ vector<MeshPoint> Mesh::_tree_breakers_getter(const Triangle &triangle) const {
 
   vector<MeshPoint> breakers;
   for (MeshPoint meshpoint : potential_breakers) {
-    if (meshpoint.get_point() != triangle.A() &&
-        meshpoint.get_point() != triangle.B() &&
-        meshpoint.get_point() != triangle.B()) {
-      breakers.push_back(meshpoint);
+    MeshPoint actualized_meshpoint = _mesh_points[meshpoint.get_index()];
+    if (actualized_meshpoint.get_point() != triangle.A() &&
+        actualized_meshpoint.get_point() != triangle.B() &&
+        actualized_meshpoint.get_point() != triangle.B()) {
+      breakers.push_back(actualized_meshpoint);
     }
   }
   return breakers;
@@ -775,8 +925,20 @@ bool Mesh::check_Delaunay(const HalfEdge &working_edge,
   const numeric dist = 0.8 * std::min(std::min(distA, distB), distC);
   const Triangle &T = new_triangle;
 
+  vector<MeshPoint> potential_breakers = get_meshpoints_in_interval(
+      new_gravity_center.x() - 5 * dist, new_gravity_center.x() + 5 * dist,
+      new_gravity_center.y() - 5 * dist, new_gravity_center.y() + 5 * dist,
+      new_gravity_center.z() - 5 * dist, new_gravity_center.z() + 5 * dist);
+
+  vector<FaceIndex> potential_faces;
+  for (MeshPoint P : potential_breakers) {
+    for (HalfEdgeIndex halfedge_index : P.get_outgoing()) {
+      potential_faces.push_back(get_halfedge(halfedge_index).get_incident());
+    }
+  }
   // gravity center condition
-  for (Face face : get_mesh_faces()) {
+  for (FaceIndex face_index : potential_faces) {
+    Face face = get_face(face_index);
     Point gravity_center = face.get_gravity_center();
     numeric gc_dist = Vector(new_gravity_center, gravity_center).get_length();
     // numeric gc_dist = Vector(new_point, gravity_center).get_length();

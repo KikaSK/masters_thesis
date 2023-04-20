@@ -41,6 +41,10 @@ class Mesh {
                    HalfEdge *edge3) const;
   void _bound_opposite_outgoing(const MeshPoint &A, const MeshPointIndex i_B,
                                 const HalfEdgeIndex i_BA);
+  bool _tree_is_in_mesh(const Edge &edge) const;
+  bool _linear_is_in_mesh(const Edge &edge) const;
+  HalfEdgeIndex _tree_get_edge_index(const Edge &edge) const;
+  HalfEdgeIndex _linear_get_edge_index(const Edge &edge) const;
 
  public:
   explicit Mesh(const Triangle &T, const BoundingBox &bounding_box);
@@ -57,6 +61,9 @@ class Mesh {
   void add_triangle_to_meshpoint(MeshPointIndex i_A, Point point_B,
                                  Point point_C,
                                  const BoundingBox &bounding_box);
+  void add_triangle_to_two_meshpoints(MeshPointIndex i_A, MeshPointIndex i_B,
+                                      Point point_C,
+                                      const BoundingBox &bounding_box);
   void add_triangle(HalfEdgeIndex index_AB, Point P, const bool is_new,
                     const BoundingBox &bounding_box,
                     MeshPointIndex index_P = kInvalidPointIndex);
