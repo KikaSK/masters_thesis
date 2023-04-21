@@ -137,7 +137,7 @@ class Mesh {
                                                numeric max_z) const;
 
   void obj_format(const std::string &name) const;
-
+  void mesh_format(const std::string &name) const;
   bool edges_check(const std::string &message,
                    const HalfEdgeIndex working_edge = kInvalidEdgeIndex) const;
   NewTriangleType _find_type(const HalfEdgeIndex index_AB,

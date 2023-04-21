@@ -1635,7 +1635,7 @@ void BasicAlgorithm::calculate() {
   // fix_corners();
   //  my_mesh.measure(bounding_edges, F, name, e_size);
   //  my_mesh.adaptive(0.005, F, e_size);
-
+  // my_mesh.mesh_format(name);
   return;
 }
 

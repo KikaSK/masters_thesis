@@ -1014,7 +1014,35 @@ void Mesh::obj_format(const std::string &name) const {
   }
   return;
 }
-
+/*
+void Mesh::mesh_format(const std::string &name) const {
+  // std::cout << name << endl;
+  std::ofstream out(name + ".txt");
+  for (size_t i = 0; i < _mesh_points.size(); ++i) {
+    out << "v " << _mesh_points[i].x() << " " << _mesh_points[i].y() << " "
+        << _mesh_points[i].z() << endl;
+    for (HalfEdgeIndex outgoing : _mesh_points[i].get_outgoing()) {
+      out << outgoing << " ";
+    }
+    out << endl;
+  }
+  for (size_t i = 0; i < _mesh_triangles.size(); ++i) {
+    HalfEdge halfedge = get_halfedge(_mesh_triangles[i].get_halfedge());
+    HalfEdge next_halfedge =
+        get_next_halfedge(_mesh_triangles[i].get_halfedge());
+    out << "f " << halfedge.get_A() + 1 << " " << halfedge.get_B() + 1 << " "
+        << next_halfedge.get_B() + 1 << endl;
+  }
+  for (size_t i = 0; i < _mesh_edges.size(); ++i) {
+    HalfEdge halfedge = get_halfedge(_mesh_triangles[i].get_halfedge());
+    HalfEdge next_halfedge =
+        get_next_halfedge(_mesh_triangles[i].get_halfedge());
+    out << "f " << halfedge.get_A() + 1 << " " << halfedge.get_B() + 1 << " "
+        << next_halfedge.get_B() + 1 << endl;
+  }
+  return;
+}
+*/
 // private member functions
 void Mesh::_bound_consecutive(HalfEdge *previous,
                               const HalfEdgeIndex i_previous, HalfEdge *next,

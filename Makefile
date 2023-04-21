@@ -24,6 +24,9 @@ reformat:
 main: reformat prepare run_main # for debug mode add "gdb" on the beginning
 	$(BUILD_DIR)/main.out 
 
+measure: reformat prepare run_measure
+	$(BUILD_DIR)/measure.out
+
 remake: clean reformat prepare run_main # for debug mode add "gdb" on the beginning
 	$(BUILD_DIR)/main.out 
 
@@ -32,6 +35,9 @@ test: clean reformat prepare run_test # for debug mode add "gdb" on the beginnin
 
 run_main: build/main.o $(build_dependencies)
 	$(CC) $(CCFLAGS) $^ -I$(SRC_DIR) -o $(BUILD_DIR)/main.out $(GINAC)
+
+run_measure: build/measure.o $(build_dependencies)
+	$(CC) $(CCFLAGS) $^ -I$(SRC_DIR) -o $(BUILD_DIR)/measure.out $(GINAC)
 
 run_test: build/test.o $(build_dependencies)
 	$(CC) $(CCFLAGS) $^ -I$(SRC_DIR) -o $(BUILD_DIR)/test.out $(GINAC)
