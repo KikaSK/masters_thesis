@@ -903,8 +903,8 @@ vector<MeshPoint> Mesh::get_meshpoints_in_interval(numeric min_x, numeric max_x,
 }
 
 // checks Delaunay constraint for triangle T
-bool Mesh::check_Delaunay(const HalfEdge &working_edge,
-                          const Point &new_point) const {
+bool Mesh::check_Delaunay(const HalfEdge &working_edge, const Point &new_point,
+                          const numeric &e_size) const {
   MeshPoint other_point =
       get_meshpoint(get_next_halfedge(working_edge).get_B());
 
@@ -923,6 +923,7 @@ bool Mesh::check_Delaunay(const HalfEdge &working_edge,
   assertm(abs(distA - distB) + abs(distB - distC) + abs(distC - distA) < kEps,
           "Wrong circumcenter in Delaunay!");
   const numeric dist = 0.8 * std::min(std::min(distA, distB), distC);
+  const numeric min_dist = 0.5 * std::min(std::min(distA, distB), distC);
   const Triangle &T = new_triangle;
 
   vector<MeshPoint> potential_breakers = get_meshpoints_in_interval(
@@ -942,6 +943,8 @@ bool Mesh::check_Delaunay(const HalfEdge &working_edge,
     Point gravity_center = face.get_gravity_center();
     numeric gc_dist = Vector(new_gravity_center, gravity_center).get_length();
     // numeric gc_dist = Vector(new_point, gravity_center).get_length();
+
+    // if (gc_dist < min_dist) return false;
 
     if (gc_dist < 2 * dist / 3 - 10 * kEps) {
       // if (gc_dist < working_edge.get_length() / 4) {

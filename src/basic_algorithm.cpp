@@ -218,6 +218,9 @@ void BasicAlgorithm::triangulate_singularity_circular(
         Vector(rot_vector_x * plane_vector, rot_vector_y * plane_vector,
                rot_vector_z * plane_vector);
   }
+  assertm(
+      singular != points[0] && singular != points[1] && points[0] != points[1],
+      "Wrong projection!");
   const Triangle first_triangle(singular, points[0], points[1]);
   assertm(first_triangle.is_triangle(), "Not a triangle!");
 
@@ -229,6 +232,9 @@ void BasicAlgorithm::triangulate_singularity_circular(
   // Mesh local_mesh;
   for (int i = 0; i < num_triangles; ++i) {
     int j = (i + 1) % num_triangles;
+    assertm(singular != points[i] && singular != points[j] &&
+                points[i] != points[j],
+            "Wrong projection!");
     Triangle triangle = Triangle(singular, points[i], points[j]);
     assertm(triangle.is_triangle(), "Invalid triangle!");
     if (i == 0) {
@@ -266,8 +272,8 @@ void BasicAlgorithm::triangulate_singularity_case2(
   Vector unit_singular_direction = singular_direction.unit();
   Vector plane_vector = unit_singular_direction.get_any_perpendicular().unit();
   const Vector &u = unit_singular_direction;
-  const int num_triangles = 8;
-
+  const int num_triangles = 4;
+  std::cout << "ok1" << endl;
   const numeric COS = GiNaC::ex_to<numeric>(
       GiNaC::cos(2 * GiNaC::Pi.evalf() / num_triangles).evalf());
   const numeric SIN = GiNaC::ex_to<numeric>(
@@ -281,7 +287,8 @@ void BasicAlgorithm::triangulate_singularity_case2(
   const Vector rot_vector_z = Vector(u.x() * u.z() * (1 - COS) - u.y() * SIN,
                                      u.y() * u.z() * (1 - COS) + u.x() * SIN,
                                      COS + u.z() * u.z() * (1 - COS));
-  const numeric mult = 0.5;
+  std::cout << "ok2" << endl;
+  const numeric mult = 0.7;
   vector<Point> points;
   int extra_triangles = 0;
   for (int i = 0; i < num_triangles + extra_triangles; ++i) {
@@ -294,6 +301,7 @@ void BasicAlgorithm::triangulate_singularity_case2(
         F, singular, start_point_to_bisect,
         GiNaC::ex_to<numeric>((GiNaC::Pi).evalf()), rot_vector, e_size * mult);
     points.push_back(projected_point);
+    std::cout << projected_point << endl;
 
     // checks if the point is in the correct halfspace
     // Vector projected_vector = Vector(singular, projected_point);
@@ -305,16 +313,24 @@ void BasicAlgorithm::triangulate_singularity_case2(
                rot_vector_z * plane_vector);
   }
 
+  std::cout << "ok3" << endl;
+  assertm(
+      singular != points[0] && singular != points[1] && points[0] != points[1],
+      "Wrong projection!");
   const Triangle first_triangle(singular, points[0], points[1]);
   // make sure normals point outside
   if (first_triangle.get_normal() * F.outside_normal(first_triangle, e_size) <
       0)
     reverse(points.begin(), points.end());
 
+  std::cout << "ok4" << endl;
   // Mesh local_mesh;
   for (int i = 0; i < num_triangles; ++i) {
     int j = (i + 1) % num_triangles;
     Triangle triangle = Triangle(singular, points[i], points[j]);
+    assertm(singular != points[i] && singular != points[j] &&
+                points[i] != points[j],
+            "Wrong projection!");
     assertm(triangle.is_triangle(), "Invalid triangle!");
     if (i == 0) {
       if (mesh->get_faces_count() == 0) {
@@ -337,6 +353,7 @@ void BasicAlgorithm::triangulate_singularity_case2(
       mesh->edges_check("in A1 round: " + std::to_string(i));
     }
   }
+  std::cout << "ok4" << endl;
   mesh->obj_format(name + "_local");
   return;
 }
@@ -347,8 +364,8 @@ void BasicAlgorithm::triangulate_cone_iterative(
   Vector unit_singular_direction = singular_direction.unit();
   Vector plane_vector = unit_singular_direction.get_any_perpendicular().unit();
   const Vector &u = unit_singular_direction;
-  const int num_triangles = 8;
-  const numeric mult = 1.2;
+  const int num_triangles = 4;
+  const numeric mult = 1;
   vector<Point> points;
   const numeric delta_angle = GiNaC::ex_to<numeric>(GiNaC::Pi.evalf() / 36);
   for (int i = 0; i < num_triangles; ++i) {
@@ -740,7 +757,8 @@ bool BasicAlgorithm::Delaunay_conditions(const HalfEdge &working_edge,
 
   if (P == opposite_point) return false;
 
-  bool delaunay = my_mesh.check_Delaunay(working_edge, P);
+  bool gc_distance = true;  // gc_distance_check(new_triangle);
+  bool delaunay = my_mesh.check_Delaunay(working_edge, P, e_size);
   bool has_good_edges = good_edges(working_edge, P);
   bool neighbor_triangles_normal_check = _check_normals(working_edge, P);
   bool is_edge_in_mesh = my_mesh.is_in_mesh(new_triangle.AB()) ||
@@ -765,7 +783,7 @@ bool BasicAlgorithm::Delaunay_conditions(const HalfEdge &working_edge,
     if (!has_good_edges) cout << "NO PASS GOOD EDGES!" << endl;
   */
   return (delaunay && has_good_edges && neighbor_triangles_normal_check &&
-          !is_edge_in_mesh
+          !is_edge_in_mesh && gc_distance
           // && orientability
   );
 }
@@ -828,6 +846,41 @@ bool BasicAlgorithm::good_edges(const HalfEdge &working_edge,
   if (is_in_mesh_2) is_good_2 = is_border(new_edge2_index);
 
   return (is_good_1 && is_good_2);
+}
+
+bool BasicAlgorithm::gc_distance_check(const Triangle T) const {
+  const Point gravity_center = T.get_gravity_center();
+  const numeric min_edge_length = std::min(
+      T.AB().get_length(), std::min(T.BC().get_length(), T.CA().get_length()));
+  const std::optional<Point> proj_gravity_center =
+      project(gravity_center, F.get_gradient_at_point(gravity_center).unit(), F,
+              e_size);
+  if (!proj_gravity_center.has_value()) return false;
+  if (Vector(gravity_center, proj_gravity_center.value()).get_length() >
+      min_edge_length / 10)
+    return false;
+
+  const Point M_AB = T.AB().get_midpoint();
+  const Point M_BC = T.BC().get_midpoint();
+  const Point M_CA = T.CA().get_midpoint();
+
+  const std::optional<Point> proj_M_AB =
+      project(M_AB, F.get_gradient_at_point(M_AB).unit(), F, e_size);
+  const std::optional<Point> proj_M_BC =
+      project(M_BC, F.get_gradient_at_point(M_BC).unit(), F, e_size);
+  const std::optional<Point> proj_M_CA =
+      project(M_CA, F.get_gradient_at_point(M_CA).unit(), F, e_size);
+  if (!proj_M_AB.has_value()) return false;
+  if (!proj_M_BC.has_value()) return false;
+  if (!proj_M_CA.has_value()) return false;
+  if (Vector(M_AB, proj_M_AB.value()).get_length() > T.AB().get_length() / 4)
+    return false;
+  if (Vector(M_BC, proj_M_BC.value()).get_length() > T.BC().get_length() / 4)
+    return false;
+  if (Vector(M_CA, proj_M_CA.value()).get_length() > T.CA().get_length() / 4)
+    return false;
+
+  return true;
 }
 
 bool BasicAlgorithm::neighbor_triangles_normal_check(const Triangle &T1,
@@ -1636,6 +1689,8 @@ void BasicAlgorithm::calculate() {
   //  my_mesh.measure(bounding_edges, F, name, e_size);
   //  my_mesh.adaptive(0.005, F, e_size);
   // my_mesh.mesh_format(name);
+  cout << "Final triangles count: ";
+  my_mesh.cout_triangles_number();
   return;
 }
 

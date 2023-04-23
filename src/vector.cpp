@@ -12,7 +12,7 @@ numeric Vector::get_length_squared() const {
   return pow(_x, numeric(2)) + pow(_y, numeric(2)) + pow(_z, numeric(2));
 }
 numeric Vector::get_length() const { return sqrt(get_length_squared()); }
-bool Vector::is_zero() const { return (get_length() < kEps); }
+bool Vector::is_zero() const { return (get_length() < kEps * kEps); }
 Vector Vector::unit() const {
   assertm(!is_zero(), "Uniting zero vector");
   return Vector(*this / get_length());

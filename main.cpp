@@ -449,7 +449,7 @@ int main() {
   // run_input(0, "/sing_surfaces/A2", "my_run_input");
   // run_input(0, "/sing_surfaces/A3", "my_run_input");
   // run_input(0, "/sing_surfaces/A4", "my_run_input");
-  run_all(0, 1, "/sing_surfaces/E7", "TEXT");
+  run_all(7, 7, "/sing_surfaces/D5", "measure");
   // run_all_plane(2, 2, "/1_singularity/A2", "test");
   // run_polyline(0.35);
   // run_all(2, 2, "/sing_surfaces/A2-plane",

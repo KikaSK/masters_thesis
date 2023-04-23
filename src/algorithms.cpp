@@ -171,10 +171,10 @@ std::pair<Point, Point> _circular_bisect(const Function &F,
                                                  F.get_y() == end_point.y(),
                                                  F.get_z() == end_point.z()})
                                 .evalf());
-  if (abs(subs_start) < kEps) {
+  if (abs(subs_start) < kEps * kEps) {
     return {start_point, start_point};
   }
-  if (abs(subs_end) < kEps) {
+  if (abs(subs_end) < kEps * kEps) {
     return {end_point, end_point};
   }
   const Point &mid_point = rotate(singular_point, start_point, u, angle / 2);
@@ -185,7 +185,7 @@ std::pair<Point, Point> _circular_bisect(const Function &F,
                                                  F.get_y() == mid_point.y(),
                                                  F.get_z() == mid_point.z()})
                                 .evalf());
-  if (abs(subs_mid) < kEps) {
+  if (abs(subs_mid) < kEps * kEps) {
     return {mid_point, mid_point};
   }
   if (subs_start * subs_mid < 0) {

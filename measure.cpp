@@ -132,6 +132,7 @@ pair<numeric, numeric> mean_std(const vector< pair<Point, vector<int> > > & poin
     numeric sum_avg = 0;
     numeric sum_std = 0;
     for (auto p : points){
+        if(p.second.size() == 0) continue;
         Point P = p.first;
         numeric sum = 0;
         for(auto index : p.second){
@@ -178,10 +179,10 @@ void measure (const vector<pair<Point, vector<int> > > &mesh_points,
     auto avg_mean_std = mean_std(mesh_points);
     double avg_mean_neighbour_points_dist = to_double(avg_mean_std.first);
     double avg_std_neighbour_points_dist = to_double(avg_mean_std.second);
-    auto min_max_angle = min_max_normal_angle(mesh_edges, F, e_size);
+    //auto min_max_angle = min_max_normal_angle(mesh_edges, F, e_size);
 
-    double min_normal_angle = to_double(min_max_angle.first*100);
-    double max_normal_angle = to_double(min_max_angle.second);
+    //double min_normal_angle = to_double(min_max_angle.first*100);
+    //double max_normal_angle = to_double(min_max_angle.second);
     double d_e_size = to_double(e_size);
 
     cout<<"Measure done."<<endl;
@@ -192,8 +193,8 @@ void measure (const vector<pair<Point, vector<int> > > &mesh_points,
     out << std::fixed;
 
     out << std::setprecision(3) << d_e_size << " & " << avg_side_length/d_e_size << " & " << avg_gc_dist/d_e_size << " & " <<
-    avg_max_side_ratio << " & " << max_gc_dist/d_e_size << " & " << min_normal_angle << " & " <<
-    max_normal_angle << " & " << avg_mean_neighbour_points_dist/d_e_size << " & " << 
+    avg_max_side_ratio << " & " << max_gc_dist/d_e_size << " & " << 
+    avg_mean_neighbour_points_dist/d_e_size << " & " << 
     avg_std_neighbour_points_dist/d_e_size << "\\\\" << endl << endl;
 
     out<<avg_gc_dist/avg_side_length<<endl<<endl;
@@ -214,8 +215,8 @@ void measure (const vector<pair<Point, vector<int> > > &mesh_points,
 
     out << "MIN and MAX: " << endl;
     out << "Hausdorff distance - Max gc distance: " << max_gc_dist << endl;
-    out << "Min neighbour triangles normals angle: " << min_normal_angle << endl;
-    out << "Max neighbour triangles normals angle: " << max_normal_angle << endl << endl;
+    //out << "Min neighbour triangles normals angle: " << min_normal_angle << endl;
+    //out << "Max neighbour triangles normals angle: " << max_normal_angle << endl << endl;
 
     out << "RATIOS:" << endl;
 //   out << "Average trinagle area to ideal triangle area: " << avg_tri_area/ideal_triangle_area << endl;
@@ -348,7 +349,12 @@ void load_data_new_obj(std::ifstream& obj_file, vector<pair<Point,vector<int>> >
         else if (type == "f") {
             int i0, i1, i2;
             obj_file >> i0 >> i1 >> i2;
-            Triangle T(mesh_points[i0-1].first, mesh_points[i1-1].first, mesh_points[i2-1].first);
+            Point A = mesh_points[i0-1].first;
+            Point B = mesh_points[i1-1].first;
+            Point C = mesh_points[i2-1].first;
+            if (A==B || B==C || A==C) continue;
+            Triangle T(A, B, C);
+            if(!T.is_triangle()) continue;
             mesh_triangles.push_back(T);
             int indA = i0-1;
             int indB = i1-1;
@@ -494,7 +500,7 @@ int main(){
     // bol vytvoreny s predponou "measure" (predpona, ktoru si volime pri spustani algoritmu v main.cpp)
     // vystupny subor vlozi do priecinka "/measure/measure_data/finite_surfaces/sphere" a nazve ho s 
     // predponou "measure"
-    run_all(0,0, "/sing_surfaces/A1", "singsurf");
+    run_all(0,0, "/sing_surfaces/A2", "singsurf");
 
     // zmeria modely vyprodukovane vstupnymi suboromi "input1", "input2", "input3" v priecinku 
     // "/measure/inputs/adaptive_height/neighbour_influence_adapt", ocakava, ze model sa nachadza 

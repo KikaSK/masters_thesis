@@ -128,8 +128,8 @@ class Mesh {
   bool active_edges_empty() const;
   bool checked_edges_empty() const;
 
-  bool check_Delaunay(const HalfEdge &working_edge,
-                      const Point &new_point) const;
+  bool check_Delaunay(const HalfEdge &working_edge, const Point &new_point,
+                      const numeric &e_size) const;
   vector<MeshPoint> get_breakers(const Triangle &T) const;
   vector<MeshPoint> get_meshpoints_in_interval(numeric min_x, numeric max_x,
                                                numeric min_y, numeric max_y,
@@ -137,7 +137,7 @@ class Mesh {
                                                numeric max_z) const;
 
   void obj_format(const std::string &name) const;
-  void mesh_format(const std::string &name) const;
+  // void mesh_format(const std::string &name) const;
   bool edges_check(const std::string &message,
                    const HalfEdgeIndex working_edge = kInvalidEdgeIndex) const;
   NewTriangleType _find_type(const HalfEdgeIndex index_AB,

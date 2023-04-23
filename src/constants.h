@@ -6,7 +6,7 @@ using HalfEdgeIndex = int;
 using MeshPointIndex = int;
 using FaceIndex = int;
 
-static GiNaC::numeric kEps = GiNaC::numeric(10e-5);
+static GiNaC::numeric kEps = GiNaC::numeric(10e-7);
 void set_epsylon(GiNaC::numeric edge_size);
 
 constexpr HalfEdgeIndex kInvalidEdgeIndex = -1;

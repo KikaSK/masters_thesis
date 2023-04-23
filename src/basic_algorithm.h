@@ -148,6 +148,7 @@ name == "./outputs/my_run_input_D4--_0.3"
 
   void create_triangle(const HalfEdge &working_edge, const Point &P,
                        const bool is_new, const MeshPointIndex index_P = -1);
+  bool gc_distance_check(const Triangle T) const;
   bool good_edges(const HalfEdge &working_edge, const Point &P) const;
   bool good_new_point(const MeshPoint &point) const;
   bool basic_triangle(const HalfEdge &working_edge, const MeshPoint &point);

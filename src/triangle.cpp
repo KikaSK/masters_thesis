@@ -58,7 +58,7 @@ Point Triangle::get_circumcenter() const {
   Vector AC(_A, _C);
 
   assertm(_B != _C, "Same edges in triangle.");
-  assertm(((AB ^ AC).get_length()) > kEps,
+  assertm(((AB ^ AC).get_length()) > kEps * kEps,
           "Edges of triangle lineary dependent!");
   Point circumcenter(_A, (AC.get_length_squared() * ((AB ^ AC) ^ AB) +
                           AB.get_length_squared() * ((AC ^ AB) ^ AC)) /
