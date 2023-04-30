@@ -1,4 +1,4 @@
-name: "A2+-example"
+name: "A2+-example-1"
 index: "0.1"
 function: "x*z+y^2*(x+y+z)"
 min x: "-2"

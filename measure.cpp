@@ -191,12 +191,22 @@ void measure (const vector<pair<Point, vector<int> > > &mesh_points,
 
 
     out << std::fixed;
+    out << std::setprecision(3) << avg_max_side_ratio << " & " << max_gc_dist << " & " <<
+    avg_gc_dist << " & " << 
+    avg_mean_neighbour_points_dist << " & " << 
+    avg_std_neighbour_points_dist << "\\\\" << endl << endl;
 
+
+    out << std::fixed;
+    out << std::setprecision(3) << avg_max_side_ratio << " & " << max_gc_dist << " & " <<
+    avg_gc_dist << " & " << 
+    avg_std_neighbour_points_dist << "\\\\" << endl << endl;
+/*
     out << std::setprecision(3) << d_e_size << " & " << avg_side_length/d_e_size << " & " << avg_gc_dist/d_e_size << " & " <<
     avg_max_side_ratio << " & " << max_gc_dist/d_e_size << " & " << 
     avg_mean_neighbour_points_dist/d_e_size << " & " << 
     avg_std_neighbour_points_dist/d_e_size << "\\\\" << endl << endl;
-
+*/
     out<<avg_gc_dist/avg_side_length<<endl<<endl;
 
     out << "DATA:" << endl;
@@ -438,7 +448,7 @@ void run_input(const int i, const string folder, const string index){
     string name;
     if(index == "singsurf")
         name = parsed_input[0];
-    else if(index == "me")
+    else if(index == "uniform" || index == "adaptive")
         name = parsed_input[0] + "_" + parsed_input[1];
 
     ex input_F = reader(parsed_input[2]);
@@ -461,8 +471,10 @@ void run_input(const int i, const string folder, const string index){
     Function F(x, y, z, input_F, input_dF);
     cout<<"Name:" << name << endl;
     string file_name;
-    if (index == "me")
-        file_name = "/me/" + name + "_uniform" + ".obj";
+    if (index == "uniform")
+        file_name = "/uniform/" + name + "_uniform" + ".obj";
+    else if(index == "adaptive")
+        file_name = "/adaptive/" + name + "_adaptive" + ".obj";
     else if(index == "singsurf")
         file_name = "/singsurf/" + name + ".obj";
 
@@ -500,8 +512,30 @@ int main(){
     // bol vytvoreny s predponou "measure" (predpona, ktoru si volime pri spustani algoritmu v main.cpp)
     // vystupny subor vlozi do priecinka "/measure/measure_data/finite_surfaces/sphere" a nazve ho s 
     // predponou "measure"
-    run_all(0,0, "/sing_surfaces/A2", "singsurf");
-
+    run_input(4, "/sing_surfaces/A1", "adaptive");
+    /*run_all(3, 3, "/sing_surfaces/A1", "singsurf");
+    run_all(3, 3, "/sing_surfaces/A1", "me");
+    run_all(4, 5, "/sing_surfaces/A2", "singsurf");
+    run_all(4, 5, "/sing_surfaces/A2", "me");
+    
+    run_all(2, 3, "/sing_surfaces/A3", "singsurf");
+    run_all(2, 3, "/sing_surfaces/A3", "me");
+    run_all(2, 3, "/sing_surfaces/A4", "singsurf");
+    run_all(2, 3, "/sing_surfaces/A4", "me");
+    */
+    
+    //run_all(2, 2, "/sing_surfaces/D4", "singsurf");
+    //run_all(2, 2, "/sing_surfaces/D4", "me");
+    //run_all(6, 7, "/sing_surfaces/D5", "singsurf");
+    //run_all(6, 7, "/sing_surfaces/D5", "me");
+    /*
+    run_all(4, 5, "/sing_surfaces/E6", "singsurf");
+    run_all(4, 5, "/sing_surfaces/E6", "me");
+    run_all(2, 2, "/sing_surfaces/E7", "singsurf");
+    run_all(2, 2, "/sing_surfaces/E7", "me");
+    run_all(2, 2, "/sing_surfaces/E8", "singsurf");
+    run_all(2, 2, "/sing_surfaces/E8", "me");
+    */
     // zmeria modely vyprodukovane vstupnymi suboromi "input1", "input2", "input3" v priecinku 
     // "/measure/inputs/adaptive_height/neighbour_influence_adapt", ocakava, ze model sa nachadza 
     // v priecinku "/measure/outputs/adaptive_height/neighbour_influence_adapt" a ze 

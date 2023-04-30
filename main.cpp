@@ -19,6 +19,7 @@
 #include "function.h"
 #include "mesh.h"
 #include "point.h"
+#include "singularity.h"
 #include "triangle.h"
 #include "vector.h"
 
@@ -63,7 +64,12 @@ void run_input(const int i, const string folder, const string index) {
 
   parser reader(table);
   // regex for An-- singularities
-  std::regex An_regex("A[0-9]+--.*");
+  std::regex Amm_regex("A[0-9]+--.*");
+  std::regex Apm_regex("A[0-9]+[+]-.*");
+  std::regex Dmm_regex("D[0-9]+--.*");
+  std::regex Dpm_regex("D[0-9]+[+]-.*");
+  std::regex Epm_regex("E[0-9]+[+]-.*");
+  std::regex Epp_regex("E[0-9]+[+][+].*");
 
   string name = index_str + "_" + parsed_input[0] + "_" + parsed_input[1];
   cout << "Triangulation of " << parsed_input[0] << " with edge size "
@@ -85,21 +91,38 @@ void run_input(const int i, const string folder, const string index) {
   vector<Point> singular_points;
   vector<vector<Vector>> singular_directions;
   vector<int> types;
+  vector<Singularity> singularities;
   for (int i = 0; i < num_of_singular - 0.5; ++i) {
-    if (std::regex_match(parsed_input[0], An_regex)) {
-      string s;
-      for (int i = 1; i < 4; ++i) {
-        if (parsed_input[0][i] != '-')
-          s.push_back(parsed_input[0][i]);
-        else
-          break;
-      }
-      types.push_back(stoi(s));
+    Singularity sing;
+    if (std::regex_match(parsed_input[0], Amm_regex)) {
+      sing.set_type(SingularityType::Amm);
+    } else if (std::regex_match(parsed_input[0], Apm_regex)) {
+      sing.set_type(SingularityType::Apm);
+    } else if (std::regex_match(parsed_input[0], Dmm_regex)) {
+      sing.set_type(SingularityType::Dmm);
+    } else if (std::regex_match(parsed_input[0], Dpm_regex)) {
+      sing.set_type(SingularityType::Dpm);
+    } else if (std::regex_match(parsed_input[0], Epm_regex)) {
+      sing.set_type(SingularityType::Epm);
+    } else if (std::regex_match(parsed_input[0], Epp_regex)) {
+      sing.set_type(SingularityType::Epp);
+    } else {
+      assertm(false, "Wrong input!");
     }
+    string str_n;
+    for (int i = 1; i < 4; ++i) {
+      if (parsed_input[0][i] != '-' && parsed_input[0][i] != '+')
+        str_n.push_back(parsed_input[0][i]);
+      else
+        break;
+    }
+    types.push_back(stoi(str_n));
+    sing.set_n(stoi(str_n));
     numeric p_x = ex_to<numeric>(stod(parsed_input[14 + 3 * i]));
     numeric p_y = ex_to<numeric>(stod(parsed_input[15 + 3 * i]));
     numeric p_z = ex_to<numeric>(stod(parsed_input[16 + 3 * i]));
     singular_points.push_back(Point(p_x, p_y, p_z));
+    sing.set_location(Point(p_x, p_y, p_z));
     singular_directions.push_back(vector<Vector>());
     numeric num_of_branches = ex_to<numeric>(stod(parsed_input[17 + 3 * i]));
     for (int j = 0; j < num_of_branches - 0.5; ++j) {
@@ -108,7 +131,9 @@ void run_input(const int i, const string folder, const string index) {
       numeric d_z = ex_to<numeric>(stod(parsed_input[20 + 3 * i + 3 * j]));
       singular_directions[singular_directions.size() - 1].push_back(
           Vector(d_x, d_y, d_z));
+      sing.add_direction(Vector(d_x, d_y, d_z));
     }
+    singularities.push_back(sing);
   }
   /*
   for (auto p : singular_points) std::cout << "point: " << p << endl;
@@ -125,10 +150,13 @@ void run_input(const int i, const string folder, const string index) {
 
   Function F(x, y, z, input_F, input_dF);
   std::cout << F.get_function() << endl;
-
+  /*
+    BasicAlgorithm alg("./outputs/" + name, F, seed_point, e_size, x, y, z,
+                       my_bounding_box, singular_points, singular_directions,
+                       types);*/
   BasicAlgorithm alg("./outputs/" + name, F, seed_point, e_size, x, y, z,
-                     my_bounding_box, singular_points, singular_directions,
-                     types);
+                     my_bounding_box, singularities);
+
   cout << "Basic algorithm created, calling for calculate()!" << endl;
   // alg.my_mesh.obj_format("./outputs/" + name);
 
@@ -239,10 +267,13 @@ void run_input_plane(const int i, const string folder, const string index) {
   input_dF.push_back(diff(final_eq, z));
 
   Function F(x, y, z, final_eq, input_dF);
+  // TODO rewrite input format
+  /*
   BasicAlgorithm alg("./outputs/" + name, F, singular_points[0], e_size, x, y,
                      z, my_bounding_box, singular_points, singular_directions,
                      types);
   cout << "Basic algorithm created, calling for calculate()!" << endl;
+  */
   // alg.my_mesh.obj_format("./outputs/" + name);
 
   /*assertm(seed_triangle.A() == sing_point,
@@ -250,7 +281,7 @@ void run_input_plane(const int i, const string folder, const string index) {
   assertm(F.eval_at_point(sing_point) < kEps,
           "Singular point not lying on surface!");
   assertm(false, "breakpoint");*/
-  alg.calculate();
+  // alg.calculate();
 }
 
 // runs multiple inputs, creates output files in "/output" folder
@@ -449,7 +480,7 @@ int main() {
   // run_input(0, "/sing_surfaces/A2", "my_run_input");
   // run_input(0, "/sing_surfaces/A3", "my_run_input");
   // run_input(0, "/sing_surfaces/A4", "my_run_input");
-  run_all(7, 7, "/sing_surfaces/D5", "measure");
+  run_all(1, 1, "/sing_surfaces/D4", "measure");
   // run_all_plane(2, 2, "/1_singularity/A2", "test");
   // run_polyline(0.35);
   // run_all(2, 2, "/sing_surfaces/A2-plane",

@@ -8,6 +8,7 @@
 #include "bounding_box.h"
 #include "function.h"
 #include "mesh.h"
+#include "singularity.h"
 #include "triangle.h"
 
 using GiNaC::realsymbol;
@@ -16,6 +17,75 @@ using std::string;
 
 class BasicAlgorithm {
  public:
+  explicit BasicAlgorithm(string name, Function f, Point seed_point,
+                          numeric e_size, realsymbol x, realsymbol y,
+                          realsymbol z, BoundingBox bounding_box,
+                          const vector<Singularity> &singularities)
+      : name(name),
+        F(f),
+        e_size(e_size),
+        x(x),
+        y(y),
+        z(z),
+        bounding_box(bounding_box) {
+    // Vector singular_direction(0, 0, 1);
+    // Vector singular_direction(-1, 0.5, 0);
+    // const Point singular_point(0, 0, 0);
+    std::cout << "Creating local mesh: " << endl;
+    std::cout << "Number of singular points: " << singularities.size() << endl;
+
+    std::regex A1(".*A[0-9]*[02468][+][-].*");
+    std::regex D1(".*D[0-9]*[02468][+][-].*");
+    std::regex E1(".*((E6[+][+])|(E8[+][+])|(E6[+]-)).*");
+
+    std::regex A2(".*A[0-9]*[13579][+][-].*");
+    std::regex D2(".*D[0-9]*[13579][+][-].*");
+
+    std::regex A3(".*A[0-9]+[-][-].*");
+
+    for (int j = 0; j < singularities.size(); ++j) {
+      const Point singular_point = singularities[j].location();
+      for (int i = 0; i < singularities[j].get_directions_count(); ++i) {
+        Vector singular_direction = singularities[j].get_direction(i);
+        std::cout << "Sing dir: " << singular_direction << endl;
+        if (std::regex_match(name, A1) || 
+            std::regex_match(name, D1) ||
+            std::regex_match(name, E1)  /*||
+            name == "./outputs/my_run_input_A2+-_0.9" ||
+            name == "./outputs/TEXT_A2+-_0.5" ||
+            name == "./outputs/TEXT_A2-example-1_0.2" ||
+            name == "./outputs/my_run_input_A2-example-1_0.2" ||
+            name == "./outputs/my_run_input_A4+-_1"*/) {
+          std::cout << "group1" << endl;
+
+          triangulate_singularity_case2(singularities[j], i,
+                                        (i == 0) ? kInvalidPointIndex : 0);
+        } else if (std::regex_match(name, A2) /*||
+std::regex_match(name, D2)
+name == "./outputs/my_run_input_D4--_0.4" ||
+name == "./outputs/my_run_input_D4--_0.2" ||
+name == "./outputs/my_run_input_D4--_0.5" ||
+name == "./outputs/my_run_input_D4--_0.6" ||
+name == "./outputs/my_run_input_D4--_0.1" ||
+name == "./outputs/my_run_input_D4--_0.3"
+*/) {
+          std::cout << "group2" << endl;
+          triangulate_singularity_circular(singularities[j], i,
+                                           (i == 0) ? kInvalidPointIndex : 0);
+        } else if (std::regex_match(name, A3)) {
+          std::cout << "group3" << endl;
+          triangulate_An_analytical(singularities[j], i,
+                                    (i == 0) ? kInvalidPointIndex : 0);
+        } else {
+          std::cout << "group4" << endl;
+          triangulate_cone_iterative(singular_point, singular_direction,
+                                     &my_mesh,
+                                     (i == 0) ? kInvalidPointIndex : 0);
+        }
+      }
+    }
+  }
+  /*
   explicit BasicAlgorithm(string name, Function f, Point seed_point,
                           numeric e_size, realsymbol x, realsymbol y,
                           realsymbol z, BoundingBox bounding_box,
@@ -51,28 +121,15 @@ class BasicAlgorithm {
       for (int i = 0; i < singular_directions[j].size(); ++i) {
         Vector singular_direction = singular_directions[j][i];
         std::cout << "Sing dir: " << singular_direction << endl;
-        if (std::regex_match(name, A1) || 
+        if (std::regex_match(name, A1) ||
             std::regex_match(name, D1) ||
-            std::regex_match(name, E1)  /*||
-            name == "./outputs/my_run_input_A2+-_0.9" ||
-            name == "./outputs/TEXT_A2+-_0.5" ||
-            name == "./outputs/TEXT_A2-example-1_0.2" ||
-            name == "./outputs/my_run_input_A2-example-1_0.2" ||
-            name == "./outputs/my_run_input_A4+-_1"*/) {
+            std::regex_match(name, E1)) {
           std::cout << "group1" << endl;
 
           triangulate_singularity_case2(singular_point, singular_direction,
                                         &my_mesh,
                                         (i == 0) ? kInvalidPointIndex : 0);
-        } else if (std::regex_match(name, A2) /*||
-std::regex_match(name, D2)
-name == "./outputs/my_run_input_D4--_0.4" ||
-name == "./outputs/my_run_input_D4--_0.2" ||
-name == "./outputs/my_run_input_D4--_0.5" ||
-name == "./outputs/my_run_input_D4--_0.6" ||
-name == "./outputs/my_run_input_D4--_0.1" ||
-name == "./outputs/my_run_input_D4--_0.3"
-*/) {
+        } else if (std::regex_match(name, A2) ) {
           std::cout << "group2" << endl;
           triangulate_singularity_circular(singular_point, singular_direction,
                                            &my_mesh,
@@ -91,7 +148,7 @@ name == "./outputs/my_run_input_D4--_0.3"
       }
     }
   }
-
+*/
   explicit BasicAlgorithm(string name, Function f, const Function &F,
                           const Function &G, const vector<Point> &polyline,
                           numeric e_size, realsymbol x, realsymbol y,
@@ -103,7 +160,7 @@ name == "./outputs/my_run_input_D4--_0.3"
         y(y),
         z(z),
         bounding_box(bounding_box) {
-    get_local_mesh(&my_mesh, F, G, f, polyline, bounding_box, e_size);
+    get_local_mesh_curve(&my_mesh, F, G, f, polyline, bounding_box, e_size);
   }
   void calculate();
   void starting();
@@ -181,25 +238,34 @@ name == "./outputs/my_run_input_D4--_0.3"
   void triangulate_A1_starter(const Point &singular,
                               const Vector &singular_direction, Mesh *mesh,
                               const MeshPointIndex singular_index);
-  void triangulate_singularity_circular(const Point &singular,
-                                        const Vector &singular_direction,
-                                        Mesh *mesh,
+  void triangulate_singularity_circular(const Singularity &singularity,
+                                        const int branch,
                                         const MeshPointIndex singular_index);
-  void triangulate_An_analytical(const Point &singular,
-                                 const Vector &singular_direction, Mesh *mesh,
-                                 const MeshPointIndex singular_index,
-                                 const int n);
-  void triangulate_singularity_case2(const Point &singular,
-                                     const Vector &singular_direction,
-                                     Mesh *mesh,
+  void triangulate_An_analytical(const Singularity &singularity,
+                                 const int branch,
+                                 const MeshPointIndex singular_index);
+  void triangulate_singularity_case2(const Singularity &singularity,
+                                     const int branch,
                                      const MeshPointIndex singular_index);
   void triangulate_cone_iterative(const Point &singular,
                                   const Vector &singular_direction, Mesh *mesh,
                                   const MeshPointIndex singular_index);
 
-  void get_local_mesh(Mesh *local_mesh, const Function &_F, const Function &_G,
-                      const Function &inter_FG, const vector<Point> &polyline,
-                      const BoundingBox &bounding_box, const numeric e_size);
+  void get_local_mesh_curve(Mesh *local_mesh, const Function &_F,
+                            const Function &_G, const Function &inter_FG,
+                            const vector<Point> &polyline,
+                            const BoundingBox &bounding_box,
+                            const numeric e_size);
+  void get_local_mesh_point(const vector<vector<Point>> &points,
+                            const Singularity &singularity,
+                            const MeshPointIndex singular_index,
+                            const int num_triangles, const int branch,
+                            const int layers);
+  void get_points_singular_point(const Singularity singularity,
+                                 const int num_triangles,
+                                 const numeric &edge_length,
+                                 vector<vector<Point>> &points,
+                                 const int branch = 0, const int layers = 1);
 
  private:
   string name;

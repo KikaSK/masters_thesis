@@ -1,4 +1,4 @@
-name: "A2--example"
+name: "A2--example-2"
 index: "0.1"
 function: "x^2+y^2+z^3+3.2*(x^3-3*x*y^2)"
 min x: "-1.5"

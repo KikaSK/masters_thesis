@@ -46,24 +46,19 @@ bool Function::is_outside(const Point &P) const {
 }
 
 Vector Function::outside_normal(const Triangle &T, const numeric e_size) const {
-  // std::cout << "Triangle " << T << endl;
   Vector normal = T.get_normal();
   Point A = T.B();  // numeric(1) / numeric(3) * (T.A() + T.B() + T.C());
   if (is_inside(Point(A, numeric(0.1) * e_size * normal)) &&
       !is_inside(Point(A, -numeric(0.1) * e_size * normal))) {
-    // std::cout << "case1" << endl;
     return numeric(-1) * normal;
   } else if (!is_inside(Point(A, numeric(0.1) * e_size * normal)) &&
              is_inside(Point(A, -numeric(0.1) * e_size * normal))) {
-    // std::cout << "case2" << endl;
     return normal;
   } else if (is_inside(Point(A, numeric(0.1) * e_size * normal)) &&
              is_inside(Point(A, -numeric(0.1) * e_size * normal))) {
-    // std::cout << "case3" << endl;
     return outside_normal(T, e_size * 1.1);
   } else if (!is_inside(Point(A, numeric(0.1) * e_size * normal)) &&
              !is_inside(Point(A, -numeric(0.1) * e_size * normal))) {
-    // std::cout << "case4" << endl;
     return outside_normal(T, e_size / 1.1);
   }
   assertm(false, "Should not get here!");

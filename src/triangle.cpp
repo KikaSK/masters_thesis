@@ -37,7 +37,8 @@ bool Triangle::is_triangle() const {
   auto a = _AB.get_length();
   auto b = _BC.get_length();
   auto c = _CA.get_length();
-  return (a + b > c + kEps) && (b + c > a + kEps) && (a + c > b + kEps);
+  return (a + b > c + kEps * kEps) && (b + c > a + kEps * kEps) &&
+         (a + c > b + kEps * kEps);
 }
 
 // returns unit normal vector of triangle
