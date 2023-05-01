@@ -115,7 +115,8 @@ void BasicAlgorithm::get_points_singular_point(const Singularity singularity,
                                                vector<vector<Point>> &points,
                                                const int branch,
                                                const int layers) {
-  Vector unit_singular_direction = singularity.get_direction(branch).unit();
+  const Vector unit_singular_direction =
+      singularity.get_direction(branch).unit();
   Vector plane_vector = unit_singular_direction.get_any_perpendicular().unit();
   const Vector &u = unit_singular_direction;
   const numeric COS = GiNaC::ex_to<numeric>(
@@ -139,6 +140,7 @@ void BasicAlgorithm::get_points_singular_point(const Singularity singularity,
     h = edge_length;
   }
   numeric h_layer, e_layer;
+  const numeric delta_angle = GiNaC::ex_to<numeric>(GiNaC::Pi.evalf() / 36);
   for (int layer = 0; layer < layers; ++layer) {
     h_layer = (layer + 1) * h / (numeric)layers;
     e_layer = pow(h_layer, ((numeric)singularity.n() + 1) / (numeric)2);
@@ -155,45 +157,68 @@ void BasicAlgorithm::get_points_singular_point(const Singularity singularity,
     points.push_back(vector<Point>());
     for (int i = 0; i < num_triangles; ++i) {
       Point new_point;
-      if (singularity.type() == SingularityType::Amm) {
+      if (singularity.type() == SingularityType::Amm) {  // group 0 - analytical
         new_point = Point(singularity.x() + direction_layer.x(),
                           singularity.y() + direction_layer.y(),
                           singularity.z() + direction_layer.z());
-      }
-      numeric mult = 1.0;
-      if ((singularity.type() == SingularityType::Apm) ||
-          (singularity.type() == SingularityType::Dpm &&
-           singularity.n() % 2 == 0) ||
-          (singularity.type() == SingularityType::Epp &&
-           singularity.n() % 2 == 0) ||
-          singularity.type() == SingularityType::Epm) {
+      } else if ((singularity.type() == SingularityType::Apm) ||
+                 (singularity.type() == SingularityType::Dpm &&
+                  singularity.n() % 2 == 0) ||
+                 (singularity.type() == SingularityType::Epp &&
+                  singularity.n() % 2 == 0) ||
+                 singularity.type() ==
+                     SingularityType::Epm) {  // group 1 - circular bisection
         Point start_point_to_bisect, end_point_to_bisect;
         numeric angle;
         if (singularity.type() == SingularityType::Apm &&
             singularity.n() % 2 == 1) {
           start_point_to_bisect =
-              Point(singularity.location(), h_layer * mult * plane_vector);
+              Point(singularity.location(), h_layer * plane_vector);
           direction_layer = (plane_vector ^ unit_singular_direction).unit();
           angle = GiNaC::ex_to<numeric>((GiNaC::Pi / 2).evalf());
         } else {
           start_point_to_bisect =
-              Point(singularity.location(),
-                    -h_layer * mult * unit_singular_direction);
+              Point(singularity.location(), -h_layer * unit_singular_direction);
 
           direction_layer = (plane_vector).unit();
           angle = GiNaC::ex_to<numeric>((GiNaC::Pi).evalf());
         }
-        end_point_to_bisect = Point(singularity.location(),
-                                    h_layer * mult * unit_singular_direction);
+        end_point_to_bisect =
+            Point(singularity.location(), h_layer * unit_singular_direction);
         new_point =
             circular_bisection(F, singularity.location(), start_point_to_bisect,
-                               angle, direction_layer, h_layer * mult);
+                               angle, direction_layer, h_layer);
 
         plane_vector =
             Vector(rot_vector_x * plane_vector, rot_vector_y * plane_vector,
                    rot_vector_z * plane_vector);
+      } else {  // group 3 - iterative binary search
+        Point start_point_to_bisect(singularity.location(),
+                                    h_layer * unit_singular_direction);
+        Point end_point_to_bisect = start_point_to_bisect;
+        int iter = 0;
+        while (F.eval_at_point(start_point_to_bisect) *
+                   F.eval_at_point(end_point_to_bisect) >
+               0) {
+          assertm(iter <= 71, "Too many iterations!");
+          end_point_to_bisect =
+              rotate(singularity.location(), end_point_to_bisect, plane_vector,
+                     delta_angle);
+          iter++;
+        }
+        new_point =
+            circular_bisection(F, singularity.location(), start_point_to_bisect,
+                               iter * delta_angle, plane_vector, h_layer);
+        plane_vector = Vector(
+            singularity.location(),
+            rotate(
+                singularity.location(),
+                Point(plane_vector.x() - singularity.x(),
+                      plane_vector.y() - singularity.y(),
+                      plane_vector.z() - singularity.z()),
+                u,
+                GiNaC::ex_to<numeric>(2 * GiNaC::Pi.evalf() / num_triangles)));
       }
-      std::cout << "point: " << new_point << endl;
       points[layer].push_back(new_point);
       // checks if the point is in the correct halfspace
       assertm(unit_singular_direction * direction_layer >= 0,
@@ -202,7 +227,79 @@ void BasicAlgorithm::get_points_singular_point(const Singularity singularity,
           Vector(rot_vector_x * direction_layer, rot_vector_y * direction_layer,
                  rot_vector_z * direction_layer);
     }
+    if (num_triangles == 8) {
+      numeric dist01 = Vector(points[layer][0], points[layer][1]).get_length();
+      numeric dist12 = Vector(points[layer][1], points[layer][2]).get_length();
+      numeric dist02 = Vector(points[layer][0], points[layer][2]).get_length();
+      numeric dist_difference = abs(dist01 - dist12);
+      numeric angle1 = 0;
+      numeric angle2 = GiNaC::ex_to<numeric>((GiNaC::Pi / 2).evalf());
+      plane_vector = unit_singular_direction.get_any_perpendicular().unit();
+      Point new_point;
+      Vector rotated_plane_vector = plane_vector;
+      int iter = 0;
+      std::cout << "dist_diff: " << dist_difference << " dist02: " << dist02
+                << endl;
+      while (dist_difference > dist02 / 10 && iter < 100) {
+        iter++;
+        numeric angle_mid = (angle1 + angle2) / 2;
+        std::cout << "inside, angle mid: " << angle_mid << endl;
+
+        if ((singularity.type() == SingularityType::Apm) ||
+            (singularity.type() == SingularityType::Dpm &&
+             singularity.n() % 2 == 0) ||
+            (singularity.type() == SingularityType::Epp &&
+             singularity.n() % 2 == 0) ||
+            singularity.type() == SingularityType::Epm) {
+          rotated_plane_vector =
+              Vector(singularity.location(),
+                     rotate(singularity.location(),
+                            Point(plane_vector.x() - singularity.x(),
+                                  plane_vector.y() - singularity.y(),
+                                  plane_vector.z() - singularity.z()),
+                            u, angle_mid));
+
+          Point start_point_to_bisect, end_point_to_bisect;
+          numeric angle;
+          if (singularity.type() == SingularityType::Apm &&
+              singularity.n() % 2 == 1) {
+            start_point_to_bisect =
+                Point(singularity.location(), h_layer * rotated_plane_vector);
+            direction_layer =
+                (rotated_plane_vector ^ unit_singular_direction).unit();
+            angle = GiNaC::ex_to<numeric>((GiNaC::Pi / 2).evalf());
+          } else {
+            start_point_to_bisect = Point(singularity.location(),
+                                          -h_layer * unit_singular_direction);
+
+            direction_layer = (rotated_plane_vector).unit();
+            angle = GiNaC::ex_to<numeric>((GiNaC::Pi).evalf());
+          }
+          end_point_to_bisect =
+              Point(singularity.location(), h_layer * unit_singular_direction);
+          new_point = circular_bisection(F, singularity.location(),
+                                         start_point_to_bisect, angle,
+                                         direction_layer, h_layer);
+        }
+        points[layer][1] = new_point;
+        dist01 = Vector(points[layer][0], points[layer][1]).get_length();
+        dist12 = Vector(points[layer][1], points[layer][2]).get_length();
+        dist_difference = abs(dist01 - dist12);
+        if (dist01 > dist12) {
+          angle2 = angle_mid;
+        } else {  // if(dist01 < dist12)
+          angle1 = angle_mid;
+        }
+      }
+      points[layer][3] = Point(new_point.x(), new_point.y(), -new_point.z());
+      points[layer][5] = Point(-new_point.x(), new_point.y(), -new_point.z());
+      points[layer][7] = Point(-new_point.x(), new_point.y(), new_point.z());
+    }
+    for (auto point : points[layer]) {
+      std::cout << "point: " << point << endl;
+    }
   }
+  return;
 }
 
 void BasicAlgorithm::get_local_mesh_point(const vector<vector<Point>> &points,
@@ -259,6 +356,73 @@ void BasicAlgorithm::get_local_mesh_point(const vector<vector<Point>> &points,
   }
 }
 
+void BasicAlgorithm::triangulate_singular_point_local(
+    const Singularity &singularity, const int branch,
+    const MeshPointIndex singular_index) {
+  int num_triangles;
+  int layers;
+  numeric length;
+  if (singularity.type() == SingularityType::Amm) {  // An--
+    num_triangles = 6;
+    layers = singularity.n();
+    length = e_size;
+  } else if (singularity.type() == SingularityType::Apm &&
+             singularity.n() % 2 == 0)  // A2+-, A4+-, A6+-, ...
+  {
+    num_triangles = 8;
+    layers = 3;
+    length = layers * e_size;
+  } else if (singularity.type() == SingularityType::Apm &&
+             singularity.n() & 2 == 1) {  // A1+-, A3+-, A5+-, ...
+    num_triangles = 6;
+    layers = 4;
+    length = layers * e_size;
+  } else if (singularity.type() == SingularityType::Dpm &&
+             singularity.n() % 2 == 0) {  // D4+-, D6+-, D8+-, ...
+    num_triangles = 8;
+    layers = 3;
+    length = layers * e_size;
+  } else if (singularity.type() == SingularityType::Epm) {  // E6+-
+    num_triangles = 4;                                      // 8;
+    layers = 3;
+    length = layers * e_size;
+  } else if (singularity.type() == SingularityType::Epp &&
+             singularity.n() % 2 == 0) {  // E6++, E8++
+    num_triangles = 4;                    // 6, 8;
+    layers = 3;
+    length = layers * e_size;
+  } else if (singularity.type() == SingularityType::Epp &&
+             singularity.n() % 2 == 1) {  // E7++
+    if (branch == 0)
+      num_triangles = 6;
+    else
+      num_triangles = 4;  // 4, 8;
+    layers = 3;
+  } else if (singularity.type() == SingularityType::Dpm &&
+             singularity.n() % 2 == 1) {  // D5+-, D7+-, D9+-, ...
+    if (branch == 0)
+      num_triangles = 8;
+    else
+      num_triangles = 4;
+    layers = 3;
+    length = layers * e_size;
+  } else if (singularity.type() ==
+             SingularityType::Dmm) {  // D4--, D5--, D6--, ...
+    num_triangles = 4;
+    layers = 3;
+    length = layers * e_size;
+  } else {
+    assertm(false, "Should not get here!");
+  }
+  vector<vector<Point>> points;
+  get_points_singular_point(singularity, num_triangles, layers * e_size, points,
+                            branch, layers);
+  get_local_mesh_point(points, singularity, singular_index, num_triangles,
+                       branch, layers);
+  my_mesh.obj_format(name + "_local");
+  return;
+}
+
 void BasicAlgorithm::triangulate_An_analytical(
     const Singularity &singularity, const int branch,
     const MeshPointIndex singular_index) {
@@ -288,101 +452,6 @@ void BasicAlgorithm::triangulate_singularity_circular(
                        branch, layers);
   my_mesh.obj_format(name + "_local");
   return;
-  /*
-  Vector unit_singular_direction = singular_direction.unit();
-  Vector plane_vector = unit_singular_direction.get_any_perpendicular().unit();
-  const Vector &u = unit_singular_direction;
-
-  // rotating matrix around singular direction
-  // cos(pi/3)+ux^2*(1-cos(pi/3))          ux*uy*(1-cos(pi/3)-uz*sin(pi/3)
-  // ux*uz(1-cos(pi/3))+uy*sin(pi/3) ux*uy*(1-cos(pi/3)+uz*sin(pi/3)
-  // cos(pi/3)+uy^2*(1-cos(pi/3))         uy*uz(1-cos(pi/3))-ux*sin(pi/3)
-  // ux*uz(1-cos(pi/3))-uy*sin(pi/3)       uy*uz(1-cos(pi/3))+ux*sin(pi/3)
-  // cos(pi/3)+uz^2*(1-cos(pi/3))
-
-
-  const numeric COS = GiNaC::ex_to<numeric>(
-      GiNaC::cos(2 * GiNaC::Pi.evalf() / num_triangles).evalf());
-  const numeric SIN = GiNaC::ex_to<numeric>(
-      GiNaC::sin(2 * GiNaC::Pi.evalf() / num_triangles).evalf());
-  const Vector rot_vector_x = Vector(COS + u.x() * u.x() * (1 - COS),
-                                     u.x() * u.y() * (1 - COS) - u.z() * SIN,
-                                     u.x() * u.z() * (1 - COS) + u.y() * SIN);
-  const Vector rot_vector_y = Vector(u.x() * u.y() * (1 - COS) + u.z() * SIN,
-                                     COS + u.y() * u.y() * (1 - COS),
-                                     u.y() * u.z() * (1 - COS) - u.x() * SIN);
-  const Vector rot_vector_z = Vector(u.x() * u.z() * (1 - COS) - u.y() * SIN,
-                                     u.y() * u.z() * (1 - COS) + u.x() * SIN,
-                                     COS + u.z() * u.z() * (1 - COS));
-
-  const numeric mult = 0.8;
-  vector<Point> points;
-  for (int i = 0; i < num_triangles; ++i) {
-    Point start_point_to_bisect(singular, e_size * mult * plane_vector);
-    Point end_point_to_bisect(singular,
-                              e_size * mult * unit_singular_direction);
-    Vector rot_vector = (plane_vector ^ unit_singular_direction).unit();
-    Point projected_point =
-        circular_bisection(F, singular, start_point_to_bisect,
-                           GiNaC::ex_to<numeric>((GiNaC::Pi / 2).evalf()),
-                           rot_vector, e_size * mult);
-    points.push_back(projected_point);
-    // checks if the point is in the correct halfspace
-    Vector projected_vector = Vector(singular, projected_point);
-    assertm(unit_singular_direction * projected_vector >= 0,
-            "New point in opposite halfspace!");
-
-    plane_vector =
-        Vector(rot_vector_x * plane_vector, rot_vector_y * plane_vector,
-               rot_vector_z * plane_vector);
-  }
-  assertm(
-      singular != points[0] && singular != points[1] && points[0] != points[1],
-      "Wrong projection!");
-  const Triangle first_triangle(singular, points[0], points[1]);
-  assertm(first_triangle.is_triangle(), "Not a triangle!");
-
-  // make sure normals point outside - outside normal problem in higher degrees
-  if (first_triangle.get_normal() * F.outside_normal(first_triangle, e_size) <
-      0)
-    reverse(points.begin(), points.end());
-
-  // Mesh local_mesh;
-  for (int i = 0; i < num_triangles; ++i) {
-    int j = (i + 1) % num_triangles;
-    assertm(singularity.location() != points[0][i] &&
-                singularity.location() != points[0][j] &&
-                points[0][i] != points[0][j],
-            "Wrong projection!");
-    Triangle triangle =
-        Triangle(singularity.location(), points[0][i], points[0][j]);
-    assertm(triangle.is_triangle(), "Invalid triangle!");
-    if (i == 0) {
-      if (my_mesh.get_faces_count() == 0 ||
-          singular_index == kInvalidPointIndex) {
-        my_mesh.add_first_triangle(triangle, bounding_box);
-      } else {
-        assertm(singular_index != kInvalidPointIndex,
-                "invalid singular meshpoint index");
-        my_mesh.add_triangle_to_meshpoint(singular_index, points[0][i],
-                                          points[0][j], bounding_box);
-      }
-    } else if (i < num_triangles - 1) {
-      my_mesh.add_triangle(my_mesh.get_edges_count() - 1, points[0][j], true,
-                           bounding_box);
-      my_mesh.edges_check("in A1 round: " + std::to_string(i));
-      //,bounding_box);
-    } else {
-      my_mesh.add_triangle(my_mesh.get_edges_count() - 1, points[0][j], false,
-                           bounding_box,
-                           my_mesh.get_points_count() - num_triangles);
-      my_mesh.edges_check("in A1 round: " + std::to_string(i));
-    }
-  }
-
-  my_mesh.obj_format(name + "_local");
-  return;
-  */
 }
 
 // trinagulates singularities lying in both half-spaces having only single
@@ -398,274 +467,26 @@ void BasicAlgorithm::triangulate_singularity_case2(
                             branch, layers);
   get_local_mesh_point(points, singularity, singular_index, num_triangles,
                        branch, layers);
-  /*
-
-  Vector unit_singular_direction = singularity.get_direction(branch).unit();
-  Vector plane_vector = unit_singular_direction.get_any_perpendicular().unit();
-  const Vector &u = unit_singular_direction;
-  const int num_triangles = 8;
-  const numeric COS = GiNaC::ex_to<numeric>(
-      GiNaC::cos(2 * GiNaC::Pi.evalf() / num_triangles).evalf());
-  const numeric SIN = GiNaC::ex_to<numeric>(
-      GiNaC::sin(2 * GiNaC::Pi.evalf() / num_triangles).evalf());
-  const Vector rot_vector_x = Vector(COS + u.x() * u.x() * (1 - COS),
-                                     u.x() * u.y() * (1 - COS) - u.z() * SIN,
-                                     u.x() * u.z() * (1 - COS) + u.y() * SIN);
-  const Vector rot_vector_y = Vector(u.x() * u.y() * (1 - COS) + u.z() * SIN,
-                                     COS + u.y() * u.y() * (1 - COS),
-                                     u.y() * u.z() * (1 - COS) - u.x() * SIN);
-  const Vector rot_vector_z = Vector(u.x() * u.z() * (1 - COS) - u.y() * SIN,
-                                     u.y() * u.z() * (1 - COS) + u.x() * SIN,
-                                     COS + u.z() * u.z() * (1 - COS));
-  const numeric mult = 0.7;
-  vector<vector<Point>> points;
-  vector<vector<Point>> points_test;
-  get_points_singular_point(singularity, num_triangles, e_size, points, branch,
-                            1);
-  std::cout << "original: " << endl;
-  points.push_back(vector<Point>());
-  int extra_triangles = 0;
-  for (int i = 0; i < num_triangles + extra_triangles; ++i) {
-    Point start_point_to_bisect(singularity.location(),
-                                e_size * mult * unit_singular_direction);
-    Point end_point_to_bisect(singularity.location(),
-                              -e_size * mult * unit_singular_direction);
-    std::cout << "start: " << start_point_to_bisect
-              << " end: " << end_point_to_bisect << endl;
-    Vector rot_vector = (plane_vector).unit();
-    std::cout << "rot vector: " << rot_vector << endl;
-    Point projected_point = circular_bisection(
-        F, singularity.location(), start_point_to_bisect,
-        GiNaC::ex_to<numeric>((GiNaC::Pi).evalf()), rot_vector, e_size * mult);
-    points[0].push_back(projected_point);
-    std::cout << "point: " << projected_point << endl;
-
-    // checks if the point is in the correct halfspace
-    // Vector projected_vector = Vector(singular, projected_point);
-    // assertm(unit_singular_direction * projected_vector > 0,
-    //        "New point in opposite halfspace!");
-
-    plane_vector =
-        Vector(rot_vector_x * plane_vector, rot_vector_y * plane_vector,
-               rot_vector_z * plane_vector);
-  }
-
-  assertm(singularity.location() != points[0][0] &&
-              singularity.location() != points[0][1] &&
-              points[0][0] != points[0][1],
-          "Wrong projection!");
-  const Triangle first_triangle(singularity.location(), points[0][0],
-                                points[0][1]);
-  // make sure normals point outside
-  if (first_triangle.get_normal() * F.outside_normal(first_triangle, e_size) <
-      0)
-    std::reverse(points[0].begin(), points[0].end());
-*/
-  // Mesh local_mesh;
-  /*
-  for (int i = 0; i < num_triangles; ++i) {
-    int j = (i + 1) % num_triangles;
-    Triangle triangle =
-        Triangle(singularity.location(), points[0][i], points[0][j]);
-    assertm(singularity.location() != points[0][i] &&
-                singularity.location() != points[0][j] &&
-                points[0][i] != points[0][j],
-            "Wrong projection!");
-    assertm(triangle.is_triangle(), "Invalid triangle!");
-    if (i == 0) {
-      if (my_mesh.get_faces_count() == 0) {
-        my_mesh.add_first_triangle(triangle, bounding_box);
-      } else {
-        assertm(singular_index != kInvalidPointIndex,
-                "invalid singular meshpoint index");
-        my_mesh.add_triangle_to_meshpoint(singular_index, points[0][i],
-                                          points[0][j], bounding_box);
-      }
-    } else if (i < num_triangles - 1) {
-      my_mesh.add_triangle(my_mesh.get_edges_count() - 1, points[0][j], true,
-                           bounding_box);
-      my_mesh.edges_check("in A1 round: " + std::to_string(i));
-      //,bounding_box);
-    } else {
-      my_mesh.add_triangle(my_mesh.get_edges_count() - 1, points[0][j], false,
-                           bounding_box,
-                           my_mesh.get_points_count() - num_triangles);
-      my_mesh.edges_check("in A1 round: " + std::to_string(i));
-    }
-  }
-  */
   my_mesh.obj_format(name + "_local");
   return;
 }
 
 void BasicAlgorithm::triangulate_cone_iterative(
-    const Point &singular, const Vector &singular_direction, Mesh *mesh,
+    const Singularity &singularity, const int branch,
     const MeshPointIndex singular_index) {
-  Vector unit_singular_direction = singular_direction.unit();
-  Vector plane_vector = unit_singular_direction.get_any_perpendicular().unit();
-  const Vector &u = unit_singular_direction;
-  const int num_triangles = 4;
-  const numeric mult = 1;
-  vector<Point> points;
-  const numeric delta_angle = GiNaC::ex_to<numeric>(GiNaC::Pi.evalf() / 36);
-  for (int i = 0; i < num_triangles; ++i) {
-    Point start_point_to_bisect(singular,
-                                e_size * mult * unit_singular_direction);
-    Point end_point_to_bisect = start_point_to_bisect;
-    int iter = 0;
-    while (F.eval_at_point(start_point_to_bisect) *
-               F.eval_at_point(end_point_to_bisect) >
-           0) {
-      assertm(iter <= 71, "Too many iterations!");
-      end_point_to_bisect =
-          rotate(singular, end_point_to_bisect, plane_vector, delta_angle);
-      iter++;
-    }
-    Point projected_point =
-        circular_bisection(F, singular, start_point_to_bisect,
-                           iter * delta_angle, plane_vector, e_size * mult);
-    points.push_back(projected_point);
-    plane_vector = Vector(
-        singular,
-        rotate(singular,
-               Point(plane_vector.x() - singular.x(),
-                     plane_vector.y() - singular.y(),
-                     plane_vector.z() - singular.z()),
-               u,
-               GiNaC::ex_to<numeric>(2 * GiNaC::Pi.evalf() / num_triangles)));
-  }
+  int num_triangles = 4;
+  if (branch == 0) num_triangles = 8;
 
-  assertm(
-      singular != points[0] && singular != points[1] && points[0] != points[1],
-      "Precision error!");
-  const Triangle first_triangle(singular, points[0], points[1]);
-  // make sure normals point outside
+  int layers = 3;
 
-  if (first_triangle.get_normal() * F.outside_normal(first_triangle, e_size) <
-      0)
-    reverse(points.begin(), points.end());
-
-  // Mesh local_mesh;
-  for (int i = 0; i < num_triangles; ++i) {
-    int j = (i + 1) % num_triangles;
-    Triangle triangle = Triangle(singular, points[i], points[j]);
-    assertm(triangle.is_triangle(), "Invalid triangle!");
-    if (i == 0) {
-      if (mesh->get_faces_count() == 0) {
-        mesh->add_first_triangle(triangle, bounding_box);
-      } else {
-        assertm(singular_index != kInvalidPointIndex,
-                "invalid singular meshpoint index");
-        mesh->add_triangle_to_meshpoint(singular_index, points[i], points[j],
-                                        bounding_box);
-      }
-    } else if (i < num_triangles - 1) {
-      mesh->add_triangle(mesh->get_edges_count() - 1, points[j], true,
-                         bounding_box);
-      mesh->edges_check("in A1 round: " + std::to_string(i));
-      //,bounding_box);
-    } else {
-      mesh->add_triangle(mesh->get_edges_count() - 1, points[j], false,
-                         bounding_box,
-                         mesh->get_points_count() - num_triangles);
-      mesh->edges_check("in A1 round: " + std::to_string(i));
-    }
-  }
-
-  mesh->obj_format(name + "_local");
+  vector<vector<Point>> points;
+  get_points_singular_point(singularity, num_triangles, e_size, points, branch,
+                            layers);
+  get_local_mesh_point(points, singularity, singular_index, num_triangles,
+                       branch, layers);
+  my_mesh.obj_format(name + "_local");
   return;
 }
-
-// TODO(kuska) project via spinning, not perpendicular
-void BasicAlgorithm::triangulate_A1_starter(
-    const Point &singular, const Vector &singular_direction, Mesh *mesh,
-    const MeshPointIndex singular_index) {
-  Vector unit_singular_direction = singular_direction.unit();
-  Vector plane_vector = unit_singular_direction.get_any_perpendicular();
-  const Vector &u = unit_singular_direction;
-
-  // rotating matrix around singular direction
-  // cos(pi/3)+ux^2*(1-cos(pi/3))          ux*uy*(1-cos(pi/3)-uz*sin(pi/3)
-  // ux*uz(1-cos(pi/3))+uy*sin(pi/3) ux*uy*(1-cos(pi/3)+uz*sin(pi/3)
-  // cos(pi/3)+uy^2*(1-cos(pi/3))         uy*uz(1-cos(pi/3))-ux*sin(pi/3)
-  // ux*uz(1-cos(pi/3))-uy*sin(pi/3)       uy*uz(1-cos(pi/3))+ux*sin(pi/3)
-  // cos(pi/3)+uz^2*(1-cos(pi/3))
-
-  const int num_triangles = 5;
-
-  const numeric COS = GiNaC::ex_to<numeric>(
-      GiNaC::cos(2 * GiNaC::Pi.evalf() / num_triangles).evalf());
-  const numeric SIN = GiNaC::ex_to<numeric>(
-      GiNaC::sin(2 * GiNaC::Pi.evalf() / num_triangles).evalf());
-  const Vector rot_vector_x = Vector(COS + u.x() * u.x() * (1 - COS),
-                                     u.x() * u.y() * (1 - COS) - u.z() * SIN,
-                                     u.x() * u.z() * (1 - COS) + u.y() * SIN);
-  const Vector rot_vector_y = Vector(u.x() * u.y() * (1 - COS) + u.z() * SIN,
-                                     COS + u.y() * u.y() * (1 - COS),
-                                     u.y() * u.z() * (1 - COS) - u.x() * SIN);
-  const Vector rot_vector_z = Vector(u.x() * u.z() * (1 - COS) - u.y() * SIN,
-                                     u.y() * u.z() * (1 - COS) + u.x() * SIN,
-                                     COS + u.z() * u.z() * (1 - COS));
-
-  vector<Point> points;
-  for (int i = 0; i < num_triangles; ++i) {
-    Point point_to_project =
-        Point(singular, (sqrt(15) / 4) * plane_vector +
-                            (e_size / 4) * unit_singular_direction);
-
-    // direction of projection
-    Vector direction = F.get_gradient_at_point(point_to_project).unit();
-    std::optional<Point> projected_point =
-        project(point_to_project, direction, F, e_size);
-    assertm(projected_point.has_value(), "No value!");
-    points.push_back(projected_point.value());
-
-    // checks if the point is in the correct halfspace
-    Vector projected_vector = Vector(singular, projected_point.value());
-    assertm(direction * projected_vector > 0,
-            "New point in opposite halfspace!");
-
-    plane_vector =
-        Vector(rot_vector_x * plane_vector, rot_vector_y * plane_vector,
-               rot_vector_z * plane_vector);
-  }
-
-  const Triangle first_triangle(singular, points[0], points[1]);
-  // make sure normals point outside
-  if (first_triangle.get_normal() * F.outside_normal(first_triangle, e_size) <
-      0)
-    reverse(points.begin(), points.end());
-
-  // Mesh local_mesh;
-  for (int i = 0; i < num_triangles; ++i) {
-    int j = (i + 1) % num_triangles;
-    Triangle triangle = Triangle(singular, points[i], points[j]);
-    assertm(triangle.is_triangle(), "Invalid triangle!");
-    if (i == 0) {
-      if (mesh->get_faces_count() == 0) {
-        mesh->add_first_triangle(triangle, bounding_box);
-      } else {
-        assertm(singular_index != kInvalidPointIndex,
-                "invalid singular meshpoint index");
-        mesh->add_triangle_to_meshpoint(singular_index, points[i], points[j],
-                                        bounding_box);
-      }
-    } else if (i < num_triangles - 1) {
-      mesh->add_triangle(mesh->get_edges_count() - 1, points[j], true,
-                         bounding_box);
-      mesh->edges_check("in A1 round: " + std::to_string(i));
-      //,bounding_box);
-    } else {
-      mesh->add_triangle(mesh->get_edges_count() - 1, points[j], false,
-                         bounding_box,
-                         mesh->get_points_count() - num_triangles);
-      mesh->edges_check("in A1 round: " + std::to_string(i));
-    }
-  }
-  mesh->obj_format(name + "_local");
-  return;
-}
-
 #pragma endregion "Region singularities"
 
 #pragma region "Seed triangle"
