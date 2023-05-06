@@ -431,16 +431,18 @@ numeric get_curvedness(const Function &F, const Point &point) {
       (gradient_eval *
        (Vector(gradient_eval * Hx, gradient_eval * Hy, gradient_eval * Hz))) /
       (gradient_eval.get_length_squared() * gradient_eval.get_length_squared());
-  //std::cout << "gaussian curvature: " << gaussian_curvature << endl;
+  // std::cout << "gaussian curvature: " << gaussian_curvature << endl;
 
   numeric mean_curvature =
       ((gradient_eval *
         (Vector(gradient_eval * Gx, gradient_eval * Gy, gradient_eval * Gz))) -
        gradient_eval.get_length_squared() * (Fxx + Fyy + Fzz)) /
       (2 * gradient_eval.get_length_squared() * gradient_eval.get_length());
-  // std::cout << "mean curvature^2: " << mean_curvature * mean_curvature << endl;
+  // std::cout << "mean curvature^2: " << mean_curvature * mean_curvature <<
+  // endl;
 
-  //std::cout << "under sqr: " << mean_curvature * mean_curvature - gaussian_curvature << endl;
+  // std::cout << "under sqr: " << mean_curvature * mean_curvature -
+  // gaussian_curvature << endl;
   numeric sq;
   if (abs(mean_curvature * mean_curvature - gaussian_curvature) < kEps) {
     sq = 0;
@@ -450,8 +452,8 @@ numeric get_curvedness(const Function &F, const Point &point) {
     sq = sqrt(mean_curvature * mean_curvature - gaussian_curvature);
   }
 
-  //std::cout << "sq: " << sq << endl;
-  
+  // std::cout << "sq: " << sq << endl;
+
   numeric k1, k2;
   // gaussian - at least one of them is zero
   if (abs(mean_curvature) < kEps && abs(gaussian_curvature) < kEps) {
@@ -503,10 +505,10 @@ numeric get_curvature_multiplicator_logistic(const Function &F,
   // min_mult = 1.0 - range;
   // max_mult = 1.0 + range;
   const numeric curvedness = get_curvedness(F, point);
-  //std::cout << "curvedness: " << curvedness << endl;
+  // std::cout << "curvedness: " << curvedness << endl;
   if (curvedness == 0) return 3;
   numeric radius = 1.0 / curvedness;
-  //std::cout << "radius: " << radius << endl;
+  // std::cout << "radius: " << radius << endl;
   if (min_size > radius / k)
     return min_size;
   else if (max_size < radius / k)
@@ -606,9 +608,9 @@ numeric get_curvature_multiplicator(const Function &F, const Point &point) {
 // finds first edge from seed point
 Edge get_seed_edge(Point seed_point, const Function &F, numeric edge_size,
                    const BoundingBox &bounding_box) {
-  const numeric edge_length =
+  numeric edge_length =
       get_curvature_multiplicator_logistic(F, seed_point, edge_size);
-  // const numeric edge_length = e_size;
+  edge_length = edge_size;
   Vector edge_size_tangent =
       edge_length * sqrt(3) / 2 * (F.get_tangent_at_point(seed_point).unit());
 
@@ -651,9 +653,9 @@ Point get_seed_triangle(const Edge &e, numeric edge_size, const Function &F,
   const Point mult_point = Point(basic_height / 2 * center_tangent.unit().x(),
                                  basic_height / 2 * center_tangent.unit().y(),
                                  basic_height / 2 * center_tangent.unit().z());
-  const numeric edge_length =
+  numeric edge_length =
       get_curvature_multiplicator_logistic(F, mult_point, edge_size);
-  // const numeric edge_length = e_size;
+  edge_length = edge_size;
   numeric height = sqrt(numeric(3)) / 2 * edge_length;
 
   Point point_to_project(center, height * center_tangent.unit());

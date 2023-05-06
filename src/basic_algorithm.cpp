@@ -487,94 +487,6 @@ void BasicAlgorithm::triangulate_cone_iterative(
 }
 #pragma endregion "Region singularities"
 
-#pragma region "Seed triangle"
-// finds first edge from seed point
-Edge BasicAlgorithm::get_seed_edge(Point seed_point) const {
-  numeric edge_length =
-      get_curvature_multiplicator_logistic(F, seed_point, e_size);
-  edge_length = e_size;
-  Vector edge_size_tangent =
-      edge_length * sqrt(3) / 2 * (F.get_tangent_at_point(seed_point).unit());
-
-  Point point_to_project(seed_point, edge_size_tangent);
-
-  // direction of projection
-  Vector direction = F.get_gradient_at_point(point_to_project).unit();
-
-  std::optional<Point> projected_point =
-      project(point_to_project, direction, F, edge_length);
-  // projected_point = bounding_box.crop_to_box(seed_point, projected_point,
-  // edge_size, F);
-  assertm(projected_point.has_value(), "No value!");
-  assertm(seed_point != projected_point.value(), "Error in get_seed_edge");
-
-  return Edge(seed_point, projected_point.value());
-}
-
-// finds third point in first triangle from seed edge
-Point BasicAlgorithm::get_seed_triangle(const Edge &e) const {
-  Point center = e.get_midpoint();
-
-  // normals at endpoints of the edge
-  Vector n_A = F.get_gradient_at_point(e.A()).unit();
-  Vector n_B = F.get_gradient_at_point(e.B()).unit();
-
-  // average of endpoints normals
-  Vector center_normal((n_A + n_B) / 2);
-
-  Vector edge_vector(e.A(), e.B());
-  Vector center_tangent = center_normal ^ edge_vector;
-
-  assertm(abs(center_normal * center_tangent) < 1e-6, "Not perpendicular!");
-
-  // height of equilateral triangle with side edge_length
-
-  numeric basic_height = sqrt(numeric(3)) / 2 * e.get_length();
-
-  const Point mult_point = Point(basic_height / 2 * center_tangent.unit().x(),
-                                 basic_height / 2 * center_tangent.unit().y(),
-                                 basic_height / 2 * center_tangent.unit().z());
-  numeric edge_length =
-      get_curvature_multiplicator_logistic(F, mult_point, e_size);
-  edge_length = e_size;
-  numeric height = sqrt(numeric(3)) / 2 * edge_length;
-
-  Point point_to_project(center, height * center_tangent.unit());
-
-  Vector normal = F.get_gradient_at_point(point_to_project).unit();
-
-  std::optional<Point> projected =
-      project(point_to_project, normal, F, edge_length);
-  assertm(projected.has_value(), "No value!");
-  // projected = bounding_box.crop_to_box(e.get_midpoint(), projected,
-  // edge_size, F);
-  return projected.value();
-}
-
-// returns first triangle
-Triangle BasicAlgorithm::find_seed_triangle(Point seed) const {
-  Vector normal = F.get_gradient_at_point(seed).unit();
-  // project point on surface just to be sure it is lying on the surface with
-  // enough precision
-  std::optional<Point> opt_seed = project(seed, normal, F, e_size);
-  assertm(opt_seed.has_value(), "No value!");
-  seed = opt_seed.value();
-  assertm(bounding_box.is_inside(seed), "Seed point outside of bounding box!");
-  // gets seed edge
-  Edge seed_edge = get_seed_edge(seed);
-
-  // gets third point in seed triangle
-  Point Q = get_seed_triangle(seed_edge);
-
-  const Triangle new_triangle(seed_edge.A(), seed_edge.B(), Q);
-  if (new_triangle.get_normal() * F.outside_normal(new_triangle, e_size) < 0)
-    return Triangle(seed_edge.B(), seed_edge.A(), Q);
-
-  // return seed triangle
-  return new_triangle;
-}
-#pragma endregion "Seed triangle"
-
 #pragma region "Find close points"
 
 // TODO(kuska) rewrite to non-optional
@@ -617,7 +529,7 @@ std::optional<vector<MeshPoint>> BasicAlgorithm::_linear_close_points_finder(
 // closest to working edge if there are no points returns std::nullopt
 std::optional<vector<MeshPoint>> BasicAlgorithm::find_close_points(
     const Point &P, const HalfEdge &working_edge) const {
-  return _linear_close_points_finder(P, working_edge);
+  return _tree_close_points_finder(P, working_edge);
 }
 
 #pragma endregion "Find close points"
@@ -1104,8 +1016,8 @@ std::optional<Point> BasicAlgorithm::get_projected(
     if (proj_midpoint.has_value()) {
       const numeric gaussian_mult = get_curvature_multiplicator_logistic(
           F, proj_midpoint.value(), e_size);
-      //std::cout << gaussian_mult << endl;
-      // std::cout << "Edge: " << gaussian_mult << endl;
+      // std::cout << gaussian_mult << endl;
+      //  std::cout << "Edge: " << gaussian_mult << endl;
       /*
       numeric gaussian_height =
           basic_height * get_curvature_multiplicator_logistic(

@@ -108,9 +108,7 @@ bool Mesh::_tree_is_in_mesh(const Edge &edge) const {
   }
   return false;
 }
-bool Mesh::is_in_mesh(const Edge &edge) const {
-  return _linear_is_in_mesh(edge);
-}
+bool Mesh::is_in_mesh(const Edge &edge) const { return _tree_is_in_mesh(edge); }
 
 HalfEdgeIndex Mesh::_tree_get_edge_index(const Edge &edge) const {
   vector<MeshPoint> _A = get_meshpoints_in_interval(
@@ -147,7 +145,7 @@ HalfEdgeIndex Mesh::_linear_get_edge_index(const Edge &edge) const {
 }
 
 HalfEdgeIndex Mesh::get_edge_index(const Edge &edge) const {
-  return _linear_get_edge_index(edge);
+  return _tree_get_edge_index(edge);
 }
 
 HalfEdge Mesh::get_halfedge(HalfEdgeIndex index) const {
@@ -891,7 +889,7 @@ vector<MeshPoint> Mesh::_tree_breakers_getter(const Triangle &triangle) const {
 }
 
 vector<MeshPoint> Mesh::get_breakers(const Triangle &triangle) const {
-  return _linear_breakers_getter(triangle);
+  return _tree_breakers_getter(triangle);
 }
 
 vector<MeshPoint> Mesh::get_meshpoints_in_interval(numeric min_x, numeric max_x,
@@ -901,7 +899,14 @@ vector<MeshPoint> Mesh::get_meshpoints_in_interval(numeric min_x, numeric max_x,
   const MeshPoint min_point = MeshPoint(min_x, min_y, min_z);
   const MeshPoint max_point = MeshPoint(max_x, max_y, max_z);
 
-  return _point_tree.between(min_point, max_point);
+  vector<MeshPoint> meshpoints = _point_tree.between(min_point, max_point);
+  vector<MeshPoint> actualized_meshpoints;
+  for (MeshPoint meshpoint : meshpoints) {
+    MeshPoint actualized_meshpoint = _mesh_points[meshpoint.get_index()];
+    actualized_meshpoints.push_back(actualized_meshpoint);
+  }
+
+  return actualized_meshpoints;
 }
 
 // checks Delaunay constraint for triangle T
@@ -928,16 +933,17 @@ bool Mesh::check_Delaunay(const HalfEdge &working_edge, const Point &new_point,
   const numeric min_dist = 0.5 * std::min(std::min(distA, distB), distC);
   const Triangle &T = new_triangle;
 
-  vector<MeshPoint> potential_breakers = _linear_breakers_getter(new_triangle);
+  // vector<MeshPoint> potential_breakers =
+  // _linear_breakers_getter(new_triangle); // THIS DOES NOT WORK!!!
 
-/*
   vector<MeshPoint> potential_breakers = get_meshpoints_in_interval(
       new_gravity_center.x() - 5 * dist, new_gravity_center.x() + 5 * dist,
       new_gravity_center.y() - 5 * dist, new_gravity_center.y() + 5 * dist,
       new_gravity_center.z() - 5 * dist, new_gravity_center.z() + 5 * dist);
-*/
+
   vector<FaceIndex> potential_faces;
   for (MeshPoint P : potential_breakers) {
+    P = _mesh_points[P.get_index()];
     for (HalfEdgeIndex halfedge_index : P.get_outgoing()) {
       potential_faces.push_back(get_halfedge(halfedge_index).get_incident());
     }

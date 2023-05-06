@@ -480,7 +480,7 @@ int main() {
   // vystupny subor vlozi do priecinka "/outputs" a nazve ho s predponou
   // "my_run_input"
   // run_input(5, "/finite_surfaces/sphere", "my_run_input");
-  run_all(6, 8, "/finite_surfaces/torus", "my_run_input");
+  run_all(7, 8, "/finite_surfaces/torus", "my_run_input");
   // run_polyline(0.05);
   //  run_all(3, 4, "/finite_surfaces/sphere", "my_run_input");
   //  run_input(0, "/sing_surfaces/A1", "my_run_input");
