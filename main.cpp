@@ -150,22 +150,34 @@ void run_input(const int i, const string folder, const string index) {
 
   Function F(x, y, z, input_F, input_dF);
   std::cout << F.get_function() << endl;
-  /*
+
+  // regular algorithm
+  if (num_of_singular == 0) {
+    Triangle seed_triangle =
+        find_seed_triangle(F, seed_point, e_size, my_bounding_box);
+
+    assertm(seed_triangle.AB() != seed_triangle.BC() &&
+                seed_triangle.AB() != seed_triangle.CA() &&
+                seed_triangle.BC() != seed_triangle.CA(),
+            "Seed triangle contains duplicit edges!");
+
+    BasicAlgorithm alg("./outputs/" + name, F, seed_triangle, e_size, x, y, z,
+                       my_bounding_box);
+    cout << "Basic algorithm created, calling for calculate()!" << endl;
+    // alg.my_mesh.obj_format("./outputs/" + name);
+
+    alg.calculate();
+  }
+  // algorithm starting in singular points
+  else {
     BasicAlgorithm alg("./outputs/" + name, F, seed_point, e_size, x, y, z,
-                       my_bounding_box, singular_points, singular_directions,
-                       types);*/
-  BasicAlgorithm alg("./outputs/" + name, F, seed_point, e_size, x, y, z,
-                     my_bounding_box, singularities);
+                       my_bounding_box, singularities);
+    cout << "Basic algorithm created, calling for calculate()!" << endl;
+    // alg.my_mesh.obj_format("./outputs/" + name);
 
-  cout << "Basic algorithm created, calling for calculate()!" << endl;
-  // alg.my_mesh.obj_format("./outputs/" + name);
-
-  /*assertm(seed_triangle.A() == sing_point,
-          "Triangle not created with singular point.");
-  assertm(F.eval_at_point(sing_point) < kEps,
-          "Singular point not lying on surface!");
-  assertm(false, "breakpoint");*/
-  alg.calculate();
+    alg.calculate();
+  }
+  return;
 }
 // runs given input, creates output file in "/output" folder
 void run_input_plane(const int i, const string folder, const string index) {
@@ -275,13 +287,6 @@ void run_input_plane(const int i, const string folder, const string index) {
   cout << "Basic algorithm created, calling for calculate()!" << endl;
   */
   // alg.my_mesh.obj_format("./outputs/" + name);
-
-  /*assertm(seed_triangle.A() == sing_point,
-          "Triangle not created with singular point.");
-  assertm(F.eval_at_point(sing_point) < kEps,
-          "Singular point not lying on surface!");
-  assertm(false, "breakpoint");*/
-  // alg.calculate();
 }
 
 // runs multiple inputs, creates output files in "/output" folder
@@ -474,13 +479,16 @@ int main() {
   // spusti vstup "input0" v priecinku "inputs/finite_surfaces/sphere",
   // vystupny subor vlozi do priecinka "/outputs" a nazve ho s predponou
   // "my_run_input"
-  // run_input(0, "/finite_surfaces/sphere", "my_run_input");
-  // run_all(3, 4, "/finite_surfaces/sphere", "my_run_input");
-  // run_input(0, "/sing_surfaces/A1", "my_run_input");
-  // run_input(0, "/sing_surfaces/A2", "my_run_input");
-  // run_input(0, "/sing_surfaces/A3", "my_run_input");
-  // run_input(0, "/sing_surfaces/A4", "my_run_input");
-  run_all(2, 2, "/sing_surfaces/E7", "measure");
+  // run_input(5, "/finite_surfaces/sphere", "my_run_input");
+  run_all(6, 8, "/finite_surfaces/torus", "my_run_input");
+  // run_polyline(0.05);
+  //  run_all(3, 4, "/finite_surfaces/sphere", "my_run_input");
+  //  run_input(0, "/sing_surfaces/A1", "my_run_input");
+  //  run_input(0, "/sing_surfaces/A2", "my_run_input");
+  //  run_input(0, "/sing_surfaces/A3", "my_run_input");
+  //  run_input(0, "/sing_surfaces/A4", "my_run_input");
+  // run_all(3, 3, "/sing_surfaces/D4", "measure");
+
   // run_all_plane(2, 2, "/1_singularity/A2", "test");
   // run_polyline(0.35);
   // run_all(2, 2, "/sing_surfaces/A2-plane",

@@ -84,6 +84,19 @@ class BasicAlgorithm {
         bounding_box(bounding_box) {
     get_local_mesh_curve(&my_mesh, F, G, f, polyline, bounding_box, e_size);
   }
+  explicit BasicAlgorithm(string name, Function f, Triangle seed_triangle,
+                          numeric e_size, realsymbol x, realsymbol y,
+                          realsymbol z, BoundingBox bounding_box)
+      : name(name),
+        F(f),
+        e_size(e_size),
+        x(x),
+        y(y),
+        z(z),
+        bounding_box(bounding_box) {
+    my_mesh.add_first_triangle(seed_triangle, bounding_box);
+  }
+
   void calculate();
   void starting();
   void ending();
@@ -157,9 +170,6 @@ class BasicAlgorithm {
   void create_mesh(Point seed);
 
   // section singularities
-  void triangulate_A1_starter(const Point &singular,
-                              const Vector &singular_direction, Mesh *mesh,
-                              const MeshPointIndex singular_index);
   void triangulate_singularity_circular(const Singularity &singularity,
                                         const int branch,
                                         const MeshPointIndex singular_index);

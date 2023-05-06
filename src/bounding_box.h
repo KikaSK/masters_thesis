@@ -1,5 +1,4 @@
-#ifndef BOUNDING_BOX_H
-#define BOUNDING_BOX_H
+#pragma once
 
 #include <ginac/ginac.h>
 
@@ -61,5 +60,3 @@ class BoundingBox {
   numeric _min_z;
   numeric _max_z;
 };
-
-#endif

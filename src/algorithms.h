@@ -1,14 +1,13 @@
-#ifndef ALGORITHMS_H
-#define ALGORITHMS_H
+#pragma once
 
 #include <optional>
 #include <vector>
 
 #include "assertm.h"
+#include "bounding_box.h"
 #include "edge.h"
-#include "function.h"
-//#include "mesh.h"
 #include "face.h"
+#include "function.h"
 #include "half_edge.h"
 #include "point.h"
 #include "triangle.h"
@@ -17,6 +16,8 @@ using GiNaC::ex;
 using GiNaC::numeric;
 using GiNaC::realsymbol;
 using std::vector;
+
+class BoundingBox;
 
 // N-R method for root finding, not necessarily the closest root
 numeric Newton_Raphson(const realsymbol my_x, const ex &f, const ex &df,
@@ -51,14 +52,6 @@ std::optional<Point> project(const Point &point_to_project,
                              const Vector &normal, const Function &F,
                              const numeric e_size = -1);
 
-// connects two vectors of edges
-vector<HalfEdgeIndex> connect_edges(const vector<HalfEdgeIndex> &v1,
-                                    const vector<HalfEdgeIndex> &v2);
-
-// connects two vectors of points
-// vector<Point> connect_points(const vector<Point> &v1, const vector<Point>
-// &v2);
-
 Vector find_direction_plane(const HalfEdge &working_edge, const Vector &normal,
                             const Face &F);
 // Returns unit vector in the plane of triangle T, pointing outside from T from
@@ -66,5 +59,9 @@ Vector find_direction_plane(const HalfEdge &working_edge, const Vector &normal,
 Vector find_direction(const HalfEdge &working_edge, const Face &F);
 
 numeric get_curvature_multiplicator(const Function &F, const Point &point);
+numeric get_curvature_multiplicator_logistic(const Function &F,
+                                             const Point &point,
+                                             const numeric &e_size);
 
-#endif
+Triangle find_seed_triangle(const Function &F, Point seed, numeric e_size,
+                            const BoundingBox &bounding_box);

@@ -142,6 +142,7 @@ void BasicAlgorithm::get_points_singular_point(const Singularity singularity,
   numeric h_layer, e_layer;
   const numeric delta_angle = GiNaC::ex_to<numeric>(GiNaC::Pi.evalf() / 36);
   for (int layer = 0; layer < layers; ++layer) {
+    plane_vector = unit_singular_direction.get_any_perpendicular().unit();
     h_layer = (layer + 1) * h / (numeric)layers;
     e_layer = pow(h_layer, ((numeric)singularity.n() + 1) / (numeric)2);
     Vector direction_layer = plane_vector * e_layer + u * h_layer;
@@ -227,7 +228,7 @@ void BasicAlgorithm::get_points_singular_point(const Singularity singularity,
           Vector(rot_vector_x * direction_layer, rot_vector_y * direction_layer,
                  rot_vector_z * direction_layer);
     }
-    if (num_triangles == 8) {
+    if (num_triangles == 0) {
       numeric dist01 = Vector(points[layer][0], points[layer][1]).get_length();
       numeric dist12 = Vector(points[layer][1], points[layer][2]).get_length();
       numeric dist02 = Vector(points[layer][0], points[layer][2]).get_length();
@@ -238,12 +239,9 @@ void BasicAlgorithm::get_points_singular_point(const Singularity singularity,
       Point new_point;
       Vector rotated_plane_vector = plane_vector;
       int iter = 0;
-      std::cout << "dist_diff: " << dist_difference << " dist02: " << dist02
-                << endl;
-      while (dist_difference > dist02 / 10 && iter < 100) {
+      while (dist_difference > dist02 / 20 && iter < 100) {
         iter++;
         numeric angle_mid = (angle1 + angle2) / 2;
-        std::cout << "inside, angle mid: " << angle_mid << endl;
 
         if ((singularity.type() == SingularityType::Apm) ||
             (singularity.type() == SingularityType::Dpm &&
@@ -370,7 +368,7 @@ void BasicAlgorithm::triangulate_singular_point_local(
              singularity.n() % 2 == 0)  // A2+-, A4+-, A6+-, ...
   {
     num_triangles = 8;
-    layers = 3;
+    layers = 3;  // singularity.n()+1;
     length = layers * e_size;
   } else if (singularity.type() == SingularityType::Apm &&
              singularity.n() & 2 == 1) {  // A1+-, A3+-, A5+-, ...
@@ -380,8 +378,8 @@ void BasicAlgorithm::triangulate_singular_point_local(
   } else if (singularity.type() == SingularityType::Dpm &&
              singularity.n() % 2 == 0) {  // D4+-, D6+-, D8+-, ...
     num_triangles = 8;
-    layers = 3;
-    length = layers * e_size;
+    layers = 4;
+    length = e_size;
   } else if (singularity.type() == SingularityType::Epm) {  // E6+-
     num_triangles = 4;                                      // 8;
     layers = 3;
@@ -415,8 +413,8 @@ void BasicAlgorithm::triangulate_singular_point_local(
     assertm(false, "Should not get here!");
   }
   vector<vector<Point>> points;
-  get_points_singular_point(singularity, num_triangles, layers * e_size, points,
-                            branch, layers);
+  get_points_singular_point(singularity, num_triangles, length, points, branch,
+                            layers);
   get_local_mesh_point(points, singularity, singular_index, num_triangles,
                        branch, layers);
   my_mesh.obj_format(name + "_local");
@@ -492,8 +490,11 @@ void BasicAlgorithm::triangulate_cone_iterative(
 #pragma region "Seed triangle"
 // finds first edge from seed point
 Edge BasicAlgorithm::get_seed_edge(Point seed_point) const {
+  numeric edge_length =
+      get_curvature_multiplicator_logistic(F, seed_point, e_size);
+  edge_length = e_size;
   Vector edge_size_tangent =
-      e_size * (F.get_tangent_at_point(seed_point).unit());
+      edge_length * sqrt(3) / 2 * (F.get_tangent_at_point(seed_point).unit());
 
   Point point_to_project(seed_point, edge_size_tangent);
 
@@ -501,7 +502,7 @@ Edge BasicAlgorithm::get_seed_edge(Point seed_point) const {
   Vector direction = F.get_gradient_at_point(point_to_project).unit();
 
   std::optional<Point> projected_point =
-      project(point_to_project, direction, F, e_size);
+      project(point_to_project, direction, F, edge_length);
   // projected_point = bounding_box.crop_to_box(seed_point, projected_point,
   // edge_size, F);
   assertm(projected_point.has_value(), "No value!");
@@ -526,14 +527,24 @@ Point BasicAlgorithm::get_seed_triangle(const Edge &e) const {
 
   assertm(abs(center_normal * center_tangent) < 1e-6, "Not perpendicular!");
 
-  // height of equilateral triangle with side edge_size
-  numeric height = sqrt(numeric(3)) / 2 * e_size;
+  // height of equilateral triangle with side edge_length
+
+  numeric basic_height = sqrt(numeric(3)) / 2 * e.get_length();
+
+  const Point mult_point = Point(basic_height / 2 * center_tangent.unit().x(),
+                                 basic_height / 2 * center_tangent.unit().y(),
+                                 basic_height / 2 * center_tangent.unit().z());
+  numeric edge_length =
+      get_curvature_multiplicator_logistic(F, mult_point, e_size);
+  edge_length = e_size;
+  numeric height = sqrt(numeric(3)) / 2 * edge_length;
 
   Point point_to_project(center, height * center_tangent.unit());
 
   Vector normal = F.get_gradient_at_point(point_to_project).unit();
 
-  std::optional<Point> projected = project(point_to_project, normal, F, e_size);
+  std::optional<Point> projected =
+      project(point_to_project, normal, F, edge_length);
   assertm(projected.has_value(), "No value!");
   // projected = bounding_box.crop_to_box(e.get_midpoint(), projected,
   // edge_size, F);
@@ -570,7 +581,7 @@ Triangle BasicAlgorithm::find_seed_triangle(Point seed) const {
 std::optional<vector<MeshPoint>> BasicAlgorithm::_tree_close_points_finder(
     const Point &P, const HalfEdge &working_edge) const {
   numeric dist = 0.4 * e_size;
-  auto close_points = my_mesh.get_meshpoints_in_interval(
+  std::vector<MeshPoint> close_points = my_mesh.get_meshpoints_in_interval(
       P.x() - dist, P.x() + dist, P.y() - dist, P.y() + dist, P.z() - dist,
       P.z() + dist);
 
@@ -606,7 +617,7 @@ std::optional<vector<MeshPoint>> BasicAlgorithm::_linear_close_points_finder(
 // closest to working edge if there are no points returns std::nullopt
 std::optional<vector<MeshPoint>> BasicAlgorithm::find_close_points(
     const Point &P, const HalfEdge &working_edge) const {
-  return _tree_close_points_finder(P, working_edge);
+  return _linear_close_points_finder(P, working_edge);
 }
 
 #pragma endregion "Find close points"
@@ -953,7 +964,7 @@ bool BasicAlgorithm::basic_triangle(const HalfEdge &working_edge,
             << my_mesh.get_face(working_edge.get_incident()).get_triangle()
             << endl;
   std::cout << "new triangle: " << new_triangle << endl;*/
-  assertm(opposite_point != point, "opposite point");
+  if (opposite_point == point) return false;
   create_triangle(working_edge, point.get_point(), false, point.get_index());
   return true;
 }
@@ -1040,20 +1051,6 @@ std::optional<Point> BasicAlgorithm::get_projected(
           "Wrong get_midpoint function!");
 
   // height of equilateral triangle based on e_size
-  numeric basic_height = e_size * sqrt(numeric(3)) / 2;
-
-  std::optional<Point> opt_proj_center =
-      project(center, F.get_gradient_at_point(center).unit(), F, e_size);
-  numeric height;
-  if (opt_proj_center.has_value()) {
-    numeric gaussian_height =
-        basic_height / get_curvature_multiplicator(F, opt_proj_center.value());
-
-    height = gaussian_height * 0.75 +
-             working_edge.get_length() * sqrt(numeric(3)) / 2 * 0.25;
-  } else {
-    height = basic_height;
-  }
 
   /*
     numeric average_edge_length =
@@ -1089,14 +1086,42 @@ std::optional<Point> BasicAlgorithm::get_projected(
 
   const Face &incident_face = my_mesh.get_face(working_edge.get_incident());
   const Vector gradient_at_edge_midpoint = F.get_gradient_at_point(center);
+  numeric height;
   // Vector dir1(0, 0, 0);
   if (!gradient_at_edge_midpoint.is_zero()) {
     Vector normal_at_edge_midpoint = gradient_at_edge_midpoint.unit();
     if (normal_at_edge_midpoint * incident_face.get_normal() < 0)
       normal_at_edge_midpoint = -1 * normal_at_edge_midpoint;
-    const Vector direction =
-        height * find_direction_plane(working_edge, normal_at_edge_midpoint,
-                                      incident_face);
+
+    numeric basic_height = e_size * sqrt(numeric(3)) / 2;
+    numeric edge_height = working_edge.get_length() * sqrt(numeric(3)) / 2;
+    const Vector dir = find_direction_plane(
+        working_edge, normal_at_edge_midpoint, incident_face);
+    const Point midpoint = Point(center, (edge_height) / 2 * dir);
+
+    std::optional<Point> proj_midpoint =
+        project(center, F.get_gradient_at_point(midpoint).unit(), F, e_size);
+    if (proj_midpoint.has_value()) {
+      const numeric gaussian_mult = get_curvature_multiplicator_logistic(
+          F, proj_midpoint.value(), e_size);
+      //std::cout << gaussian_mult << endl;
+      // std::cout << "Edge: " << gaussian_mult << endl;
+      /*
+      numeric gaussian_height =
+          basic_height * get_curvature_multiplicator_logistic(
+                             F, opt_proj_center.value(), e_size);
+                             */
+      // basic_height / get_curvature_multiplicator(F, opt_proj_center.value());
+
+      height = gaussian_mult * sqrt(numeric(3.0)) / 2.0 * 0.5;
+      // + working_edge.get_length() * sqrt(numeric(3)) / 2 * 0.5;
+    } else {
+      std::cout << "no value opt proj center" << endl;
+      height = edge_height;
+    }
+    height = basic_height;
+
+    const Vector direction = height * dir;
     assertm(direction * normal_at_edge_midpoint < kEps * height,
             "Wrong direction!");
     assertm(direction * Vector(working_edge.get_point_A(),
@@ -1166,13 +1191,14 @@ std::cout << surrounding_points.has_value() << endl;
       surrounding_points.has_value()) {
     // points closer to projected point than 0.4*e_size sorted from closest
     vector<MeshPoint> close_points = surrounding_points.value();
-    for (auto close_point : close_points) {
+    for (MeshPoint close_point : close_points) {
       // todo rewrite to reflect delaunay state
       /*
       std::cout << "distance betweend close points: "
                 << Vector(close_point.get_point(), projected).get_length()
                 << endl;
                 */
+      if (!my_mesh.is_boundary_point(close_point)) continue;
       if (check_conditions(working_edge, close_point.get_point(), Delaunay,
                            close_point.get_index())) {
         // fill it it's basic triangle
