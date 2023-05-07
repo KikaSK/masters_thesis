@@ -228,7 +228,10 @@ void BasicAlgorithm::get_points_singular_point(const Singularity singularity,
           Vector(rot_vector_x * direction_layer, rot_vector_y * direction_layer,
                  rot_vector_z * direction_layer);
     }
-    if (num_triangles == 0) {
+    for (auto point : points[layer]) {
+      std::cout << "point: " << point << endl;
+    }
+    if (num_triangles == 8) {
       numeric dist01 = Vector(points[layer][0], points[layer][1]).get_length();
       numeric dist12 = Vector(points[layer][1], points[layer][2]).get_length();
       numeric dist02 = Vector(points[layer][0], points[layer][2]).get_length();
@@ -243,12 +246,39 @@ void BasicAlgorithm::get_points_singular_point(const Singularity singularity,
         iter++;
         numeric angle_mid = (angle1 + angle2) / 2;
 
-        if ((singularity.type() == SingularityType::Apm) ||
-            (singularity.type() == SingularityType::Dpm &&
-             singularity.n() % 2 == 0) ||
-            (singularity.type() == SingularityType::Epp &&
-             singularity.n() % 2 == 0) ||
-            singularity.type() == SingularityType::Epm) {
+        if ((singularity.type() == SingularityType::Dpm &&
+             singularity.n() % 2 == 1) ||
+            (singularity.type() == SingularityType::Dmm &&
+             singularity.n() % 2 == 0)) {
+          rotated_plane_vector =
+              Vector(singularity.location(),
+                     rotate(singularity.location(),
+                            Point(plane_vector.x() - singularity.x(),
+                                  plane_vector.y() - singularity.y(),
+                                  plane_vector.z() - singularity.z()),
+                            u, angle_mid));
+          Point start_point_to_bisect(singularity.location(),
+                                      h_layer * unit_singular_direction);
+          Point end_point_to_bisect = start_point_to_bisect;
+          int iter = 0;
+          while (F.eval_at_point(start_point_to_bisect) *
+                     F.eval_at_point(end_point_to_bisect) >
+                 0) {
+            assertm(iter <= 71, "Too many iterations!");
+            end_point_to_bisect =
+                rotate(singularity.location(), end_point_to_bisect,
+                       rotated_plane_vector, delta_angle);
+            iter++;
+          }
+          new_point = circular_bisection(
+              F, singularity.location(), start_point_to_bisect,
+              iter * delta_angle, rotated_plane_vector, h_layer);
+        } else if ((singularity.type() == SingularityType::Apm) ||
+                   (singularity.type() == SingularityType::Dpm &&
+                    singularity.n() % 2 == 0) ||
+                   (singularity.type() == SingularityType::Epp &&
+                    singularity.n() % 2 == 0) ||
+                   singularity.type() == SingularityType::Epm) {
           rotated_plane_vector =
               Vector(singularity.location(),
                      rotate(singularity.location(),
@@ -362,23 +392,23 @@ void BasicAlgorithm::triangulate_singular_point_local(
   numeric length;
   if (singularity.type() == SingularityType::Amm) {  // An--
     num_triangles = 6;
-    layers = singularity.n();
+    layers = 2 * singularity.n() + 1;
     length = e_size;
   } else if (singularity.type() == SingularityType::Apm &&
              singularity.n() % 2 == 0)  // A2+-, A4+-, A6+-, ...
   {
     num_triangles = 8;
-    layers = 3;  // singularity.n()+1;
-    length = layers * e_size;
+    layers = 1;  // singularity.n()+1;
+    length = e_size;
   } else if (singularity.type() == SingularityType::Apm &&
-             singularity.n() & 2 == 1) {  // A1+-, A3+-, A5+-, ...
+             singularity.n() % 2 == 1) {  // A1+-, A3+-, A5+-, ...
     num_triangles = 6;
-    layers = 4;
-    length = layers * e_size;
+    layers = 1;
+    length = e_size;
   } else if (singularity.type() == SingularityType::Dpm &&
              singularity.n() % 2 == 0) {  // D4+-, D6+-, D8+-, ...
     num_triangles = 8;
-    layers = 4;
+    layers = 2;
     length = e_size;
   } else if (singularity.type() == SingularityType::Epm) {  // E6+-
     num_triangles = 4;                                      // 8;
@@ -398,15 +428,28 @@ void BasicAlgorithm::triangulate_singular_point_local(
     layers = 3;
   } else if (singularity.type() == SingularityType::Dpm &&
              singularity.n() % 2 == 1) {  // D5+-, D7+-, D9+-, ...
-    if (branch == 0)
+    if (branch == 0) {
       num_triangles = 8;
-    else
-      num_triangles = 4;
+      layers = 2;
+      length = e_size;
+    } else {
+      num_triangles = 8;
+      layers = 4;
+      length = 2 * e_size;
+    }
+  } else if (singularity.type() == SingularityType::Dmm &&
+             singularity.n() % 2 == 0) {  // D4--, D6--, ...
+    if (branch == 0) {
+      num_triangles = 8;
+    } else {
+      num_triangles = 7;
+    }
     layers = 3;
     length = layers * e_size;
-  } else if (singularity.type() ==
-             SingularityType::Dmm) {  // D4--, D5--, D6--, ...
-    num_triangles = 4;
+  } else if (singularity.type() == SingularityType::Dmm &&
+             singularity.n() % 2 == 1) {  // D5--, D7--, ...
+    num_triangles = 7;
+
     layers = 3;
     length = layers * e_size;
   } else {
@@ -1009,24 +1052,37 @@ std::optional<Point> BasicAlgorithm::get_projected(
     numeric edge_height = working_edge.get_length() * sqrt(numeric(3)) / 2;
     const Vector dir = find_direction_plane(
         working_edge, normal_at_edge_midpoint, incident_face);
-    const Point midpoint = Point(center, (edge_height) / 2 * dir);
+    const Point midpoint = Point(center, (edge_height)*dir);
+
+    numeric avg_e_size = working_edge.get_length();
+
+    vector<MeshPoint> prev = my_mesh.get_prev(working_edge);
+    vector<MeshPoint> next = my_mesh.get_next(working_edge);
+    for (MeshPoint p : prev) {
+      avg_e_size +=
+          Vector(p.get_point(), working_edge.get_point_A()).get_length();
+    }
+    for (MeshPoint n : next) {
+      avg_e_size +=
+          Vector(n.get_point(), working_edge.get_point_B()).get_length();
+    }
+    avg_e_size /= (1 + prev.size() + next.size());
 
     std::optional<Point> proj_midpoint =
         project(center, F.get_gradient_at_point(midpoint).unit(), F, e_size);
     if (proj_midpoint.has_value()) {
-      const numeric gaussian_mult = get_curvature_multiplicator_logistic(
-          F, proj_midpoint.value(), e_size);
-      // std::cout << gaussian_mult << endl;
-      //  std::cout << "Edge: " << gaussian_mult << endl;
-      /*
-      numeric gaussian_height =
-          basic_height * get_curvature_multiplicator_logistic(
-                             F, opt_proj_center.value(), e_size);
-                             */
-      // basic_height / get_curvature_multiplicator(F, opt_proj_center.value());
-
-      height = gaussian_mult * sqrt(numeric(3.0)) / 2.0 * 0.5;
-      // + working_edge.get_length() * sqrt(numeric(3)) / 2 * 0.5;
+      const numeric gaussian_mult_1 = get_curvature_multiplicator_logistic(
+          F, working_edge.get_point_A(), e_size, avg_e_size);
+      const numeric gaussian_mult_2 = get_curvature_multiplicator_logistic(
+          F, working_edge.get_point_B(), e_size, avg_e_size);
+      const numeric gaussian_mult_3 =
+          get_curvature_multiplicator_logistic(F, midpoint, e_size, avg_e_size);
+      const numeric gaussian_mult =
+          std::min(std::min(gaussian_mult_1, gaussian_mult_2), gaussian_mult_3);
+      height = std::max(std::min(gaussian_mult, 1.3 * avg_e_size),
+                        0.7 * avg_e_size) *
+               sqrt(numeric(3.0)) / 2.0;
+      //+avg_e_size * sqrt(numeric(3)) / 2 * 0.5;
     } else {
       std::cout << "no value opt proj center" << endl;
       height = edge_height;

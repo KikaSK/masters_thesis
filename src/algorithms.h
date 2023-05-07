@@ -59,9 +59,9 @@ Vector find_direction_plane(const HalfEdge &working_edge, const Vector &normal,
 Vector find_direction(const HalfEdge &working_edge, const Face &F);
 
 numeric get_curvature_multiplicator(const Function &F, const Point &point);
-numeric get_curvature_multiplicator_logistic(const Function &F,
-                                             const Point &point,
-                                             const numeric &e_size);
+numeric get_curvature_multiplicator_logistic(
+    const Function &F, const Point &point, const numeric &e_size,
+    const numeric &working_edge_length);
 
 Triangle find_seed_triangle(const Function &F, Point seed, numeric e_size,
                             const BoundingBox &bounding_box);

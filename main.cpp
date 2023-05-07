@@ -479,14 +479,16 @@ int main() {
   // spusti vstup "input0" v priecinku "inputs/finite_surfaces/sphere",
   // vystupny subor vlozi do priecinka "/outputs" a nazve ho s predponou
   // "my_run_input"
-  // run_input(5, "/finite_surfaces/sphere", "my_run_input");
-  run_all(7, 8, "/finite_surfaces/torus", "my_run_input");
+  // run_all(4, 4, "/finite_surfaces/genus", "my_run_input");
   // run_polyline(0.05);
   //  run_all(3, 4, "/finite_surfaces/sphere", "my_run_input");
-  //  run_input(0, "/sing_surfaces/A1", "my_run_input");
-  //  run_input(0, "/sing_surfaces/A2", "my_run_input");
-  //  run_input(0, "/sing_surfaces/A3", "my_run_input");
-  //  run_input(0, "/sing_surfaces/A4", "my_run_input");
+  // run_input(3, "/sing_surfaces/A1", "measure");
+  // run_input(4, "/sing_surfaces/A2", "measure");
+  // run_input(4, "/sing_surfaces/A3", "measure");
+  // run_input(7, "/sing_surfaces/A2", "measure");
+  // run_input(5, "/sing_surfaces/A3", "measure");
+  // run_all(4, 5, "/sing_surfaces/D4", "measure");
+  run_all(8, 9, "/sing_surfaces/D5", "measure");
   // run_all(3, 3, "/sing_surfaces/D4", "measure");
 
   // run_all_plane(2, 2, "/1_singularity/A2", "test");

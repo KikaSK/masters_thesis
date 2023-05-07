@@ -491,22 +491,22 @@ numeric logistic(const numeric &c_e, const numeric &e_size) {
   return logistic;
 }
 
-numeric get_curvature_multiplicator_logistic(const Function &F,
-                                             const Point &point,
-                                             const numeric &e_size) {
+numeric get_curvature_multiplicator_logistic(
+    const Function &F, const Point &point, const numeric &e_size,
+    const numeric &working_edge_length) {
   // e_size is edge size for unit sphere
   // curvedness is the inverse of the radius of the sphere with given curvedness
   const numeric k =
       1.0 /
       e_size;  // how many times does the edge fit into radius of unit sphere
-  numeric min_size = 0.01;
-  numeric max_size = 20.0;
+  numeric min_size = 0.7 * working_edge_length;
+  numeric max_size = 1.3 * working_edge_length;
   const numeric range = 0.99;
   // min_mult = 1.0 - range;
   // max_mult = 1.0 + range;
   const numeric curvedness = get_curvedness(F, point);
   // std::cout << "curvedness: " << curvedness << endl;
-  if (curvedness == 0) return 3;
+  if (curvedness < kEps) return max_size;
   numeric radius = 1.0 / curvedness;
   // std::cout << "radius: " << radius << endl;
   if (min_size > radius / k)
@@ -609,10 +609,11 @@ numeric get_curvature_multiplicator(const Function &F, const Point &point) {
 Edge get_seed_edge(Point seed_point, const Function &F, numeric edge_size,
                    const BoundingBox &bounding_box) {
   numeric edge_length =
-      get_curvature_multiplicator_logistic(F, seed_point, edge_size);
+      get_curvature_multiplicator_logistic(F, seed_point, edge_size, edge_size);
   edge_length = edge_size;
   Vector edge_size_tangent =
-      edge_length * sqrt(3) / 2 * (F.get_tangent_at_point(seed_point).unit());
+      std::max(std::min(edge_length, edge_size * 1.3), edge_size * 0.7) *
+      sqrt(3) / 2 * (F.get_tangent_at_point(seed_point).unit());
 
   Point point_to_project(seed_point, edge_size_tangent);
 
@@ -650,13 +651,21 @@ Point get_seed_triangle(const Edge &e, numeric edge_size, const Function &F,
   // height of equilateral triangle with side edge_size
   numeric basic_height = sqrt(numeric(3)) / 2 * e.get_length();
 
-  const Point mult_point = Point(basic_height / 2 * center_tangent.unit().x(),
-                                 basic_height / 2 * center_tangent.unit().y(),
-                                 basic_height / 2 * center_tangent.unit().z());
+  const Point mult_point = Point(basic_height * center_tangent.unit().x(),
+                                 basic_height * center_tangent.unit().y(),
+                                 basic_height * center_tangent.unit().z());
+  numeric edge_length_1 =
+      get_curvature_multiplicator_logistic(F, e.A(), edge_size, e.get_length());
+  numeric edge_length_2 =
+      get_curvature_multiplicator_logistic(F, e.B(), edge_size, e.get_length());
+  numeric edge_length_3 = get_curvature_multiplicator_logistic(
+      F, mult_point, edge_size, e.get_length());
   numeric edge_length =
-      get_curvature_multiplicator_logistic(F, mult_point, edge_size);
+      std::min(std::min(edge_length_1, edge_length_2), edge_length_3);
   edge_length = edge_size;
-  numeric height = sqrt(numeric(3)) / 2 * edge_length;
+  numeric height =
+      sqrt(numeric(3)) / 2 *
+      std::max(std::min(edge_length, edge_size * 1.3), edge_size * 0.7);
 
   Point point_to_project(center, height * center_tangent.unit());
 
