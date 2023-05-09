@@ -20,6 +20,6 @@ Vector Vector::unit() const {
 Vector Vector::vector_inverse() const { return Vector(-_x, -_y, -_z); }
 Vector Vector::get_any_perpendicular() const {
   assertm(!is_zero(), "Trying to find prependicular to zero vector!");
-  if (_x == 0 && _y == 0) return Vector(_z, 0, -_x);
+  if (_x == 0 && _y == 0) return Vector(_z, 0, 0);
   return Vector(_y, -_x, 0);
 };

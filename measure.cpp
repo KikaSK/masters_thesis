@@ -472,9 +472,9 @@ void run_input(const int i, const string folder, const string index){
     cout<<"Name:" << name << endl;
     string file_name;
     if (index == "uniform")
-        file_name = "/uniform/" + name + "_uniform" + ".obj";
+        file_name = "/uniform/measure_" +  name + ".obj";
     else if(index == "adaptive")
-        file_name = "/adaptive/" + name + "_adaptive" + ".obj";
+        file_name = "/adaptive/measure_" + name + ".obj";
     else if(index == "singsurf")
         file_name = "/singsurf/" + name + ".obj";
 
@@ -503,6 +503,12 @@ void run_all(const int beg, const int end, const string folder, const string nam
     }
 }
 
+void run_all_kinds(const int A, const int B, const int C, const string folder) {
+    //run_input(A, folder, "singsurf");
+    //run_input(B, folder, "adaptive");
+    run_input(C, folder, "uniform");
+}
+
 int main(){
 
     // spustame prikazom "make run_measure" 
@@ -512,17 +518,23 @@ int main(){
     // bol vytvoreny s predponou "measure" (predpona, ktoru si volime pri spustani algoritmu v main.cpp)
     // vystupny subor vlozi do priecinka "/measure/measure_data/finite_surfaces/sphere" a nazve ho s 
     // predponou "measure"
-    run_input(4, "/sing_surfaces/A1", "adaptive");
-    /*run_all(3, 3, "/sing_surfaces/A1", "singsurf");
-    run_all(3, 3, "/sing_surfaces/A1", "me");
-    run_all(4, 5, "/sing_surfaces/A2", "singsurf");
-    run_all(4, 5, "/sing_surfaces/A2", "me");
+    /*
+    run_all_kinds(0, 5, 3, "/sing_surfaces/A1");
+    run_all_kinds(0, 6, 6, "/sing_surfaces/A2");
+    run_all_kinds(0, 6, 4, "/sing_surfaces/A3");
+    run_all_kinds(0, 5, 2, "/sing_surfaces/A4");
+    run_all_kinds(0, 8, 7, "/sing_surfaces/A2");
+    run_all_kinds(0, 5, 5, "/sing_surfaces/A3");
+    run_all_kinds(0, 7, 6, "/sing_surfaces/A4");
+    run_all_kinds(0, 7, 4, "/sing_surfaces/D4");
+    run_all_kinds(0, 10, 8, "/sing_surfaces/D5");
+    run_all_kinds(0, 6, 5, "/sing_surfaces/D4");
+    run_all_kinds(0, 11, 9, "/sing_surfaces/D5");
+    run_all_kinds(0, 8, 6, "/sing_surfaces/E6");
+    run_all_kinds(0, 9, 7, "/sing_surfaces/E6");
+    run_all_kinds(0, 4, 3, "/sing_surfaces/E7");*/
+    run_all_kinds(0, 4, 3, "/sing_surfaces/E8");
     
-    run_all(2, 3, "/sing_surfaces/A3", "singsurf");
-    run_all(2, 3, "/sing_surfaces/A3", "me");
-    run_all(2, 3, "/sing_surfaces/A4", "singsurf");
-    run_all(2, 3, "/sing_surfaces/A4", "me");
-    */
     
     //run_all(2, 2, "/sing_surfaces/D4", "singsurf");
     //run_all(2, 2, "/sing_surfaces/D4", "me");

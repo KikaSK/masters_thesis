@@ -482,14 +482,18 @@ int main() {
   // run_all(4, 4, "/finite_surfaces/genus", "my_run_input");
   // run_polyline(0.05);
   //  run_all(3, 4, "/finite_surfaces/sphere", "my_run_input");
-  // run_input(3, "/sing_surfaces/A1", "measure");
-  // run_input(4, "/sing_surfaces/A2", "measure");
-  // run_input(4, "/sing_surfaces/A3", "measure");
-  // run_input(7, "/sing_surfaces/A2", "measure");
+  // run_input(8, "/sing_surfaces/A2", "measure");
   // run_input(5, "/sing_surfaces/A3", "measure");
-  // run_all(4, 5, "/sing_surfaces/D4", "measure");
-  run_all(8, 9, "/sing_surfaces/D5", "measure");
-  // run_all(3, 3, "/sing_surfaces/D4", "measure");
+  // run_input(7, "/sing_surfaces/A4", "measure");
+  // run_input(6, "/sing_surfaces/D4", "measure");
+  // run_input(7, "/sing_surfaces/D4", "measure");
+  // run_all(11, 11, "/sing_surfaces/D5", "measure");
+
+  // run_all(9, 9, "/sing_surfaces/E6", "measure");
+
+  // run_all(4, 4, "/sing_surfaces/E7", "measure");
+  run_all(4, 4, "/sing_surfaces/E8", "measure");
+  //   run_all(3, 3, "/sing_surfaces/D4", "measure");
 
   // run_all_plane(2, 2, "/1_singularity/A2", "test");
   // run_polyline(0.35);

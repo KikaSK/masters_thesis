@@ -12,13 +12,11 @@ using std::pair;
 // N-R method for root finding, not necessarily the closest root
 numeric Newton_Raphson(const realsymbol my_x, const ex &f, const ex &df,
                        numeric starting_point) {
-  numeric precision = 1e-6;
-
   numeric iter = starting_point;
   int iterations = 0;
   while (abs(f.subs(my_x == iter).evalf()) > kEps && iterations < 10) {
     iterations++;
-    assertm(abs(df.subs(my_x == iter).evalf()) > kEps / 1000,
+    assertm(abs(df.subs(my_x == iter).evalf()) > kEps * kEps,
             "Division by 0 in N-R method!");
     iter -= GiNaC::ex_to<numeric>(f.subs(my_x == iter).evalf() /
                                   df.subs(my_x == iter).evalf());
@@ -29,8 +27,8 @@ numeric Newton_Raphson(const realsymbol my_x, const ex &f, const ex &df,
 // bisection of function f over interval of 2 points
 numeric Bisect(const realsymbol my_x, const ex &f, const numeric point1,
                const numeric point2, int iter) {
-  if (f.subs(my_x == point1).evalf() < 10e-6) return point1;
-  if (f.subs(my_x == point2).evalf() < 10e-6) return point2;
+  if (f.subs(my_x == point1).evalf() < kEps * kEps) return point1;
+  if (f.subs(my_x == point2).evalf() < kEps * kEps) return point2;
   assertm(iter < 1000, "Too much iterations in bisection method!");
   assertm(f.subs(my_x == point1).evalf() * f.subs(my_x == point2).evalf() <= 0,
           "Wrong call for Bisect function!");
@@ -610,7 +608,7 @@ Edge get_seed_edge(Point seed_point, const Function &F, numeric edge_size,
                    const BoundingBox &bounding_box) {
   numeric edge_length =
       get_curvature_multiplicator_logistic(F, seed_point, edge_size, edge_size);
-  edge_length = edge_size;
+  // edge_length = edge_size;
   Vector edge_size_tangent =
       std::max(std::min(edge_length, edge_size * 1.3), edge_size * 0.7) *
       sqrt(3) / 2 * (F.get_tangent_at_point(seed_point).unit());
@@ -662,7 +660,7 @@ Point get_seed_triangle(const Edge &e, numeric edge_size, const Function &F,
       F, mult_point, edge_size, e.get_length());
   numeric edge_length =
       std::min(std::min(edge_length_1, edge_length_2), edge_length_3);
-  edge_length = edge_size;
+  // edge_length = edge_size;
   numeric height =
       sqrt(numeric(3)) / 2 *
       std::max(std::min(edge_length, edge_size * 1.3), edge_size * 0.7);

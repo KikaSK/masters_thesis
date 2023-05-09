@@ -231,7 +231,11 @@ void BasicAlgorithm::get_points_singular_point(const Singularity singularity,
     for (auto point : points[layer]) {
       std::cout << "point: " << point << endl;
     }
+    std::cout << endl;
     if (num_triangles == 8) {
+      if (singularity.type() == SingularityType::Epp &&
+          singularity.n() == 8)  // E8++
+        return;
       numeric dist01 = Vector(points[layer][0], points[layer][1]).get_length();
       numeric dist12 = Vector(points[layer][1], points[layer][2]).get_length();
       numeric dist02 = Vector(points[layer][0], points[layer][2]).get_length();
@@ -319,9 +323,33 @@ void BasicAlgorithm::get_points_singular_point(const Singularity singularity,
           angle1 = angle_mid;
         }
       }
-      points[layer][3] = Point(new_point.x(), new_point.y(), -new_point.z());
-      points[layer][5] = Point(-new_point.x(), new_point.y(), -new_point.z());
-      points[layer][7] = Point(-new_point.x(), new_point.y(), new_point.z());
+      int first, second;
+      const Point &P = points[layer][1];
+      std::cout << u << endl;
+      if (abs(u.x()) < kEps && abs(u.z()) < kEps) {
+        first = 3;
+        second = 7;
+
+        points[layer][first] = Point(P.x(), P.y(), -P.z());
+        points[layer][5] = Point(-P.x(), P.y(), -P.z());
+        points[layer][second] = Point(-P.x(), P.y(), P.z());
+      } else if (abs(u.y()) < kEps && abs(u.z()) < kEps) {
+        first = 3;
+        second = 7;
+        std::cout << "here!: " << first << " " << second << endl;
+        points[layer][first] = Point(P.x(), P.y(), -P.z());
+        std::cout << points[layer][first] << endl;
+        points[layer][5] = Point(P.x(), -P.y(), -P.z());
+        std::cout << points[layer][5] << endl;
+        points[layer][second] = Point(P.x(), -P.y(), P.z());
+        std::cout << points[layer][second] << endl;
+      } else if (abs(u.x()) < kEps && abs(u.y()) < kEps) {
+        first = 3;
+        second = 7;
+        points[layer][first] = Point(P.x(), -P.y(), P.z());
+        points[layer][5] = Point(-P.x(), -P.y(), P.z());
+        points[layer][second] = Point(-P.x(), P.y(), P.z());
+      }
     }
     for (auto point : points[layer]) {
       std::cout << "point: " << point << endl;
@@ -362,7 +390,7 @@ void BasicAlgorithm::get_local_mesh_point(const vector<vector<Point>> &points,
                            my_mesh.get_points_count() - num_triangles);
       my_mesh.edges_check("in A1 round: " + std::to_string(i));
     }
-    my_mesh.obj_format(name + "_local");
+    // my_mesh.obj_format(name + "_local");
   }
   // the rest of the layers
   for (int layer = 1; layer < layers; ++layer) {
@@ -411,27 +439,31 @@ void BasicAlgorithm::triangulate_singular_point_local(
     layers = 2;
     length = e_size;
   } else if (singularity.type() == SingularityType::Epm) {  // E6+-
-    num_triangles = 4;                                      // 8;
-    layers = 3;
-    length = layers * e_size;
+    num_triangles = 8;
+    layers = 2;
+    length = e_size * 1.5;
   } else if (singularity.type() == SingularityType::Epp &&
              singularity.n() % 2 == 0) {  // E6++, E8++
     num_triangles = 4;                    // 6, 8;
-    layers = 3;
-    length = layers * e_size;
+    layers = 1;
+    length = e_size * 1.5;
   } else if (singularity.type() == SingularityType::Epp &&
              singularity.n() % 2 == 1) {  // E7++
-    if (branch == 0)
+    if (branch == 0) {
       num_triangles = 6;
-    else
-      num_triangles = 4;  // 4, 8;
-    layers = 3;
+      layers = 2;
+      length = e_size;
+    } else {
+      num_triangles = 7;  // 4, 8;
+      layers = 3;
+      length = layers * e_size;
+    }
   } else if (singularity.type() == SingularityType::Dpm &&
              singularity.n() % 2 == 1) {  // D5+-, D7+-, D9+-, ...
     if (branch == 0) {
       num_triangles = 8;
-      layers = 2;
-      length = e_size;
+      layers = 4;
+      length = 2 * e_size;
     } else {
       num_triangles = 8;
       layers = 4;
@@ -475,7 +507,7 @@ void BasicAlgorithm::triangulate_An_analytical(
                             layers);
   get_local_mesh_point(points, singularity, singular_index, num_triangles,
                        branch, layers);
-  my_mesh.obj_format(name + "_local");
+  // my_mesh.obj_format(name + "_local");
   return;
 }
 
@@ -491,7 +523,7 @@ void BasicAlgorithm::triangulate_singularity_circular(
                             layers);
   get_local_mesh_point(points, singularity, singular_index, num_triangles,
                        branch, layers);
-  my_mesh.obj_format(name + "_local");
+  // my_mesh.obj_format(name + "_local");
   return;
 }
 
@@ -508,7 +540,7 @@ void BasicAlgorithm::triangulate_singularity_case2(
                             branch, layers);
   get_local_mesh_point(points, singularity, singular_index, num_triangles,
                        branch, layers);
-  my_mesh.obj_format(name + "_local");
+  // my_mesh.obj_format(name + "_local");
   return;
 }
 
@@ -525,7 +557,7 @@ void BasicAlgorithm::triangulate_cone_iterative(
                             layers);
   get_local_mesh_point(points, singularity, singular_index, num_triangles,
                        branch, layers);
-  my_mesh.obj_format(name + "_local");
+  // my_mesh.obj_format(name + "_local");
   return;
 }
 #pragma endregion "Region singularities"
@@ -607,11 +639,15 @@ bool BasicAlgorithm::Delaunay_conditions(const HalfEdge &working_edge,
   numeric min_edge_length = std::min(
       std::min(new_triangle.AB().get_length(), new_triangle.BC().get_length()),
       new_triangle.CA().get_length());
+  numeric avg_edge_length =
+      (new_triangle.AB().get_length() + new_triangle.BC().get_length() +
+       new_triangle.CA().get_length()) /
+      3.0;
 
-  if (my_mesh.get_faces_count() > 40 &&
-      (new_triangle.AB().get_length() > 3 * min_edge_length ||
-       new_triangle.CA().get_length() > 3 * min_edge_length ||
-       new_triangle.BC().get_length() > 3 * min_edge_length)) {
+  if (/*my_mesh.get_faces_count() > 50 &&*/
+      (new_triangle.AB().get_length() > 2 * min_edge_length ||
+       new_triangle.CA().get_length() > 2 * min_edge_length ||
+       new_triangle.BC().get_length() > 2 * min_edge_length)) {
     // std::cout << "Edge length failed" << endl;
     return false;
   }
@@ -628,7 +664,7 @@ bool BasicAlgorithm::Delaunay_conditions(const HalfEdge &working_edge,
   if (P == opposite_point) return false;
 
   bool gc_distance = true;  // gc_distance_check(new_triangle);
-  bool delaunay = my_mesh.check_Delaunay(working_edge, P, e_size);
+  bool delaunay = my_mesh.check_Delaunay(working_edge, P, avg_edge_length);
   bool has_good_edges = good_edges(working_edge, P);
   bool neighbor_triangles_normal_check = _check_normals(working_edge, P);
   bool is_edge_in_mesh = my_mesh.is_in_mesh(new_triangle.AB()) ||
@@ -1087,7 +1123,7 @@ std::optional<Point> BasicAlgorithm::get_projected(
       std::cout << "no value opt proj center" << endl;
       height = edge_height;
     }
-    height = basic_height;
+    // height = basic_height;
 
     const Vector direction = height * dir;
     assertm(direction * normal_at_edge_midpoint < kEps * height,
@@ -1383,7 +1419,7 @@ bool BasicAlgorithm::fix_breakers(const HalfEdge &working_edge,
             });
 
   //  try create triangle with breakers
-  for (auto point : breakers) {
+  for (MeshPoint point : breakers) {
     if (my_mesh.is_boundary_point(point) &&
         fix_overlap(working_edge, point, Delaunay)) {
       // cout << "here" << endl;
@@ -1552,13 +1588,13 @@ void BasicAlgorithm::ending() {
 // TODO(kuska) make this function void
 void BasicAlgorithm::calculate() {
   starting();
-  my_mesh.obj_format(name + "_before_fix");
+  // my_mesh.obj_format(name + "_before_fix");
   std::cout << "Number of active after starting: "
             << my_mesh.get_active_edges_size() << endl;
   std::cout << "Number of checked after starting: "
             << my_mesh.get_checked_edges_size() << endl;
   ending();
-  my_mesh.obj_format(name + "_after_fix");
+  // my_mesh.obj_format(name + "_after_fix");
   std::cout << "Number of active after ending: "
             << my_mesh.get_active_edges_size() << endl;
   std::cout << "Number of checked after ending: "
@@ -1738,8 +1774,9 @@ bool BasicAlgorithm::fix_holes2(const HalfEdge &working_edge) {
     push_edge_to_checked(working_edge.get_index());
     return false;
   }
-  std::optional<Point> clipped = bounding_box.crop_to_box(
-      working_edge.get_midpoint(), projected.value(), e_size, F);
+  std::optional<Point> clipped =
+      bounding_box.crop_to_box(working_edge.get_midpoint(), projected.value(),
+                               working_edge.get_length(), F);
   assertm(clipped.has_value(), "Unable to crop to box!");
   if (!bounding_box.is_inside(clipped.value()) &&
       !bounding_box.is_on(clipped.value())) {
