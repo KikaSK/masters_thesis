@@ -191,14 +191,14 @@ void measure (const vector<pair<Point, vector<int> > > &mesh_points,
 
 
     out << std::fixed;
-    out << std::setprecision(3) << avg_max_side_ratio << " & " << max_gc_dist << " & " <<
+    out << std::setprecision(3) << 1.0/avg_max_side_ratio << " & " << max_gc_dist << " & " <<
     avg_gc_dist << " & " << 
     avg_mean_neighbour_points_dist << " & " << 
     avg_std_neighbour_points_dist << "\\\\" << endl << endl;
 
 
     out << std::fixed;
-    out << std::setprecision(3) << avg_max_side_ratio << " & " << max_gc_dist << " & " <<
+    out << std::setprecision(3) << 1.0/avg_max_side_ratio << " & " << max_gc_dist << " & " <<
     avg_gc_dist << " & " << 
     avg_std_neighbour_points_dist << "\\\\" << endl << endl;
 /*
@@ -505,7 +505,7 @@ void run_all(const int beg, const int end, const string folder, const string nam
 
 void run_all_kinds(const int A, const int B, const int C, const string folder) {
     //run_input(A, folder, "singsurf");
-    //run_input(B, folder, "adaptive");
+    run_input(B, folder, "adaptive");
     run_input(C, folder, "uniform");
 }
 
@@ -518,7 +518,7 @@ int main(){
     // bol vytvoreny s predponou "measure" (predpona, ktoru si volime pri spustani algoritmu v main.cpp)
     // vystupny subor vlozi do priecinka "/measure/measure_data/finite_surfaces/sphere" a nazve ho s 
     // predponou "measure"
-    /*
+    
     run_all_kinds(0, 5, 3, "/sing_surfaces/A1");
     run_all_kinds(0, 6, 6, "/sing_surfaces/A2");
     run_all_kinds(0, 6, 4, "/sing_surfaces/A3");
@@ -532,7 +532,7 @@ int main(){
     run_all_kinds(0, 11, 9, "/sing_surfaces/D5");
     run_all_kinds(0, 8, 6, "/sing_surfaces/E6");
     run_all_kinds(0, 9, 7, "/sing_surfaces/E6");
-    run_all_kinds(0, 4, 3, "/sing_surfaces/E7");*/
+    run_all_kinds(0, 4, 3, "/sing_surfaces/E7");
     run_all_kinds(0, 4, 3, "/sing_surfaces/E8");
     
     

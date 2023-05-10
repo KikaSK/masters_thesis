@@ -6,19 +6,17 @@ using std::cout;
 
 #pragma region "Region singularities"
 
-void BasicAlgorithm::get_local_mesh_curve(Mesh *local_mesh, const Function &_F,
-                                          const Function &_G,
-                                          const Function &inter_FG,
-                                          const vector<Point> &polyline,
-                                          const BoundingBox &bounding_box,
-                                          const numeric e_size) {
+void BasicAlgorithm::get_local_mesh_curve(
+    const Function &_F, const Function &_G, const Function &inter_FG,
+    const vector<Point> &polyline, const BoundingBox &bounding_box,
+    const numeric e_size, const string type) {
   assertm(polyline.size() > 1, "Wrong length of polyline!");
 
   const Function *F = &_F;
   const Function *G = &_G;
 
-  int offset_index_points = 0;
-  int offset_index_edges = 0;
+  int offset_index_points = my_mesh.get_points_count();
+  int offset_index_edges = my_mesh.get_edges_count();
 
   for (int i = 1; i < polyline.size(); ++i) {
     const Point &A = polyline[i - 1];
@@ -43,8 +41,19 @@ void BasicAlgorithm::get_local_mesh_curve(Mesh *local_mesh, const Function &_F,
     const Point tan_G_point(mid.x() + 0.2 * tangent_G.x(),
                             mid.y() + 0.2 * tangent_G.y(),
                             mid.z() + 0.2 * tangent_G.z());
-    if (F->is_outside(tan_G_point)) tangent_G = -1 * tangent_G;
-    if (G->is_outside(tan_F_point)) tangent_F = -1 * tangent_F;
+    std::cout << "here" << i << endl;
+    if (type == "intersection") {
+      if (F->is_outside(tan_G_point)) tangent_G = -1 * tangent_G;
+      if (G->is_outside(tan_F_point)) tangent_F = -1 * tangent_F;
+    } else if (type == "union") {
+      if (F->is_inside(tan_G_point)) tangent_G = -1 * tangent_G;
+      if (G->is_inside(tan_F_point)) tangent_F = -1 * tangent_F;
+    } else if (type == "difference") {
+      if (F->is_inside(tan_G_point)) tangent_G = -1 * tangent_G;
+      if (G->is_outside(tan_F_point)) tangent_F = -1 * tangent_F;
+    } else {
+      assertm(false, "Invalid type!");
+    }
     const Point F_to_project(mid.x() + tangent_F.x(), mid.y() + tangent_F.y(),
                              mid.z() + tangent_F.z());
     const Point G_to_project(mid.x() + tangent_G.x(), mid.y() + tangent_G.y(),
@@ -65,28 +74,31 @@ void BasicAlgorithm::get_local_mesh_curve(Mesh *local_mesh, const Function &_F,
         bounding_box.crop_to_box(proj_G, projected_G, e_size, inter_FG);
     const Triangle test_T(A, B, projected_F);
 
-    if (test_T.get_normal() * inter_FG.outside_normal(test_T, e_size) < 0) {
-      std::swap(projected_F, projected_G);
-      std::swap(F, G);
-    }
+    /*
+        if (test_T.get_normal() * inter_FG.outside_normal(test_T, e_size) < 0) {
+          std::swap(projected_F, projected_G);
+          std::swap(F, G);
+        }
+        */
 
     const Triangle T_F(A, B, projected_F);
     const Triangle T_G(B, A, projected_G);
     if (i == 1) {
-      local_mesh->add_first_triangle(T_F, bounding_box);
+      my_mesh.add_first_triangle(T_F, bounding_box);
     } else if (i == polyline.size() - 1 && polyline[0] == polyline[i]) {
       // special case - closed curve
-      local_mesh->add_triangle_to_two_meshpoints(
-          offset_index_points + 1 + (i - 2) * 3, 0, projected_F, bounding_box);
+      my_mesh.add_triangle_to_two_meshpoints(
+          offset_index_points + 1 + (i - 2) * 3, offset_index_points + 0,
+          projected_F, bounding_box);
     } else {
-      local_mesh->add_triangle_to_meshpoint(
-          offset_index_points + 1 + (i - 2) * 3, B, projected_F, bounding_box);
+      my_mesh.add_triangle_to_meshpoint(offset_index_points + 1 + (i - 2) * 3,
+                                        B, projected_F, bounding_box);
     }
 
-    local_mesh->add_triangle(offset_index_edges + (i - 1) * 6, projected_G,
-                             true, bounding_box);
+    my_mesh.add_triangle(offset_index_edges + (i - 1) * 6, projected_G, true,
+                         bounding_box);
   }
-  local_mesh->obj_format("non-isolated-test");
+  my_mesh.obj_format(name + "_local");
   return;
 }
 
@@ -645,9 +657,9 @@ bool BasicAlgorithm::Delaunay_conditions(const HalfEdge &working_edge,
       3.0;
 
   if (/*my_mesh.get_faces_count() > 50 &&*/
-      (new_triangle.AB().get_length() > 2 * min_edge_length ||
-       new_triangle.CA().get_length() > 2 * min_edge_length ||
-       new_triangle.BC().get_length() > 2 * min_edge_length)) {
+      (new_triangle.AB().get_length() > 2.5 * min_edge_length ||
+       new_triangle.CA().get_length() > 2.5 * min_edge_length ||
+       new_triangle.BC().get_length() > 2.5 * min_edge_length)) {
     // std::cout << "Edge length failed" << endl;
     return false;
   }
@@ -1078,13 +1090,13 @@ std::optional<Point> BasicAlgorithm::get_projected(
   const Face &incident_face = my_mesh.get_face(working_edge.get_incident());
   const Vector gradient_at_edge_midpoint = F.get_gradient_at_point(center);
   numeric height;
-  // Vector dir1(0, 0, 0);
-  if (!gradient_at_edge_midpoint.is_zero()) {
+  numeric basic_height = e_size * sqrt(numeric(3)) / 2;
+
+  bool adaptive = false;
+  if (adaptive && !gradient_at_edge_midpoint.is_zero()) {
     Vector normal_at_edge_midpoint = gradient_at_edge_midpoint.unit();
     if (normal_at_edge_midpoint * incident_face.get_normal() < 0)
       normal_at_edge_midpoint = -1 * normal_at_edge_midpoint;
-
-    numeric basic_height = e_size * sqrt(numeric(3)) / 2;
     numeric edge_height = working_edge.get_length() * sqrt(numeric(3)) / 2;
     const Vector dir = find_direction_plane(
         working_edge, normal_at_edge_midpoint, incident_face);
@@ -1107,14 +1119,25 @@ std::optional<Point> BasicAlgorithm::get_projected(
     std::optional<Point> proj_midpoint =
         project(center, F.get_gradient_at_point(midpoint).unit(), F, e_size);
     if (proj_midpoint.has_value()) {
-      const numeric gaussian_mult_1 = get_curvature_multiplicator_logistic(
-          F, working_edge.get_point_A(), e_size, avg_e_size);
-      const numeric gaussian_mult_2 = get_curvature_multiplicator_logistic(
-          F, working_edge.get_point_B(), e_size, avg_e_size);
-      const numeric gaussian_mult_3 =
-          get_curvature_multiplicator_logistic(F, midpoint, e_size, avg_e_size);
-      const numeric gaussian_mult =
-          std::min(std::min(gaussian_mult_1, gaussian_mult_2), gaussian_mult_3);
+      numeric gaussian_mult = 10000;
+      if (!F.get_gradient_at_point(working_edge.get_point_A()).is_zero()) {
+        gaussian_mult =
+            std::min(gaussian_mult,
+                     get_curvature_multiplicator_logistic(
+                         F, working_edge.get_point_A(), e_size, avg_e_size));
+      }
+      if (!F.get_gradient_at_point(working_edge.get_point_B()).is_zero()) {
+        gaussian_mult =
+            std::min(gaussian_mult,
+                     get_curvature_multiplicator_logistic(
+                         F, working_edge.get_point_B(), e_size, avg_e_size));
+      }
+      if (!F.get_gradient_at_point(midpoint).is_zero()) {
+        gaussian_mult =
+            std::min(gaussian_mult, get_curvature_multiplicator_logistic(
+                                        F, midpoint, e_size, avg_e_size));
+      }
+      assertm(gaussian_mult != 10000, "3 singular points!");
       height = std::max(std::min(gaussian_mult, 1.3 * avg_e_size),
                         0.7 * avg_e_size) *
                sqrt(numeric(3.0)) / 2.0;
@@ -1123,7 +1146,6 @@ std::optional<Point> BasicAlgorithm::get_projected(
       std::cout << "no value opt proj center" << endl;
       height = edge_height;
     }
-    // height = basic_height;
 
     const Vector direction = height * dir;
     assertm(direction * normal_at_edge_midpoint < kEps * height,
@@ -1143,6 +1165,7 @@ std::optional<Point> BasicAlgorithm::get_projected(
   }
   // end section -- change the incident face plane to tangent plane
 
+  height = basic_height;
   Vector direction = height * find_direction(working_edge, incident_face);
   assertm(direction * incident_face.get_normal() < kEps, "Wrong direction!");
   assertm(direction * Vector(working_edge.get_point_A(),
@@ -1157,7 +1180,6 @@ std::optional<Point> BasicAlgorithm::get_projected(
   assertm(!F.get_gradient_at_point(P).is_zero(), "Zero gradient!");
   Vector normal = F.get_gradient_at_point(P).unit();
   std::optional<Point> projected = project(P, normal, F, e_size);
-
   return projected;
 }
 // returns true if overlap triangle is added to mesh else returns false
@@ -1505,6 +1527,7 @@ void BasicAlgorithm::starting() {
     assertm(my_mesh.is_boundary(working_edge), "Working edge not boundary!");
     assertm(my_mesh.get_halfedge(working_edge).is_active(),
             "Working edge not active!");
+
     assertm(!my_mesh.is_in_mesh(
                 Edge(my_mesh.get_halfedge(working_edge).get_point_B(),
                      my_mesh.get_halfedge(working_edge).get_point_A())),

@@ -30,51 +30,21 @@ class BasicAlgorithm {
         bounding_box(bounding_box) {
     std::cout << "Creating local mesh: " << endl;
     std::cout << "Number of singular points: " << singularities.size() << endl;
-    /*
-        std::regex A1(".*A[0-9]*[02468][+][-].*");
-        std::regex D1(".*D[0-9]*[02468][+][-].*");
-        std::regex E1(".*((E6[+][+])|(E8[+][+])|(E6[+]-)).*");
-
-        std::regex A2(".*A[0-9]*[13579][+][-].*");
-        std::regex D2(".*D[0-9]*[13579][+][-].*");
-
-        std::regex A3(".*A[0-9]+[-][-].*");
-    */
     for (int j = 0; j < singularities.size(); ++j) {
       const Point singular_point = singularities[j].location();
       for (int i = 0; i < singularities[j].get_directions_count(); ++i) {
         triangulate_singular_point_local(singularities[j], i,
                                          (i == 0) ? kInvalidPointIndex : 0);
-        /*
-        if (std::regex_match(name, A1) ||
-            std::regex_match(name, D1) ||
-            std::regex_match(name, E1)) {
-          std::cout << "group1" << endl;
-
-          triangulate_singularity_case2(singularities[j], i,
-                                        (i == 0) ? kInvalidPointIndex : 0);
-        } else if (std::regex_match(name, A2)) {
-          std::cout << "group2" << endl;
-          triangulate_singularity_circular(singularities[j], i,
-                                           (i == 0) ? kInvalidPointIndex : 0);
-        } else if (std::regex_match(name, A3)) {
-          std::cout << "group3" << endl;
-          triangulate_An_analytical(singularities[j], i,
-                                    (i == 0) ? kInvalidPointIndex : 0);
-        } else {
-          std::cout << "group4" << endl;
-          triangulate_cone_iterative(singularities[j], i,
-                                     (i == 0) ? kInvalidPointIndex : 0);
-        }
-        */
       }
     }
   }
 
   explicit BasicAlgorithm(string name, Function f, const Function &F,
-                          const Function &G, const vector<Point> &polyline,
+                          const Function &G,
+                          const vector<vector<Point>> &polylines,
                           numeric e_size, realsymbol x, realsymbol y,
-                          realsymbol z, BoundingBox bounding_box)
+                          realsymbol z, BoundingBox bounding_box,
+                          const string type)
       : name(name),
         F(f),
         e_size(e_size),
@@ -82,7 +52,8 @@ class BasicAlgorithm {
         y(y),
         z(z),
         bounding_box(bounding_box) {
-    get_local_mesh_curve(&my_mesh, F, G, f, polyline, bounding_box, e_size);
+    for (auto polyline : polylines)
+      get_local_mesh_curve(F, G, f, polyline, bounding_box, e_size, type);
   }
   explicit BasicAlgorithm(string name, Function f, Triangle seed_triangle,
                           numeric e_size, realsymbol x, realsymbol y,
@@ -186,11 +157,11 @@ class BasicAlgorithm {
                                         const int branch,
                                         const MeshPointIndex singular_index);
 
-  void get_local_mesh_curve(Mesh *local_mesh, const Function &_F,
-                            const Function &_G, const Function &inter_FG,
+  void get_local_mesh_curve(const Function &_F, const Function &_G,
+                            const Function &inter_FG,
                             const vector<Point> &polyline,
                             const BoundingBox &bounding_box,
-                            const numeric e_size);
+                            const numeric e_size, const string type);
   void get_local_mesh_point(const vector<vector<Point>> &points,
                             const Singularity &singularity,
                             const MeshPointIndex singular_index,

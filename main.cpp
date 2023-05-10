@@ -304,6 +304,7 @@ void test_find_seed_triangle();
 vector<Point> get_polyline(const Function &F, const Function &G,
                            const Point &starting_point, const numeric &e_size,
                            const BoundingBox &bounding_box) {
+  std::cout << "here" << endl;
   std::optional<Point> proj_starting_point = starting_point;
   assertm(proj_starting_point.has_value(), "No value!");
   int iter = 0;
@@ -332,7 +333,7 @@ vector<Point> get_polyline(const Function &F, const Function &G,
 
   int iter_2 = 0;
   while (bounding_box.is_inside(last_point) &&
-         !bounding_box.is_on(last_point) && iter_2 < 100) {
+         !bounding_box.is_on(last_point) && iter_2 < 10000) {
     std::optional<Point> new_point =
         Point(last_point.x() + e_size * tangent_vector.x(),
               last_point.y() + e_size * tangent_vector.y(),
@@ -353,11 +354,12 @@ vector<Point> get_polyline(const Function &F, const Function &G,
 
     new_point =
         bounding_box.crop_to_box(last_point, new_point.value(), e_size, F);
+    // std::cout << iter_2 << " new_point: " << new_point.value() << endl;
 
     // special case - closed curve
-    if (iter_2 > 1 &&
+    if (iter_2 > 3 &&
         Vector(new_point.value(), proj_starting_point.value()).get_length() <
-            3 * e_size / 4) {
+            3.0 * e_size / 4.0) {
       new_point = proj_starting_point;
       points_1.push_back(new_point.value());
       return points_1;
@@ -421,22 +423,27 @@ vector<Point> get_polyline(const Function &F, const Function &G,
   return points_1;
 }
 
-void run_polyline(const numeric &e_size) {
+void run_polyline(const string function_F, const string function_G,
+                  const vector<Point> &seeds, const numeric &e_size,
+                  const string type, const string name = "default_name") {
   realsymbol x("x"), y("y"), z("z");
 
   symtab table;
   table["x"] = x;
   table["y"] = y;
   table["z"] = z;
-  ex ex_F = pow(x, 2) + pow(y, 2) + pow(z, 2) - 4;
+
+  parser reader(table);
+  ex ex_F = reader(function_F);
+  // ex ex_F = pow(x, 2) + pow(y, 2) + pow(z, 2) - 4;
   vector<ex> input_dF;
   input_dF.push_back(diff(ex_F, x));
   input_dF.push_back(diff(ex_F, y));
   input_dF.push_back(diff(ex_F, z));
 
   Function F(x, y, z, ex_F, input_dF);
-
-  ex ex_G = pow(x, 2) - pow(y, 2) + pow(z, 2) - 1;
+  ex ex_G = reader(function_G);
+  // ex ex_G = pow(x, 2) - pow(y, 2) + pow(z, 2) - 1;
   vector<ex> input_dG;
   input_dG.push_back(diff(ex_G, x));
   input_dG.push_back(diff(ex_G, y));
@@ -444,29 +451,44 @@ void run_polyline(const numeric &e_size) {
 
   Function G(x, y, z, ex_G, input_dG);
 
-  numeric min_x = -3;
-  numeric max_x = 3;
-  numeric min_y = 0;
-  numeric max_y = 3;
-  numeric min_z = -3;
-  numeric max_z = 3;
+  numeric min_x = -5;
+  numeric max_x = 5;
+  numeric min_y = -3.5;
+  numeric max_y = 3.5;
+  numeric min_z = -4;
+  numeric max_z = 4;
   BoundingBox my_bounding_box(min_x, max_x, min_y, max_y, min_z, max_z);
 
-  const Point starting_point(sqrt(5.0 / 2.0), sqrt(3.0 / 2.0), 0);
-  vector<Point> polyline_1 =
-      get_polyline(F, G, starting_point, e_size, my_bounding_box);
+  vector<vector<Point>> polylines;
+  for (Point seed : seeds) {
+    // const Point starting_point(sqrt(5.0 / 2.0), sqrt(3.0 / 2.0), 0);
+    vector<Point> polyline = get_polyline(F, G, seed, e_size, my_bounding_box);
+    for (auto P : polyline) {
+      std::cout << P << endl;
+    }
+    std::cout << endl;
+    polylines.push_back(polyline);
+  }
+  ex my_function;
+  if (type == "intersection") {
+    my_function = F.get_function() + G.get_function() +
+                  sqrt(pow(F.get_function(), 2) + pow(G.get_function(), 2));
+  } else if (type == "union") {
+    my_function = F.get_function() + G.get_function() -
+                  sqrt(pow(F.get_function(), 2) + pow(G.get_function(), 2));
+  } else if (type == "difference") {
+    my_function = F.get_function() - G.get_function() +
+                  sqrt(pow(F.get_function(), 2) + pow(G.get_function(), 2));
+  }
+  vector<ex> d_my_function;
+  d_my_function.push_back(diff(my_function, x));
+  d_my_function.push_back(diff(my_function, y));
+  d_my_function.push_back(diff(my_function, z));
 
-  ex intersection = F.get_function() + G.get_function() +
-                    sqrt(pow(F.get_function(), 2) + pow(G.get_function(), 2));
-  vector<ex> d_intersection;
-  d_intersection.push_back(diff(intersection, x));
-  d_intersection.push_back(diff(intersection, y));
-  d_intersection.push_back(diff(intersection, z));
+  Function my_function_FG(x, y, z, my_function, d_my_function);
 
-  Function inter_FG(x, y, z, intersection, d_intersection);
-
-  BasicAlgorithm alg("test_name", inter_FG, F, G, polyline_1, e_size, x, y, z,
-                     my_bounding_box);
+  BasicAlgorithm alg("./outputs/curves/" + name, my_function_FG, F, G,
+                     polylines, e_size, x, y, z, my_bounding_box, type);
   alg.calculate();
   return;
 }
@@ -480,7 +502,97 @@ int main() {
   // vystupny subor vlozi do priecinka "/outputs" a nazve ho s predponou
   // "my_run_input"
   // run_all(4, 4, "/finite_surfaces/genus", "my_run_input");
-  // run_polyline(0.05);
+  /*
+    run_polyline("x^2+y^2+z^2-9", "x^4-5*x^2+y^4-5*y^2+z^4-5*z^2+11.8",
+                 {Point(sqrt(4.5), sqrt(1.75), sqrt(1.75)),
+                  Point(-sqrt(4.5), sqrt(1.75), sqrt(1.75)),
+                  Point(sqrt(4.5), -sqrt(1.75), sqrt(1.75)),
+                  Point(sqrt(4.5), sqrt(1.75), -sqrt(1.75)),
+                  Point(-sqrt(4.5), -sqrt(1.75), sqrt(1.75)),
+                  Point(sqrt(4.5), -sqrt(1.75), -sqrt(1.75)),
+                  Point(-sqrt(4.5), sqrt(1.75), -sqrt(1.75)),
+                  Point(-sqrt(4.5), -sqrt(1.75), -sqrt(1.75))},
+                 0.3, "tanglecube_sphere_0.3");
+
+    run_polyline(
+        "sqrt((x-1)*(x-1)+y*y+z*z)*sqrt((x+1)*(x+1)+y*y+z*z)*sqrt(x*x+(y-1)*(y-1)"
+        "+z*z)*sqrt(x*x+(y+1)*(y+1)+z*z)-1.1",
+        "y", {Point(1.2038, 0, 0)}, 0.15, "blobby_plane_0.15");
+    run_polyline(
+        "sqrt((x-1)*(x-1)+y*y+z*z)*sqrt((x+1)*(x+1)+y*y+z*z)*sqrt(x*x+(y-1)*(y-1)"
+        "+z*z)*sqrt(x*x+(y+1)*(y+1)+z*z)-1.1",
+        "y", {Point(1.2038, 0, 0)}, 0.05, "blobby_plane_0.05");
+        */
+  /*
+run_polyline(
+   "sqrt((x-1)*(x-1)+y*y+z*z)*sqrt((x+1)*(x+1)+y*y+z*z)*sqrt(x*x+(y-1)*(y-1)"
+   "+z*z)*sqrt(x*x+(y+1)*(y+1)+z*z)-1.1",
+   "z", {Point(1.2038, 0, 0)}, 0.15, "blobby_plane_z_0.15");
+run_polyline(
+   "sqrt((x-1)*(x-1)+y*y+z*z)*sqrt((x+1)*(x+1)+y*y+z*z)*sqrt(x*x+(y-1)*(y-1)"
+   "+z*z)*sqrt(x*x+(y+1)*(y+1)+z*z)-1.1",
+   "z", {Point(1.2038, 0, 0)}, 0.10, "blobby_plane_z_0.10");
+run_polyline(
+   "sqrt((x-1)*(x-1)+y*y+z*z)*sqrt((x+1)*(x+1)+y*y+z*z)*sqrt(x*x+(y-1)*(y-1)"
+   "+z*z)*sqrt(x*x+(y+1)*(y+1)+z*z)-1.1",
+   "z", {Point(1.2038, 0, 0)}, 0.05, "blobby_plane_z_0.05");
+   */
+  /*
+    run_polyline("x^2+y^2+z^2-4", "x^2-y^2+z^2-1",
+                 {Point(sqrt(5.0 / 2.0), sqrt(3.0 / 2.0), 0),
+                  Point(sqrt(5.0 / 2.0), -sqrt(3.0 / 2.0), 0)},
+                 0.45, "union", "sphere_hyperboloid_union_0.45");
+    run_polyline("x^2+y^2+z^2-4", "x^2-y^2+z^2-1",
+                 {Point(sqrt(5.0 / 2.0), sqrt(3.0 / 2.0), 0),
+                  Point(sqrt(5.0 / 2.0), -sqrt(3.0 / 2.0), 0)},
+                 0.30, "union", "sphere_hyperboloid_union_0.30");
+    run_polyline("x^2+y^2+z^2-4", "x^2-y^2+z^2-1",
+                 {Point(sqrt(5.0 / 2.0), sqrt(3.0 / 2.0), 0),
+                  Point(sqrt(5.0 / 2.0), -sqrt(3.0 / 2.0), 0)},
+                 0.15, "union", "sphere_hyperboloid_union_0.15");
+    */
+  /*
+ run_polyline("(x-2)^2+y^2+z^2-4", "x^2+y^2+z^2-4", {Point(1, sqrt(3.0), 0)},
+              0.45, "union", "sphere_sphere_union_0.45");
+ run_polyline("(x-2)^2+y^2+z^2-4", "x^2+y^2+z^2-4", {Point(1, sqrt(3.0), 0)},
+              0.30, "union", "sphere_sphere_union_0.30");
+ run_polyline("(x-2)^2+y^2+z^2-4", "x^2+y^2+z^2-4", {Point(1, sqrt(3.0), 0)},
+              0.15, "union", "sphere_sphere_union_0.15");
+              */
+  /*
+run_polyline("x^2+y^2+z^2-9", "x^4-5*x^2+y^4-5*y^2+z^4-5*z^2+11.8",
+  {Point(sqrt(4.5), sqrt(1.75), sqrt(1.75)),
+   Point(-sqrt(4.5), sqrt(1.75), sqrt(1.75)),
+   Point(sqrt(4.5), -sqrt(1.75), sqrt(1.75)),
+   Point(sqrt(4.5), sqrt(1.75), -sqrt(1.75)),
+   Point(-sqrt(4.5), -sqrt(1.75), sqrt(1.75)),
+   Point(sqrt(4.5), -sqrt(1.75), -sqrt(1.75)),
+   Point(-sqrt(4.5), sqrt(1.75), -sqrt(1.75)),
+   Point(-sqrt(4.5), -sqrt(1.75), -sqrt(1.75))},
+  0.45, "union", "tanglecube_sphere__union_0.45");
+run_polyline("x^2+y^2+z^2-9", "x^4-5*x^2+y^4-5*y^2+z^4-5*z^2+11.8",
+  {Point(sqrt(4.5), sqrt(1.75), sqrt(1.75)),
+   Point(-sqrt(4.5), sqrt(1.75), sqrt(1.75)),
+   Point(sqrt(4.5), -sqrt(1.75), sqrt(1.75)),
+   Point(sqrt(4.5), sqrt(1.75), -sqrt(1.75)),
+   Point(-sqrt(4.5), -sqrt(1.75), sqrt(1.75)),
+   Point(sqrt(4.5), -sqrt(1.75), -sqrt(1.75)),
+   Point(-sqrt(4.5), sqrt(1.75), -sqrt(1.75)),
+   Point(-sqrt(4.5), -sqrt(1.75), -sqrt(1.75))},
+  0.30, "union", "tanglecube_sphere__union_0.30");
+run_polyline("x^2+y^2+z^2-9", "x^4-5*x^2+y^4-5*y^2+z^4-5*z^2+11.8",
+  {Point(sqrt(4.5), sqrt(1.75), sqrt(1.75)),
+   Point(-sqrt(4.5), sqrt(1.75), sqrt(1.75)),
+   Point(sqrt(4.5), -sqrt(1.75), sqrt(1.75)),
+   Point(sqrt(4.5), sqrt(1.75), -sqrt(1.75)),
+   Point(-sqrt(4.5), -sqrt(1.75), sqrt(1.75)),
+   Point(sqrt(4.5), -sqrt(1.75), -sqrt(1.75)),
+   Point(-sqrt(4.5), sqrt(1.75), -sqrt(1.75)),
+   Point(-sqrt(4.5), -sqrt(1.75), -sqrt(1.75))},
+  0.15, "union", "tanglecube_sphere__union_0.15");*/
+  /*
+    run_polyline("x+1", "x^2+y^2+z^2-4", {Point(-1, sqrt(3), 0)}, 0.05,
+                 "sphere_plane");*/
   //  run_all(3, 4, "/finite_surfaces/sphere", "my_run_input");
   // run_input(8, "/sing_surfaces/A2", "measure");
   // run_input(5, "/sing_surfaces/A3", "measure");
@@ -492,7 +604,7 @@ int main() {
   // run_all(9, 9, "/sing_surfaces/E6", "measure");
 
   // run_all(4, 4, "/sing_surfaces/E7", "measure");
-  run_all(4, 4, "/sing_surfaces/E8", "measure");
+  // run_all(4, 4, "/sing_surfaces/E8", "measure");
   //   run_all(3, 3, "/sing_surfaces/D4", "measure");
 
   // run_all_plane(2, 2, "/1_singularity/A2", "test");
