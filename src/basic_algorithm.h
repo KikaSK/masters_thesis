@@ -31,10 +31,11 @@ class BasicAlgorithm {
     std::cout << "Creating local mesh: " << endl;
     std::cout << "Number of singular points: " << singularities.size() << endl;
     for (int j = 0; j < singularities.size(); ++j) {
+      int points_count = my_mesh.get_points_count();
       const Point singular_point = singularities[j].location();
       for (int i = 0; i < singularities[j].get_directions_count(); ++i) {
-        triangulate_singular_point_local(singularities[j], i,
-                                         (i == 0) ? kInvalidPointIndex : 0);
+        triangulate_singular_point_local(
+            singularities[j], i, (i == 0) ? kInvalidPointIndex : points_count);
       }
     }
   }

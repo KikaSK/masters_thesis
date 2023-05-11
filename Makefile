@@ -1,6 +1,6 @@
 # https://devhints.io/makefile
 CC = g++
-CCFLAGS = -std=c++17 -Wno-sign-compare -Wno-unknown-pragmas -pedantic -fPIC -O2 -fsanitize=undefined# run mode
+CCFLAGS = -std=c++17 -Wno-sign-compare -Wno-unknown-pragmas -pedantic -fPIC -O2 -DNDEBUG -fsanitize=undefined# run mode
 #CCFLAGS = -std=c++17 -Wall -Wextra -Wno-sign-compare -pedantic -O0 -g # debug mode
 GINAC = -lginac -lcln -lgtest -lgtest_main
 BUILD_DIR = build

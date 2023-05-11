@@ -1,6 +1,7 @@
 #include <ginac/ginac.h>
 
 #include <cassert>
+#include <chrono>
 #include <cmath>
 #include <fstream>
 #include <iostream>
@@ -28,6 +29,7 @@ using std::endl;
 using std::queue;
 using std::vector;
 using namespace GiNaC;
+using namespace std::chrono;
 
 // substitutes to function and returns numeric
 numeric substitute(const Function F, GiNaC::ex il) {
@@ -165,8 +167,13 @@ void run_input(const int i, const string folder, const string index) {
                        my_bounding_box);
     cout << "Basic algorithm created, calling for calculate()!" << endl;
     // alg.my_mesh.obj_format("./outputs/" + name);
-
+    auto start = high_resolution_clock::now();
     alg.calculate();
+    auto stop = high_resolution_clock::now();
+    auto duration = duration_cast<microseconds>(stop - start);
+    std::cout << "Edge size: " << e_size << endl;
+    std::cout << "Duration: " << duration.count() << endl;
+
   }
   // algorithm starting in singular points
   else {
@@ -228,16 +235,21 @@ void run_input_plane(const int i, const string folder, const string index) {
   vector<numeric> heights;
   vector<vector<Vector>> singular_directions;
   vector<int> types;
+  vector<Singularity> singularities;
   for (int i = 0; i < num_of_singular - 0.5; ++i) {
+    Singularity sing;
     string str_n = parsed_input[9 + 4 * i];
     int n = stoi(str_n);
     types.push_back(n);
+    sing.set_n(n);
+    sing.set_type(SingularityType::Amm);
     double p_y = stod(parsed_input[10 + 4 * i]);
     double p_z = stod(parsed_input[11 + 4 * i]);
     double h = stod(parsed_input[12 + 4 * i]);
     double k = 3.1415 / (2 * sqrt(std::pow(h, n + 1)));
     double q = 4 * h / (3.1415 * (n + 1));
     double p_x = -h - q;
+    sing.set_location(Point(numeric(p_x), numeric(p_y), numeric(p_z)));
     singular_points.push_back(Point(numeric(p_x), numeric(p_y), numeric(p_z)));
     // equation of A_n singularity translated to point p_x, p_y, p_z
     ex sing_equation = pow(x - p_x, n + 1) - pow(y - p_y, 2) - pow(z - p_z, 2);
@@ -263,7 +275,9 @@ void run_input_plane(const int i, const string folder, const string index) {
 
     singular_equations.push_back(union_res_equation);
     std::vector<Vector> sing_dir = {Vector(1, 0, 0)};
+    sing.set_directions(sing_dir);
     singular_directions.push_back(sing_dir);
+    singularities.push_back(sing);
   }
   ex final_eq = singular_equations[0];
   for (int i = 1; i < singular_equations.size(); ++i) {
@@ -279,14 +293,11 @@ void run_input_plane(const int i, const string folder, const string index) {
   input_dF.push_back(diff(final_eq, z));
 
   Function F(x, y, z, final_eq, input_dF);
-  // TODO rewrite input format
-  /*
-  BasicAlgorithm alg("./outputs/" + name, F, singular_points[0], e_size, x, y,
-                     z, my_bounding_box, singular_points, singular_directions,
-                     types);
-  cout << "Basic algorithm created, calling for calculate()!" << endl;
-  */
-  // alg.my_mesh.obj_format("./outputs/" + name);
+
+  Point seed_point = Point(0, 0, 0);
+  BasicAlgorithm alg("./outputs/plane/" + name, F, seed_point, e_size, x, y, z,
+                     my_bounding_box, singularities);
+  alg.calculate();
 }
 
 // runs multiple inputs, creates output files in "/output" folder
@@ -299,12 +310,9 @@ void run_all_plane(const int beg, const int end, const string folder,
   for (int i = beg; i <= end; ++i) run_input_plane(i, folder, index);
 }
 
-void test_find_seed_triangle();
-
 vector<Point> get_polyline(const Function &F, const Function &G,
                            const Point &starting_point, const numeric &e_size,
                            const BoundingBox &bounding_box) {
-  std::cout << "here" << endl;
   std::optional<Point> proj_starting_point = starting_point;
   assertm(proj_starting_point.has_value(), "No value!");
   int iter = 0;
@@ -316,8 +324,10 @@ vector<Point> get_polyline(const Function &F, const Function &G,
     assertm(!grad_F.is_zero() && !grad_G.is_zero(), "Zero gradient!");
     proj_starting_point =
         project(proj_starting_point.value(), grad_F.unit(), F, e_size);
+    assertm(proj_starting_point.has_value(), "No value!");
     proj_starting_point =
         project(proj_starting_point.value(), grad_G.unit(), G, e_size);
+    assertm(proj_starting_point.has_value(), "No value!");
     iter++;
   }
   assertm(iter != 30, "Too many iterations!");
@@ -419,7 +429,7 @@ vector<Point> get_polyline(const Function &F, const Function &G,
   reverse(points_1.begin(), points_1.end());
   points_1.pop_back();
   points_1.insert(points_1.end(), points_2.begin(), points_2.end());
-
+  std::cout << "finished polyline" << endl;
   return points_1;
 }
 
@@ -502,27 +512,61 @@ int main() {
   // vystupny subor vlozi do priecinka "/outputs" a nazve ho s predponou
   // "my_run_input"
   // run_all(4, 4, "/finite_surfaces/genus", "my_run_input");
+  assertm(false, "TADAAAAA");
+  run_all(8, 15, "/finite_surfaces/sphere_timer", "timer");
+  // run_all_plane(3, 3, "/1_singularity/A2", "test");
   /*
-    run_polyline("x^2+y^2+z^2-9", "x^4-5*x^2+y^4-5*y^2+z^4-5*z^2+11.8",
-                 {Point(sqrt(4.5), sqrt(1.75), sqrt(1.75)),
-                  Point(-sqrt(4.5), sqrt(1.75), sqrt(1.75)),
-                  Point(sqrt(4.5), -sqrt(1.75), sqrt(1.75)),
-                  Point(sqrt(4.5), sqrt(1.75), -sqrt(1.75)),
-                  Point(-sqrt(4.5), -sqrt(1.75), sqrt(1.75)),
-                  Point(sqrt(4.5), -sqrt(1.75), -sqrt(1.75)),
-                  Point(-sqrt(4.5), sqrt(1.75), -sqrt(1.75)),
-                  Point(-sqrt(4.5), -sqrt(1.75), -sqrt(1.75))},
-                 0.3, "tanglecube_sphere_0.3");
-
-    run_polyline(
-        "sqrt((x-1)*(x-1)+y*y+z*z)*sqrt((x+1)*(x+1)+y*y+z*z)*sqrt(x*x+(y-1)*(y-1)"
-        "+z*z)*sqrt(x*x+(y+1)*(y+1)+z*z)-1.1",
-        "y", {Point(1.2038, 0, 0)}, 0.15, "blobby_plane_0.15");
-    run_polyline(
-        "sqrt((x-1)*(x-1)+y*y+z*z)*sqrt((x+1)*(x+1)+y*y+z*z)*sqrt(x*x+(y-1)*(y-1)"
-        "+z*z)*sqrt(x*x+(y+1)*(y+1)+z*z)-1.1",
-        "y", {Point(1.2038, 0, 0)}, 0.05, "blobby_plane_0.05");
-        */
+    run_polyline("(x-2)^2+y^2+z^2-4", "x^2+y^2+z^2-4", {Point(1, sqrt(3.0), 0)},
+                 0.45, "difference", "sphere_sphere_difference_0.45");
+    run_polyline("(x-2)^2+y^2+z^2-4", "x^2+y^2+z^2-4", {Point(1, sqrt(3.0), 0)},
+                 0.30, "difference", "sphere_sphere_difference_0.30");
+    run_polyline("(x-2)^2+y^2+z^2-4", "x^2+y^2+z^2-4", {Point(1, sqrt(3.0), 0)},
+                 0.15, "difference", "sphere_sphere_difference_0.15");
+  */
+  /*
+   run_polyline("x^4-5*x^2+y^4-5*y^2+z^4-5*z^2+11.8", "x^2+y^2+z^2-5.5",
+                {Point(-1.28903, 0.5, 1.89431), Point(-1.28903, 0.5, -1.89431),
+                 Point(1.28903, -1.89431, 0.5), Point(-1.89431, 1.28903, 0.5),
+                 Point(1.89431, -1.28903, 0.5), Point(-1.28903, 1.89431, 0.5)},
+                0.15, "difference", "small_sphere_tanglecube_difference_0.15");
+                */
+  /*
+run_polyline("x^4-5*x^2+y^4-5*y^2+z^4-5*z^2+11.8", "x^2+y^2+z^2-5.5",
+  {Point(-1.28903, 0.5, 1.89431), Point(-1.28903, 0.5, -1.89431),
+   Point(1.28903, -1.89431, 0.5), Point(-1.89431, 1.28903, 0.5),
+   Point(1.89431, -1.28903, 0.5), Point(-1.28903, 1.89431, 0.5)},
+  0.10, "difference", "small_sphere_tanglecube_difference_0.10");
+run_polyline("x^4-5*x^2+y^4-5*y^2+z^4-5*z^2+11.8", "x^2+y^2+z^2-5.5",
+  {Point(-1.28903, 0.5, 1.89431), Point(-1.28903, 0.5, -1.89431),
+   Point(1.28903, -1.89431, 0.5), Point(-1.89431, 1.28903, 0.5),
+   Point(1.89431, -1.28903, 0.5), Point(-1.28903, 1.89431, 0.5)},
+  0.05, "difference", "small_sphere_tanglecube_difference_0.05");*/
+  /*
+  run_polyline("x^2+y^2+z^2-5.5", "x^4-5*x^2+y^4-5*y^2+z^4-5*z^2+11.8",
+               {Point(-1.28903, 0.5, 1.89431), Point(-1.28903, 0.5, -1.89431),
+                Point(1.28903, -1.89431, 0.5), Point(-1.89431, 1.28903, 0.5),
+                Point(1.89431, -1.28903, 0.5), Point(-1.28903, 1.89431, 0.5)},
+               0.30, "difference", "tanglecube_small_sphere_difference_0.30");
+  run_polyline("x^2+y^2+z^2-5.5", "x^4-5*x^2+y^4-5*y^2+z^4-5*z^2+11.8",
+               {Point(-1.28903, 0.5, 1.89431), Point(-1.28903, 0.5, -1.89431),
+                Point(1.28903, -1.89431, 0.5), Point(-1.89431, 1.28903, 0.5),
+                Point(1.89431, -1.28903, 0.5), Point(-1.28903, 1.89431, 0.5)},
+               0.20, "difference", "tanglecube_small_sphere_difference_0.20");
+  run_polyline("x^2+y^2+z^2-5.5", "x^4-5*x^2+y^4-5*y^2+z^4-5*z^2+11.8",
+               {Point(-1.28903, 0.5, 1.89431), Point(-1.28903, 0.5, -1.89431),
+                Point(1.28903, -1.89431, 0.5), Point(-1.89431, 1.28903, 0.5),
+                Point(1.89431, -1.28903, 0.5), Point(-1.28903, 1.89431, 0.5)},
+               0.10, "difference", "tanglecube_small_sphere_difference_0.10");*/
+  /*
+      run_polyline(
+          "sqrt((x-1)*(x-1)+y*y+z*z)*sqrt((x+1)*(x+1)+y*y+z*z)*sqrt(x*x+(y-1)*(y-1)"
+          "+z*z)*sqrt(x*x+(y+1)*(y+1)+z*z)-1.1",
+          "y", {Point(1.2038, 0, 0)}, 0.15, "blobby_plane_0.15");
+      run_polyline(
+          "sqrt((x-1)*(x-1)+y*y+z*z)*sqrt((x+1)*(x+1)+y*y+z*z)*sqrt(x*x+(y-1)*(y-1)"
+          "+z*z)*sqrt(x*x+(y+1)*(y+1)+z*z)-1.1",
+          "y", {Point(1.2038, 0, 0)}, 0.05, "blobby_plane_0.05");
+          */
   /*
 run_polyline(
    "sqrt((x-1)*(x-1)+y*y+z*z)*sqrt((x+1)*(x+1)+y*y+z*z)*sqrt(x*x+(y-1)*(y-1)"
@@ -607,7 +651,6 @@ run_polyline("x^2+y^2+z^2-9", "x^4-5*x^2+y^4-5*y^2+z^4-5*z^2+11.8",
   // run_all(4, 4, "/sing_surfaces/E8", "measure");
   //   run_all(3, 3, "/sing_surfaces/D4", "measure");
 
-  // run_all_plane(2, 2, "/1_singularity/A2", "test");
   // run_polyline(0.35);
   // run_all(2, 2, "/sing_surfaces/A2-plane",
   //"test-plane-basic-height-case3-adaptive");

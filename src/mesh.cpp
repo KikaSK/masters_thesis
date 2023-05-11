@@ -478,7 +478,7 @@ void Mesh::add_first_triangle(const Triangle &T,
   _mesh_edges.push_back(BC);
   _mesh_edges.push_back(CA);
 
-  edges_check("in add first triangle: ");
+  // edges_check("in add first triangle: ");
   return;
 }
 
@@ -1109,7 +1109,7 @@ void Mesh::_bound_opposite_outgoing(const MeshPoint &A,
   }
   return;
 }
-
+/*
 bool Mesh::edges_check(const std::string &message,
                        const HalfEdgeIndex working_edge) const {
   // std::cout << "Edges check " << message << endl;
@@ -1151,28 +1151,6 @@ bool Mesh::edges_check(const std::string &message,
     }
     if (edge.is_boundary() &&
         is_in_mesh(Edge(edge.get_point_B(), edge.get_point_A()))) {
-      /*
-  std::cout << edge.is_active() << edge.is_checked() << edge.is_bounding()
-            << endl;
-  for (auto e : _mesh_edges)
-    if (e.get_edge() == Edge(edge.get_point_B(), edge.get_point_A())) {
-      std::cout << "edge index: " << edge.get_index() << endl;
-      std::cout << "edge: " << edge << endl;
-      std::cout << "opposite edge index: " << e.get_index() << endl;
-      std::cout << "307: " << _mesh_edges[307].is_active()
-                << _mesh_edges[307].is_checked()
-                << _mesh_edges[307].is_bounding() << has_active_edge(307)
-                << has_checked_edge(307) << endl;
-      std::cout << "290: " << _mesh_edges[290].is_active()
-                << _mesh_edges[290].is_checked()
-                << _mesh_edges[290].is_bounding() << has_active_edge(290)
-                << has_checked_edge(290) << endl;
-      std::cout << "309: " << _mesh_edges[309].is_active()
-                << _mesh_edges[309].is_checked()
-                << _mesh_edges[309].is_bounding() << has_active_edge(309)
-                << has_checked_edge(309) << endl;
-    }
-    */
       std::cout << "Inconsistent opposite edges!" << endl;
       is_ok = false;
     }
@@ -1197,7 +1175,7 @@ bool Mesh::edges_check(const std::string &message,
   }
   return true;
 }
-
+*/
 NewTriangleType Mesh::_find_type(const HalfEdgeIndex index_AB,
                                  const MeshPoint &P) const {
   const MeshPoint &A = _mesh_points[_mesh_edges[index_AB].get_A()];

@@ -41,7 +41,6 @@ void BasicAlgorithm::get_local_mesh_curve(
     const Point tan_G_point(mid.x() + 0.2 * tangent_G.x(),
                             mid.y() + 0.2 * tangent_G.y(),
                             mid.z() + 0.2 * tangent_G.z());
-    std::cout << "here" << i << endl;
     if (type == "intersection") {
       if (F->is_outside(tan_G_point)) tangent_G = -1 * tangent_G;
       if (G->is_outside(tan_F_point)) tangent_F = -1 * tangent_F;
@@ -49,8 +48,8 @@ void BasicAlgorithm::get_local_mesh_curve(
       if (F->is_inside(tan_G_point)) tangent_G = -1 * tangent_G;
       if (G->is_inside(tan_F_point)) tangent_F = -1 * tangent_F;
     } else if (type == "difference") {
-      if (F->is_inside(tan_G_point)) tangent_G = -1 * tangent_G;
-      if (G->is_outside(tan_F_point)) tangent_F = -1 * tangent_F;
+      if (F->is_outside(tan_G_point)) tangent_G = -1 * tangent_G;
+      if (G->is_inside(tan_F_point)) tangent_F = -1 * tangent_F;
     } else {
       assertm(false, "Invalid type!");
     }
@@ -98,7 +97,7 @@ void BasicAlgorithm::get_local_mesh_curve(
     my_mesh.add_triangle(offset_index_edges + (i - 1) * 6, projected_G, true,
                          bounding_box);
   }
-  my_mesh.obj_format(name + "_local");
+  // my_mesh.obj_format(name + "_local");
   return;
 }
 
@@ -394,13 +393,13 @@ void BasicAlgorithm::get_local_mesh_point(const vector<vector<Point>> &points,
     } else if (i < num_triangles - 1) {
       my_mesh.add_triangle(my_mesh.get_edges_count() - 1, points[0][j], true,
                            bounding_box);
-      my_mesh.edges_check("in A1 round: " + std::to_string(i));
+      // my_mesh.edges_check("in A1 round: " + std::to_string(i));
       //,bounding_box);
     } else {
       my_mesh.add_triangle(my_mesh.get_edges_count() - 1, points[0][j], false,
                            bounding_box,
                            my_mesh.get_points_count() - num_triangles);
-      my_mesh.edges_check("in A1 round: " + std::to_string(i));
+      // my_mesh.edges_check("in A1 round: " + std::to_string(i));
     }
     // my_mesh.obj_format(name + "_local");
   }
@@ -411,7 +410,7 @@ void BasicAlgorithm::get_local_mesh_point(const vector<vector<Point>> &points,
       my_mesh.add_triangle(
           my_mesh.get_faces_count() * 3 - (3 * num_triangles - magic_constant),
           points[layer][i], true, bounding_box);
-      my_mesh.edges_check("In create local mesh, layer 2");
+      // my_mesh.edges_check("In create local mesh, layer 2");
     }
     for (int i = 0; i < num_triangles; ++i) {
       int k = (i + num_triangles - 1) % num_triangles;
@@ -419,7 +418,7 @@ void BasicAlgorithm::get_local_mesh_point(const vector<vector<Point>> &points,
           3 * my_mesh.get_faces_count() - (3 * num_triangles - 1),
           points[layer][k], false, bounding_box,
           my_mesh.get_points_count() - num_triangles + k);
-      my_mesh.edges_check("In create local mesh, layer 2, round 2");
+      // my_mesh.edges_check("In create local mesh, layer 2, round 2");
     }
   }
 }
@@ -432,7 +431,7 @@ void BasicAlgorithm::triangulate_singular_point_local(
   numeric length;
   if (singularity.type() == SingularityType::Amm) {  // An--
     num_triangles = 6;
-    layers = 2 * singularity.n() + 1;
+    layers = singularity.n() + 1;
     length = e_size;
   } else if (singularity.type() == SingularityType::Apm &&
              singularity.n() % 2 == 0)  // A2+-, A4+-, A6+-, ...
@@ -504,7 +503,7 @@ void BasicAlgorithm::triangulate_singular_point_local(
                             layers);
   get_local_mesh_point(points, singularity, singular_index, num_triangles,
                        branch, layers);
-  my_mesh.obj_format(name + "_local");
+  // my_mesh.obj_format(name + "_local");
   return;
 }
 
@@ -1546,9 +1545,10 @@ void BasicAlgorithm::starting() {
 
     // once in every 10 steps prints number of triangles and number of active
     // edges and updates output file
-    if (active_rounds % 30 == 0) {
+    if (active_rounds % 500 == 0) {
       my_mesh.cout_triangles_number();
-      my_mesh.obj_format(name);
+      // my_mesh.obj_format(name);
+
       cout << "Number of active edges: " << my_mesh.get_active_edges_size()
            << endl;
       cout << "Number of checked edges: " << my_mesh.get_checked_edges_size()
@@ -1560,16 +1560,7 @@ void BasicAlgorithm::starting() {
   }
 
   // output
-  my_mesh.obj_format(name);
-
-  /*
-  // this means there are no holes so we finished
-  if (checked_edges.empty()) {
-    cout << "No holes!" << endl;
-    return;
-  }
-  return;
-  */
+  // my_mesh.obj_format(name);
   return;
 }
 
@@ -1593,7 +1584,7 @@ void BasicAlgorithm::ending() {
       my_mesh.remove_active_edge(working_edge);
 
       fix_holes2(my_mesh.get_halfedge(working_edge));
-      my_mesh.obj_format(name);
+      // my_mesh.obj_format(name);
       if (round % 5 == 0) {
         my_mesh.cout_triangles_number();
         cout << "Number of active edges: " << my_mesh.get_active_edges_size()
@@ -1602,6 +1593,7 @@ void BasicAlgorithm::ending() {
       }
     }
   }
+  // my_mesh.obj_format(name);
   if (!my_mesh.checked_edges_empty()) {
     cout << "Some holes stayed!" << endl;
   }

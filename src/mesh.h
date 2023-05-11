@@ -138,8 +138,10 @@ class Mesh {
 
   void obj_format(const std::string &name) const;
   // void mesh_format(const std::string &name) const;
+  /*
   bool edges_check(const std::string &message,
-                   const HalfEdgeIndex working_edge = kInvalidEdgeIndex) const;
+                   const HalfEdgeIndex working_edge = kInvalidEdgeIndex)
+  const;*/
   NewTriangleType _find_type(const HalfEdgeIndex index_AB,
                              const MeshPoint &P) const;
   vector<MeshPoint> _linear_breakers_getter(const Triangle &T) const;

@@ -211,6 +211,7 @@ std::optional<Point> project(const Point &point_to_project,
 
   // parametric equations of line given by P and n
   // expressing parameter and substituing to other equations
+
   if (abs(n.x()) > kEps) {
     starting_point = P.x();
     param_x = my_x;
