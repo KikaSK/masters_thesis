@@ -58,8 +58,7 @@ Vector find_direction_plane(const HalfEdge &working_edge, const Vector &normal,
 // the midpoint of edge e, perpendicular to e
 Vector find_direction(const HalfEdge &working_edge, const Face &F);
 
-numeric get_curvature_multiplicator(const Function &F, const Point &point);
-numeric get_curvature_multiplicator_logistic(
+numeric get_curvature_multiplicator(
     const Function &F, const Point &point, const numeric &e_size,
     const numeric &working_edge_length);
 

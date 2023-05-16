@@ -247,6 +247,9 @@ void BasicAlgorithm::get_points_singular_point(const Singularity singularity,
       if (singularity.type() == SingularityType::Epp &&
           singularity.n() == 8)  // E8++
         return;
+      if (singularity.type() == SingularityType::Apm &&
+          singularity.n() % 2 == 0)  // An+- not necessary
+        return;
       numeric dist01 = Vector(points[layer][0], points[layer][1]).get_length();
       numeric dist12 = Vector(points[layer][1], points[layer][2]).get_length();
       numeric dist02 = Vector(points[layer][0], points[layer][2]).get_length();
@@ -1122,18 +1125,18 @@ std::optional<Point> BasicAlgorithm::get_projected(
       if (!F.get_gradient_at_point(working_edge.get_point_A()).is_zero()) {
         gaussian_mult =
             std::min(gaussian_mult,
-                     get_curvature_multiplicator_logistic(
+                     get_curvature_multiplicator(
                          F, working_edge.get_point_A(), e_size, avg_e_size));
       }
       if (!F.get_gradient_at_point(working_edge.get_point_B()).is_zero()) {
         gaussian_mult =
             std::min(gaussian_mult,
-                     get_curvature_multiplicator_logistic(
+                     get_curvature_multiplicator(
                          F, working_edge.get_point_B(), e_size, avg_e_size));
       }
       if (!F.get_gradient_at_point(midpoint).is_zero()) {
         gaussian_mult =
-            std::min(gaussian_mult, get_curvature_multiplicator_logistic(
+            std::min(gaussian_mult, get_curvature_multiplicator(
                                         F, midpoint, e_size, avg_e_size));
       }
       assertm(gaussian_mult != 10000, "3 singular points!");
@@ -1545,9 +1548,9 @@ void BasicAlgorithm::starting() {
 
     // once in every 10 steps prints number of triangles and number of active
     // edges and updates output file
-    if (active_rounds % 500 == 0) {
+    if (active_rounds % 50 == 0) {
       my_mesh.cout_triangles_number();
-      // my_mesh.obj_format(name);
+      my_mesh.obj_format(name);
 
       cout << "Number of active edges: " << my_mesh.get_active_edges_size()
            << endl;
@@ -1584,7 +1587,7 @@ void BasicAlgorithm::ending() {
       my_mesh.remove_active_edge(working_edge);
 
       fix_holes2(my_mesh.get_halfedge(working_edge));
-      // my_mesh.obj_format(name);
+      my_mesh.obj_format(name);
       if (round % 5 == 0) {
         my_mesh.cout_triangles_number();
         cout << "Number of active edges: " << my_mesh.get_active_edges_size()
@@ -1615,11 +1618,12 @@ void BasicAlgorithm::calculate() {
   std::cout << "Number of checked after ending: "
             << my_mesh.get_checked_edges_size() << endl;
   // fix_corners();
-  //  my_mesh.measure(bounding_edges, F, name, e_size);
-  //  my_mesh.adaptive(0.005, F, e_size);
-  // my_mesh.mesh_format(name);
+  //   my_mesh.measure(bounding_edges, F, name, e_size);
+  //   my_mesh.adaptive(0.005, F, e_size);
+  //  my_mesh.mesh_format(name);
   cout << "Final triangles count: ";
   my_mesh.cout_triangles_number();
+  my_mesh.obj_format(name);
   return;
 }
 

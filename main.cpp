@@ -134,7 +134,9 @@ void run_input(const int i, const string folder, const string index) {
       singular_directions[singular_directions.size() - 1].push_back(
           Vector(d_x, d_y, d_z));
       sing.add_direction(Vector(d_x, d_y, d_z));
+      std::cout << "sing dir: " << Vector(d_x, d_y, d_z) << endl;
     }
+    std::cout << "sing point: " << sing.location() << endl;
     singularities.push_back(sing);
   }
   /*
@@ -512,8 +514,7 @@ int main() {
   // vystupny subor vlozi do priecinka "/outputs" a nazve ho s predponou
   // "my_run_input"
   // run_all(4, 4, "/finite_surfaces/genus", "my_run_input");
-  assertm(false, "TADAAAAA");
-  run_all(8, 15, "/finite_surfaces/sphere_timer", "timer");
+  run_all(6, 6, "/sing_surfaces/A1", "examples");
   // run_all_plane(3, 3, "/1_singularity/A2", "test");
   /*
     run_polyline("(x-2)^2+y^2+z^2-4", "x^2+y^2+z^2-4", {Point(1, sqrt(3.0), 0)},

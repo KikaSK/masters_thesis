@@ -90,6 +90,8 @@ std::optional<numeric> Bisection(const realsymbol my_x, const ex &f,
   return projected.value();
 }
 
+// rotates point about the axis given by the point rot_center and the vector u 
+// by an angle
 Point rotate(const Point &rot_center, const Point &to_rotate, const Vector &u,
              const numeric angle) {
   // rotating matrix around ROT_direction
@@ -117,6 +119,8 @@ Point rotate(const Point &rot_center, const Point &to_rotate, const Vector &u,
   return Point(rot_center, end_vector);
 }
 
+// performs circular bisection starting at start_point in the range of end_angle
+// the rotation is about the vector u
 Point circular_bisection(const Function &F, const Point &singular_point,
                          const Point &start_point, numeric end_angle,
                          const Vector &u /*rotation direction*/,
@@ -152,6 +156,7 @@ Point circular_bisection(const Function &F, const Point &singular_point,
   return start_point;
 }
 
+// called from circilar_bisection, returns pair of points for the next iteration
 std::pair<Point, Point> _circular_bisect(const Function &F,
                                          const Point &start_point,
                                          const Point &end_point,
@@ -267,39 +272,13 @@ std::optional<Point> project(const Point &point_to_project,
     projected = Point(projected_x, projected_y, projected_z);
   }
   assertm(projected.has_value(), "Not found projected point!");
-  /*
-  assertm(!e_size.has_value() ||
-              Vector(point_to_project, projected.value()).get_length() <
-                  4 * e_size.value(),
-          "Wrong calculation in project function!");
-  */
   return projected.value();
 }
 
-// connects two vectors of edges
-/*
-vector<HalfEdgeIndex> connect_edges(const vector<HalfEdgeIndex> &v1,
-                                    const vector<HalfEdgeIndex> &v2) {
-  vector<HalfEdgeIndex> connected = v1;
-  for (auto edge : v2) {
-    connected.push_back(edge);
-  }
-  return connected;
-}
-*/
-/*
-// connects two vectors of points
-vector<Point> connect_points(const vector<Point> &v1, const vector<Point> &v2) {
-  vector<Point> connected = v1;
-  for (auto point : v2) {
-    connected.push_back(point);
-  }
-  return connected;
-}
-*/
-
+// finds the direction perpendicular to the working_edge in the plane of the face F 
+// pointing outside of a face F
 Vector find_direction_plane(const HalfEdge &working_edge, const Vector &normal,
-                            const Face &F /*neighbour_face*/) {
+                            const Face &F /*incident_face*/) {
   Vector edge_vector(working_edge.get_point_A(), working_edge.get_point_B());
   assertm(!(normal ^ edge_vector).is_zero(), "Zero vector!");
   Vector direction = (normal ^ edge_vector).unit();
@@ -316,47 +295,10 @@ Vector find_direction_plane(const HalfEdge &working_edge, const Vector &normal,
 Vector find_direction(const HalfEdge &working_edge, const Face &F) {
   assertm(F.is_triangle(), "Getting normal of non-valid triangle!");
   Vector normal = F.get_normal();
-  Vector edge_vector(working_edge.get_point_A(), working_edge.get_point_B());
-  assertm(!(normal ^ edge_vector).is_zero(), "Zero vector!");
-  Vector direction = (normal ^ edge_vector).unit();
-  numeric min_side_length = std::min(
-      F.AB().get_length(), std::min(F.BC().get_length(), F.CA().get_length()));
-  numeric min_median_length =
-      std::min(Vector(F.A(), F.BC().get_midpoint()).get_length(),
-               std::min(Vector(F.B(), F.CA().get_midpoint()).get_length(),
-                        Vector(F.C(), F.AB().get_midpoint()).get_length()));
-  numeric delta = min_median_length / 20;
-
-  bool repeat = true;
-  int round = 0;
-  while (repeat && round < 10) {
-    Point P1 = Point(working_edge.get_midpoint(), delta * direction);
-    delta = delta / 2;
-    round++;
-    if (F.is_in_triangle(P1)) {
-      if (!F.is_in_triangle(
-              Point(working_edge.get_midpoint(), -delta * direction))) {
-        direction = numeric(-1) * direction;
-        repeat = false;
-      } else {
-        assertm(false, "Both points in triangle!");
-      }
-    } else if (!F.is_in_triangle(
-                   Point(working_edge.get_midpoint(), -delta * direction))) {
-      repeat = true;
-    } else {
-      repeat = false;
-    }
-  }
-  assertm(!repeat, "No Points in triangle!");
-
-  const Vector to_gravity_center(working_edge.get_midpoint(),
-                                 F.get_gravity_center());
-  assertm(direction * to_gravity_center < 0 - kEps, "Wrong direction!");
-
-  return direction;
+  return find_direction_plane(working_edge, normal, F);
 }
 
+// curvedness of a surface F=0 in its point 
 numeric get_curvedness(const Function &F, const Point &point) {
   vector<ex> gradient = F.get_gradient();
   Vector gradient_eval = F.get_gradient_at_point(point);
@@ -430,18 +372,13 @@ numeric get_curvedness(const Function &F, const Point &point) {
       (gradient_eval *
        (Vector(gradient_eval * Hx, gradient_eval * Hy, gradient_eval * Hz))) /
       (gradient_eval.get_length_squared() * gradient_eval.get_length_squared());
-  // std::cout << "gaussian curvature: " << gaussian_curvature << endl;
 
   numeric mean_curvature =
       ((gradient_eval *
         (Vector(gradient_eval * Gx, gradient_eval * Gy, gradient_eval * Gz))) -
        gradient_eval.get_length_squared() * (Fxx + Fyy + Fzz)) /
       (2 * gradient_eval.get_length_squared() * gradient_eval.get_length());
-  // std::cout << "mean curvature^2: " << mean_curvature * mean_curvature <<
-  // endl;
 
-  // std::cout << "under sqr: " << mean_curvature * mean_curvature -
-  // gaussian_curvature << endl;
   numeric sq;
   if (abs(mean_curvature * mean_curvature - gaussian_curvature) < kEps) {
     sq = 0;
@@ -451,10 +388,7 @@ numeric get_curvedness(const Function &F, const Point &point) {
     sq = sqrt(mean_curvature * mean_curvature - gaussian_curvature);
   }
 
-  // std::cout << "sq: " << sq << endl;
-
   numeric k1, k2;
-  // gaussian - at least one of them is zero
   if (abs(mean_curvature) < kEps && abs(gaussian_curvature) < kEps) {
     k2 = 0;
     k1 = 0;
@@ -465,32 +399,12 @@ numeric get_curvedness(const Function &F, const Point &point) {
     k1 = -mean_curvature + sq;
     k2 = -mean_curvature - sq;
   }
-  // std::cout << "point: " << point << endl;
-  // std::cout << "k1: " << k1 << " k2: " << k2 << endl;
   numeric curvedness = sqrt((k1 * k1 + k2 * k2) / 2);
   return curvedness;
 }
 
-numeric logistic(const numeric &c_e, const numeric &e_size) {
-  // maximal multiplicator
-  const numeric max_mult = 3.0;
-  const numeric min_mult = 0.3;
-
-  const numeric L = max_mult - min_mult;  // height of the logistic function
-  const numeric x_0 = 1 / 4 * e_size;     // 0.0; // function midpoint
-  const numeric k = 1.0;       // logistic growth rate or steepness of the curve
-  const numeric h = min_mult;  // elevation from zero
-
-  const numeric logistic =
-      L / (1.0 + GiNaC::ex_to<numeric>(pow(2.718281828, k * (c_e - x_0)))) +
-      min_mult;
-  std::cout << c_e << " " << e_size << " " << logistic << endl;
-  assertm(logistic < max_mult + kEps && logistic > min_mult - kEps,
-          "Incorect logistic function!");
-  return logistic;
-}
-
-numeric get_curvature_multiplicator_logistic(
+// returns the adaptive height
+numeric get_curvature_multiplicator(
     const Function &F, const Point &point, const numeric &e_size,
     const numeric &working_edge_length) {
   // e_size is edge size for unit sphere
@@ -500,14 +414,10 @@ numeric get_curvature_multiplicator_logistic(
       e_size;  // how many times does the edge fit into radius of unit sphere
   numeric min_size = 0.7 * working_edge_length;
   numeric max_size = 1.3 * working_edge_length;
-  const numeric range = 0.99;
-  // min_mult = 1.0 - range;
-  // max_mult = 1.0 + range;
+
   const numeric curvedness = get_curvedness(F, point);
-  // std::cout << "curvedness: " << curvedness << endl;
   if (curvedness < kEps) return max_size;
   numeric radius = 1.0 / curvedness;
-  // std::cout << "radius: " << radius << endl;
   if (min_size > radius / k)
     return min_size;
   else if (max_size < radius / k)
@@ -515,101 +425,12 @@ numeric get_curvature_multiplicator_logistic(
   return radius / k;
 }
 
-numeric get_curvature_multiplicator(const Function &F, const Point &point) {
-  vector<ex> gradient = F.get_gradient();
-  Vector gradient_eval = F.get_gradient_at_point(point);
-  assertm(gradient_eval != Vector(0, 0, 0), "zero gradient!");
-
-  ex _Fxx = diff(gradient[0], F.get_x());
-  ex _Fxy = diff(gradient[0], F.get_y());
-  ex _Fxz = diff(gradient[0], F.get_z());
-  ex _Fyx = diff(gradient[1], F.get_x());
-  ex _Fyy = diff(gradient[1], F.get_y());
-  ex _Fyz = diff(gradient[1], F.get_z());
-  ex _Fzx = diff(gradient[2], F.get_x());
-  ex _Fzy = diff(gradient[2], F.get_y());
-  ex _Fzz = diff(gradient[2], F.get_z());
-
-  // assertm(_Fxy == _Fyx && _Fyz == _Fzy && _Fxz == _Fzx, "Not smooth!");
-
-  numeric Fxx = GiNaC::ex_to<numeric>(
-      _Fxx.subs(GiNaC::lst{F.get_x() == point.x(), F.get_y() == point.y(),
-                           F.get_z() == point.z()})
-          .evalf());
-  numeric Fxy = GiNaC::ex_to<numeric>(
-      _Fxy.subs(GiNaC::lst{F.get_x() == point.x(), F.get_y() == point.y(),
-                           F.get_z() == point.z()})
-          .evalf());
-  numeric Fxz = GiNaC::ex_to<numeric>(
-      _Fxz.subs(GiNaC::lst{F.get_x() == point.x(), F.get_y() == point.y(),
-                           F.get_z() == point.z()})
-          .evalf());
-
-  numeric Fyx = GiNaC::ex_to<numeric>(
-      _Fyx.subs(GiNaC::lst{F.get_x() == point.x(), F.get_y() == point.y(),
-                           F.get_z() == point.z()})
-          .evalf());
-  numeric Fyy = GiNaC::ex_to<numeric>(
-      _Fyy.subs(GiNaC::lst{F.get_x() == point.x(), F.get_y() == point.y(),
-                           F.get_z() == point.z()})
-          .evalf());
-  numeric Fyz = GiNaC::ex_to<numeric>(
-      _Fyz.subs(GiNaC::lst{F.get_x() == point.x(), F.get_y() == point.y(),
-                           F.get_z() == point.z()})
-          .evalf());
-
-  numeric Fzx = GiNaC::ex_to<numeric>(
-      _Fzx.subs(GiNaC::lst{F.get_x() == point.x(), F.get_y() == point.y(),
-                           F.get_z() == point.z()})
-          .evalf());
-  numeric Fzy = GiNaC::ex_to<numeric>(
-      _Fzy.subs(GiNaC::lst{F.get_x() == point.x(), F.get_y() == point.y(),
-                           F.get_z() == point.z()})
-          .evalf());
-  numeric Fzz = GiNaC::ex_to<numeric>(
-      _Fzz.subs(GiNaC::lst{F.get_x() == point.x(), F.get_y() == point.y(),
-                           F.get_z() == point.z()})
-          .evalf());
-
-  Vector Hx(Fyy * Fzz - Fyz * Fzy, Fyz * Fzx - Fyx * Fzz,
-            Fyx * Fzy - Fyy * Fzx);
-  Vector Hy(Fyz * Fzx - Fyx * Fzz, Fxx * Fzz - Fzx * Fxz,
-            Fyx * Fzx - Fxx * Fzy);
-  Vector Hz(Fyx * Fzy - Fyy * Fzx, Fyx * Fzx - Fxx * Fzy,
-            Fxx * Fyy - Fxy * Fyx);
-
-  numeric gaussian_curvature =
-      (gradient_eval *
-       (Vector(gradient_eval * Hx, gradient_eval * Hy, gradient_eval * Hz))) /
-      (gradient_eval.get_length_squared() * gradient_eval.get_length_squared());
-
-  numeric mean_curvature =
-      ((gradient_eval *
-        (Vector(gradient_eval * Hx, gradient_eval * Hy, gradient_eval * Hz))) -
-       gradient_eval.get_length_squared() * (Fxx + Fyy + Fzz)) /
-      (2 * gradient_eval.get_length_squared() * gradient_eval.get_length());
-
-  numeric k1 = abs(mean_curvature +
-                   sqrt(mean_curvature * mean_curvature - gaussian_curvature));
-  numeric k2 = abs(mean_curvature -
-                   sqrt(mean_curvature * mean_curvature - gaussian_curvature));
-  numeric curvature_multiplicator =
-      std::max((numeric)0.3, ((k1 < k2) ? k2 : k1).power(numeric(1) / 4)) / 1.5;
-  numeric bounded_curvature_multiplicator =
-      std::max(std::min(curvature_multiplicator, numeric(5)), numeric(0.5));
-  // std::cout << bounded_curvature_multiplicator << endl;
-  //  std::cout << "GC:" << sq_gaussian_curvature * mult << endl;
-  //  if (gaussian_curvature * mult < 1) return 1;
-  //  std::cout << "1/GC:" << 1 / (sq_gaussian_curvature * mult) << endl;
-  return bounded_curvature_multiplicator;
-}
-
 // finds first edge from seed point
 Edge get_seed_edge(Point seed_point, const Function &F, numeric edge_size,
                    const BoundingBox &bounding_box) {
   numeric edge_length =
-      get_curvature_multiplicator_logistic(F, seed_point, edge_size, edge_size);
-  // edge_length = edge_size;
+      get_curvature_multiplicator(F, seed_point, edge_size, edge_size);
+  edge_length = edge_size; // comment this line for adaptive triangulation
   Vector edge_size_tangent =
       std::max(std::min(edge_length, edge_size * 1.3), edge_size * 0.7) *
       sqrt(3) / 2 * (F.get_tangent_at_point(seed_point).unit());
@@ -654,14 +475,14 @@ Point get_seed_triangle(const Edge &e, numeric edge_size, const Function &F,
                                  basic_height * center_tangent.unit().y(),
                                  basic_height * center_tangent.unit().z());
   numeric edge_length_1 =
-      get_curvature_multiplicator_logistic(F, e.A(), edge_size, e.get_length());
+      get_curvature_multiplicator(F, e.A(), edge_size, e.get_length());
   numeric edge_length_2 =
-      get_curvature_multiplicator_logistic(F, e.B(), edge_size, e.get_length());
-  numeric edge_length_3 = get_curvature_multiplicator_logistic(
+      get_curvature_multiplicator(F, e.B(), edge_size, e.get_length());
+  numeric edge_length_3 = get_curvature_multiplicator(
       F, mult_point, edge_size, e.get_length());
   numeric edge_length =
       std::min(std::min(edge_length_1, edge_length_2), edge_length_3);
-  // edge_length = edge_size;
+  edge_length = edge_size; // comment this line for adaptive triangulation
   numeric height =
       sqrt(numeric(3)) / 2 *
       std::max(std::min(edge_length, edge_size * 1.3), edge_size * 0.7);
