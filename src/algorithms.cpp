@@ -290,7 +290,7 @@ Vector find_direction_plane(const HalfEdge &working_edge, const Vector &normal,
   return direction;
 }
 
-// Returns unit vector in the plane of triangle T, pointing outside from T from
+// returns unit vector in the plane of triangle T, pointing outside from T from
 // the midpoint of edge e, perpendicular to e
 Vector find_direction(const HalfEdge &working_edge, const Face &F) {
   assertm(F.is_triangle(), "Getting normal of non-valid triangle!");
