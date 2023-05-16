@@ -6,6 +6,9 @@ using std::cout;
 
 #pragma region "Region singularities"
 
+// given the polyline approximation of the singular curve
+// creates the local mesh around the curve
+// type - intersection, union, difference
 void BasicAlgorithm::get_local_mesh_curve(
     const Function &_F, const Function &_G, const Function &inter_FG,
     const vector<Point> &polyline, const BoundingBox &bounding_box,
@@ -101,7 +104,7 @@ void BasicAlgorithm::get_local_mesh_curve(
   return;
 }
 
-// rotation of point about vector by given angle TODO
+// rotation of point about vector by given angle
 void rotate(Vector &to_rotate, const Vector &u, const GiNaC::ex angle) {
   const Vector v = u.get_any_perpendicular().unit();
   const numeric COS = GiNaC::ex_to<numeric>(GiNaC::cos(angle).evalf());
@@ -120,6 +123,7 @@ void rotate(Vector &to_rotate, const Vector &u, const GiNaC::ex angle) {
   return;
 }
 
+// creates layers of points around the given branch of a singularity
 void BasicAlgorithm::get_points_singular_point(const Singularity singularity,
                                                const int num_triangles,
                                                const numeric &edge_length,
@@ -204,7 +208,7 @@ void BasicAlgorithm::get_points_singular_point(const Singularity singularity,
         plane_vector =
             Vector(rot_vector_x * plane_vector, rot_vector_y * plane_vector,
                    rot_vector_z * plane_vector);
-      } else {  // group 3 - iterative binary search
+      } else {  // group 2 - iterative binary search
         Point start_point_to_bisect(singularity.location(),
                                     h_layer * unit_singular_direction);
         Point end_point_to_bisect = start_point_to_bisect;
@@ -232,6 +236,7 @@ void BasicAlgorithm::get_points_singular_point(const Singularity singularity,
                 GiNaC::ex_to<numeric>(2 * GiNaC::Pi.evalf() / num_triangles)));
       }
       points[layer].push_back(new_point);
+
       // checks if the point is in the correct halfspace
       assertm(unit_singular_direction * direction_layer >= 0,
               "New point in opposite halfspace!");
@@ -239,13 +244,11 @@ void BasicAlgorithm::get_points_singular_point(const Singularity singularity,
           Vector(rot_vector_x * direction_layer, rot_vector_y * direction_layer,
                  rot_vector_z * direction_layer);
     }
-    for (auto point : points[layer]) {
-      std::cout << "point: " << point << endl;
-    }
-    std::cout << endl;
+    
+    // the optimization of the mesh for some singularities with 8 triangles
     if (num_triangles == 8) {
       if (singularity.type() == SingularityType::Epp &&
-          singularity.n() == 8)  // E8++
+          singularity.n() == 8)  // E8++ not symmetrical
         return;
       if (singularity.type() == SingularityType::Apm &&
           singularity.n() % 2 == 0)  // An+- not necessary
@@ -339,24 +342,20 @@ void BasicAlgorithm::get_points_singular_point(const Singularity singularity,
       }
       int first, second;
       const Point &P = points[layer][1];
-      std::cout << u << endl;
+      
+      // TODO fix for general case, not working properly
       if (abs(u.x()) < kEps && abs(u.z()) < kEps) {
         first = 3;
         second = 7;
-
         points[layer][first] = Point(P.x(), P.y(), -P.z());
         points[layer][5] = Point(-P.x(), P.y(), -P.z());
         points[layer][second] = Point(-P.x(), P.y(), P.z());
       } else if (abs(u.y()) < kEps && abs(u.z()) < kEps) {
         first = 3;
         second = 7;
-        std::cout << "here!: " << first << " " << second << endl;
         points[layer][first] = Point(P.x(), P.y(), -P.z());
-        std::cout << points[layer][first] << endl;
         points[layer][5] = Point(P.x(), -P.y(), -P.z());
-        std::cout << points[layer][5] << endl;
         points[layer][second] = Point(P.x(), -P.y(), P.z());
-        std::cout << points[layer][second] << endl;
       } else if (abs(u.x()) < kEps && abs(u.y()) < kEps) {
         first = 3;
         second = 7;
@@ -365,18 +364,18 @@ void BasicAlgorithm::get_points_singular_point(const Singularity singularity,
         points[layer][second] = Point(-P.x(), P.y(), P.z());
       }
     }
-    for (auto point : points[layer]) {
-      std::cout << "point: " << point << endl;
-    }
   }
   return;
 }
 
+// connects the layers of points into triangles
 void BasicAlgorithm::get_local_mesh_point(const vector<vector<Point>> &points,
                                           const Singularity &singularity,
                                           const MeshPointIndex singular_index,
                                           const int num_triangles,
                                           const int branch, const int layers) {
+  // the patterns of in indices were derived on a paper
+
   // first layer
   for (int i = 0; i < num_triangles; ++i) {
     int j = (i + 1) % num_triangles;
@@ -396,16 +395,13 @@ void BasicAlgorithm::get_local_mesh_point(const vector<vector<Point>> &points,
     } else if (i < num_triangles - 1) {
       my_mesh.add_triangle(my_mesh.get_edges_count() - 1, points[0][j], true,
                            bounding_box);
-      // my_mesh.edges_check("in A1 round: " + std::to_string(i));
-      //,bounding_box);
     } else {
       my_mesh.add_triangle(my_mesh.get_edges_count() - 1, points[0][j], false,
                            bounding_box,
                            my_mesh.get_points_count() - num_triangles);
-      // my_mesh.edges_check("in A1 round: " + std::to_string(i));
     }
-    // my_mesh.obj_format(name + "_local");
   }
+
   // the rest of the layers
   for (int layer = 1; layer < layers; ++layer) {
     int magic_constant = layer == 1 ? 1 : 2;
@@ -413,7 +409,6 @@ void BasicAlgorithm::get_local_mesh_point(const vector<vector<Point>> &points,
       my_mesh.add_triangle(
           my_mesh.get_faces_count() * 3 - (3 * num_triangles - magic_constant),
           points[layer][i], true, bounding_box);
-      // my_mesh.edges_check("In create local mesh, layer 2");
     }
     for (int i = 0; i < num_triangles; ++i) {
       int k = (i + num_triangles - 1) % num_triangles;
@@ -421,11 +416,11 @@ void BasicAlgorithm::get_local_mesh_point(const vector<vector<Point>> &points,
           3 * my_mesh.get_faces_count() - (3 * num_triangles - 1),
           points[layer][k], false, bounding_box,
           my_mesh.get_points_count() - num_triangles + k);
-      // my_mesh.edges_check("In create local mesh, layer 2, round 2");
     }
   }
 }
 
+// division into cases - possible twisting of parameters to some extent
 void BasicAlgorithm::triangulate_singular_point_local(
     const Singularity &singularity, const int branch,
     const MeshPointIndex singular_index) {
@@ -506,78 +501,11 @@ void BasicAlgorithm::triangulate_singular_point_local(
                             layers);
   get_local_mesh_point(points, singularity, singular_index, num_triangles,
                        branch, layers);
-  // my_mesh.obj_format(name + "_local");
-  return;
-}
-
-void BasicAlgorithm::triangulate_An_analytical(
-    const Singularity &singularity, const int branch,
-    const MeshPointIndex singular_index) {
-  int num_triangles = 6;
-  int layers = 1;
-
-  vector<vector<Point>> points;
-  get_points_singular_point(singularity, num_triangles, e_size, points, branch,
-                            layers);
-  get_local_mesh_point(points, singularity, singular_index, num_triangles,
-                       branch, layers);
-  // my_mesh.obj_format(name + "_local");
-  return;
-}
-
-// triangulates singularities lying in a single half-space
-void BasicAlgorithm::triangulate_singularity_circular(
-    const Singularity &singularity, const int branch,
-    const MeshPointIndex singular_index) {
-  const int num_triangles = 6;
-  int layers = 4;
-
-  vector<vector<Point>> points;
-  get_points_singular_point(singularity, num_triangles, e_size, points, branch,
-                            layers);
-  get_local_mesh_point(points, singularity, singular_index, num_triangles,
-                       branch, layers);
-  // my_mesh.obj_format(name + "_local");
-  return;
-}
-
-// trinagulates singularities lying in both half-spaces having only single
-// branch
-void BasicAlgorithm::triangulate_singularity_case2(
-    const Singularity &singularity, const int branch,
-    const MeshPointIndex singular_index) {
-  int num_triangles = 8;
-  int layers = 3;
-
-  vector<vector<Point>> points;
-  get_points_singular_point(singularity, num_triangles, e_size * 0.7, points,
-                            branch, layers);
-  get_local_mesh_point(points, singularity, singular_index, num_triangles,
-                       branch, layers);
-  // my_mesh.obj_format(name + "_local");
-  return;
-}
-
-void BasicAlgorithm::triangulate_cone_iterative(
-    const Singularity &singularity, const int branch,
-    const MeshPointIndex singular_index) {
-  int num_triangles = 4;
-  if (branch == 0) num_triangles = 8;
-
-  int layers = 3;
-
-  vector<vector<Point>> points;
-  get_points_singular_point(singularity, num_triangles, e_size, points, branch,
-                            layers);
-  get_local_mesh_point(points, singularity, singular_index, num_triangles,
-                       branch, layers);
-  // my_mesh.obj_format(name + "_local");
   return;
 }
 #pragma endregion "Region singularities"
 
 #pragma region "Find close points"
-
 // TODO(kuska) rewrite to non-optional
 std::optional<vector<MeshPoint>> BasicAlgorithm::_tree_close_points_finder(
     const Point &P, const HalfEdge &working_edge) const {
