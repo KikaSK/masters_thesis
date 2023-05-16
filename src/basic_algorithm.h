@@ -80,8 +80,7 @@ class BasicAlgorithm {
                         const bool Delaunay);
   bool fix_overlap(const HalfEdge &working_edge, const MeshPoint &overlap_point,
                    const bool Delaunay);
-  int fix_holes(const HalfEdge &working_edge);
-  bool fix_holes2(const HalfEdge &working_edge);
+  bool fix_holes(const HalfEdge &working_edge);
   bool fix_breakers(const HalfEdge &working_edge, const Point &projected,
                     const bool Delaunay);
   bool fix_same_points(const HalfEdge &working_edge, const Point &projected);
