@@ -506,7 +506,9 @@ void BasicAlgorithm::triangulate_singular_point_local(
 #pragma endregion "Region singularities"
 
 #pragma region "Find close points"
-// TODO(kuska) rewrite to non-optional
+
+// using the range tree to find the points in the surrounding of a point P
+// sorted by the distance from the edge introduced in bachelor's thesis
 std::optional<vector<MeshPoint>> BasicAlgorithm::_tree_close_points_finder(
     const Point &P, const HalfEdge &working_edge) const {
   numeric dist = 0.4 * e_size;
@@ -523,6 +525,8 @@ std::optional<vector<MeshPoint>> BasicAlgorithm::_tree_close_points_finder(
   return close_points;
 }
 
+// using the linear search to find the points in the surrounding of a point P
+// sorted by the distance from the edge introduced in bachelor's thesis
 std::optional<vector<MeshPoint>> BasicAlgorithm::_linear_close_points_finder(
     const Point &P, const HalfEdge &working_edge) const {
   numeric min_dist = 0.4 * e_size;
@@ -553,7 +557,7 @@ std::optional<vector<MeshPoint>> BasicAlgorithm::find_close_points(
 
 #pragma region "Check conditions"
 
-// TODO(Kuska) add condition to check for the edge already existing
+// check of the conditions for the creation of the new triangle
 bool BasicAlgorithm::check_conditions(const HalfEdge &working_edge,
                                       const Point &P, const bool Delaunay,
                                       const MeshPointIndex i_P) const {
@@ -565,16 +569,13 @@ bool BasicAlgorithm::check_conditions(const HalfEdge &working_edge,
 // satisfied
 bool BasicAlgorithm::Delaunay_conditions(const HalfEdge &working_edge,
                                          const Point &P) const {
-  // std::cout << "Check Delaunay conditions" << endl;
   if (working_edge.get_point_A() == P || working_edge.get_point_B() == P) {
-    // std::cout << "Not triangle failed" << endl;
     return false;
   }
   Triangle new_triangle =
       Triangle(working_edge.get_point_B(), working_edge.get_point_A(), P);
 
   if (!new_triangle.is_triangle()) {
-    // std::cout << "Is triangle failed" << endl;
     return false;
   }
 
@@ -585,12 +586,12 @@ bool BasicAlgorithm::Delaunay_conditions(const HalfEdge &working_edge,
       (new_triangle.AB().get_length() + new_triangle.BC().get_length() +
        new_triangle.CA().get_length()) /
       3.0;
-
-  if (/*my_mesh.get_faces_count() > 50 &&*/
+  
+  // possible twisting the parameter 2.5
+  if (/*my_mesh.get_faces_count() > 50 &&*/ // turned on for some singularities with sharp triangles 
       (new_triangle.AB().get_length() > 2.5 * min_edge_length ||
        new_triangle.CA().get_length() > 2.5 * min_edge_length ||
        new_triangle.BC().get_length() > 2.5 * min_edge_length)) {
-    // std::cout << "Edge length failed" << endl;
     return false;
   }
 
@@ -599,12 +600,9 @@ bool BasicAlgorithm::Delaunay_conditions(const HalfEdge &working_edge,
           .get_meshpoint(my_mesh.get_halfedge(working_edge.get_next()).get_B())
           .get_point();
 
-  // const Point midpoint = working_edge.get_midpoint();
-  // const Vector edge_vector_new(midpoint, P);
-  // const Vector edge_vector_neighbour(midpoint, opposite_point);
-
   if (P == opposite_point) return false;
 
+  // possible to turn on in case of the connection of two distinct branches
   bool gc_distance = true;  // gc_distance_check(new_triangle);
   bool delaunay = my_mesh.check_Delaunay(working_edge, P, avg_edge_length);
   bool has_good_edges = good_edges(working_edge, P);
@@ -612,31 +610,15 @@ bool BasicAlgorithm::Delaunay_conditions(const HalfEdge &working_edge,
   bool is_edge_in_mesh = my_mesh.is_in_mesh(new_triangle.AB()) ||
                          my_mesh.is_in_mesh(new_triangle.BC()) ||
                          my_mesh.is_in_mesh(new_triangle.CA());
-  // TODO(kuska) Do not pass point to oreintability check!!!
+  
   // bool orientability = orientability_check(working_edge, P);
-  /*
-  if (neighbor_triangles_normal_check) {
-    cout << "Neighbor triangles normal check passed for triangles: " << endl;
-    cout << new_triangle << endl;
-    cout << "and" << endl;
-    cout << my_mesh.get_face(working_edge.get_incident()).get_triangle()
-         << endl;
-  } else {
-  */
-  /*
-    if (is_edge_in_mesh) cout << "NO PASS IS EDGE IN MESH!" << endl;
-    if (!neighbor_triangles_normal_check) cout << "NO PASS NORMAL CHECK!" <<
-    endl; if (!delaunay) cout << "NO PASS DELAUNAY!" << endl;
-    // if (!orientability) cout << "NO PASS ORIENTABILITY!" << endl;
-    if (!has_good_edges) cout << "NO PASS GOOD EDGES!" << endl;
-  */
   return (delaunay && has_good_edges && neighbor_triangles_normal_check &&
           !is_edge_in_mesh && gc_distance
           // && orientability
   );
 }
 
-// checks if essential conditions are fulfilled
+// checks if essential conditions in the hole fixing are fulfilled
 bool BasicAlgorithm::non_Delaunay_conditions(const HalfEdge &working_edge,
                                              const Point &P,
                                              const MeshPointIndex i_P) const {
@@ -654,7 +636,6 @@ bool BasicAlgorithm::non_Delaunay_conditions(const HalfEdge &working_edge,
                          my_mesh.is_in_mesh(new_triangle.BC()) ||
                          my_mesh.is_in_mesh(new_triangle.CA());
   // bool orientability = orientability_check(working_edge, P);
-  //  if (!has_good_edges) cout << "Good Edges condition failed!" << endl;
 
   return (has_good_edges && is_border && !is_edge_in_mesh  //&& orientability
   );
@@ -736,14 +717,8 @@ bool BasicAlgorithm::neighbor_triangles_normal_check(const Triangle &T1,
   assertm(T1.is_triangle() && T2.is_triangle(),
           "Normal check of invalid triangle");
 
-  // std::cout << "in normal check:" << endl;
-
   Vector normal_1 = T1.get_normal();
   Vector normal_2 = T2.get_normal();
-
-  // std::cout << "normal 1: " << normal_1 << endl;
-  // std::cout << "normal 2: " << normal_2 << endl;
-  // std::cout << "dot: " << normal_1 * normal_2 << endl;
   return (normal_1 * normal_2 > 0.25);
 }
 
@@ -770,6 +745,7 @@ bool BasicAlgorithm::orientability_check(const HalfEdge &working_edge,
   return true;
 }
 
+// checks if the incident triangles have angle smaller than pi/2
 bool BasicAlgorithm::overlap_normals_check(const MeshPoint &candidate,
                                            const HalfEdge &working_edge) const {
   if (candidate.get_point() == working_edge.get_point_A() ||
@@ -780,8 +756,7 @@ bool BasicAlgorithm::overlap_normals_check(const MeshPoint &candidate,
   Triangle my_triangle(working_edge.get_point_B(), working_edge.get_point_A(),
                        candidate.get_point());
 
-  if (my_triangle.is_triangle() /*&&
-      good_edges(working_edge, candidate.get_point())*/) {
+  if (my_triangle.is_triangle()) {
     Vector my_normal = my_triangle.get_normal();
     Face overlap_face = my_mesh.get_face(
         my_mesh.get_halfedge(candidate.get_outgoing()[0]).get_incident());
